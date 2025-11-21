@@ -8,6 +8,7 @@ use App\Http\Controllers\Tenant\SiteController;
 use App\Http\Controllers\Tenant\BoxController;
 use App\Http\Controllers\Tenant\CustomerController;
 use App\Http\Controllers\Tenant\ContractController;
+use App\Http\Controllers\Tenant\InvoiceController;
 use Inertia\Inertia;
 
 /*
@@ -125,10 +126,8 @@ Route::middleware('auth')->group(function () {
         // Contracts (Resource Controller)
         Route::resource('contracts', ContractController::class);
 
-        // Invoices
-        Route::get('/invoices', function () {
-            return Inertia::render('Tenant/Invoices/Index');
-        })->name('invoices.index');
+        // Invoices (Resource Controller)
+        Route::resource('invoices', InvoiceController::class);
 
         // Messages
         Route::get('/messages', function () {

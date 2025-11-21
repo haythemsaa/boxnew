@@ -16,11 +16,13 @@ class Invoice extends Model
         'customer_id',
         'contract_id',
         'invoice_number',
-        'invoice_type',
+        'type',
         'status',
-        'issue_date',
+        'invoice_date',
         'due_date',
-        'paid_date',
+        'paid_at',
+        'period_start',
+        'period_end',
         'items',
         'subtotal',
         'tax_rate',
@@ -31,19 +33,18 @@ class Invoice extends Model
         'currency',
         'notes',
         'is_recurring',
-        'recurring_frequency',
-        'next_billing_date',
         'reminder_count',
-        'last_reminder_sent_at',
+        'last_reminder_sent',
         'pdf_path',
     ];
 
     protected $casts = [
-        'issue_date' => 'date',
+        'invoice_date' => 'date',
         'due_date' => 'date',
-        'paid_date' => 'date',
-        'next_billing_date' => 'date',
-        'last_reminder_sent_at' => 'datetime',
+        'paid_at' => 'date',
+        'period_start' => 'date',
+        'period_end' => 'date',
+        'last_reminder_sent' => 'date',
         'items' => 'array',
         'subtotal' => 'decimal:2',
         'tax_rate' => 'decimal:2',
@@ -118,7 +119,7 @@ class Invoice extends Model
     {
         $this->update([
             'status' => 'paid',
-            'paid_date' => now(),
+            'paid_at' => now(),
             'paid_amount' => $this->total,
         ]);
     }
@@ -140,7 +141,7 @@ class Invoice extends Model
     public function sendReminder(): void
     {
         $this->increment('reminder_count');
-        $this->update(['last_reminder_sent_at' => now()]);
+        $this->update(['last_reminder_sent' => now()]);
     }
 
     public function calculateTotal(): void
