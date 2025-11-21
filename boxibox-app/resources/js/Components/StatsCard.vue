@@ -10,6 +10,7 @@
             <div class="ml-4 flex-1">
                 <p class="text-sm font-medium text-gray-600">{{ title }}</p>
                 <p class="text-2xl font-bold text-gray-900">{{ value }}</p>
+                <p v-if="subtitle" class="text-xs text-gray-500 mt-1">{{ subtitle }}</p>
             </div>
         </div>
     </div>
@@ -26,11 +27,13 @@ import {
     DocumentTextIcon,
     CurrencyDollarIcon,
     ChartBarIcon,
+    ClockIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     title: String,
     value: [String, Number],
+    subtitle: String,
     icon: String,
     color: {
         type: String,
@@ -47,6 +50,7 @@ const iconMap = {
     document: DocumentTextIcon,
     currency: CurrencyDollarIcon,
     chart: ChartBarIcon,
+    clock: ClockIcon,
 }
 
 const iconComponent = computed(() => iconMap[props.icon] || ArchiveBoxIcon)
