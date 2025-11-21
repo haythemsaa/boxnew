@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Tenant\DashboardController;
+use App\Http\Controllers\Tenant\SiteController;
 use Inertia\Inertia;
 
 /*
@@ -109,10 +110,8 @@ Route::middleware('auth')->group(function () {
         // Dashboard
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-        // Sites
-        Route::get('/sites', function () {
-            return Inertia::render('Tenant/Sites/Index');
-        })->name('sites.index');
+        // Sites (Resource Controller)
+        Route::resource('sites', SiteController::class);
 
         // Boxes
         Route::get('/boxes', function () {
