@@ -12,31 +12,36 @@ class Payment extends Model
         'customer_id',
         'invoice_id',
         'contract_id',
-        'amount',
-        'currency',
+        'payment_number',
+        'type',
         'status',
+        'amount',
+        'fee',
+        'currency',
+        'method',
         'gateway',
         'gateway_payment_id',
+        'gateway_customer_id',
         'gateway_response',
-        'payment_method',
         'card_brand',
         'card_last_four',
         'paid_at',
+        'processed_at',
         'failed_at',
-        'failure_reason',
-        'refunded_amount',
-        'refunded_at',
-        'refund_reason',
         'refund_for_payment_id',
+        'refunded_amount',
+        'failure_code',
+        'failure_message',
         'notes',
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'fee' => 'decimal:2',
         'refunded_amount' => 'decimal:2',
         'paid_at' => 'datetime',
+        'processed_at' => 'datetime',
         'failed_at' => 'datetime',
-        'refunded_at' => 'datetime',
         'gateway_response' => 'array',
     ];
 
@@ -116,16 +121,17 @@ class Payment extends Model
         }
     }
 
-    public function markAsFailed(string $reason = null): void
+    public function markAsFailed(string $code = null, string $message = null): void
     {
         $this->update([
             'status' => 'failed',
             'failed_at' => now(),
-            'failure_reason' => $reason,
+            'failure_code' => $code,
+            'failure_message' => $message,
         ]);
     }
 
-    public function refund(float $amount = null, string $reason = null): self
+    public function refund(float $amount = null, string $notes = null): self
     {
         $refundAmount = $amount ?? $this->amount;
 
@@ -134,19 +140,21 @@ class Payment extends Model
             'customer_id' => $this->customer_id,
             'invoice_id' => $this->invoice_id,
             'contract_id' => $this->contract_id,
+            'payment_number' => 'REF-' . strtoupper(substr(uniqid(), -8)),
+            'type' => 'refund',
             'amount' => -$refundAmount,
             'currency' => $this->currency,
             'status' => 'completed',
+            'method' => $this->method,
             'gateway' => $this->gateway,
             'refund_for_payment_id' => $this->id,
-            'refund_reason' => $reason,
-            'refunded_at' => now(),
+            'notes' => $notes,
+            'paid_at' => now(),
         ]);
 
         $this->update([
             'status' => 'refunded',
             'refunded_amount' => $refundAmount,
-            'refunded_at' => now(),
         ]);
 
         return $refundPayment;
