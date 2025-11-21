@@ -13,52 +13,68 @@ class Contract extends Model
 
     protected $fillable = [
         'tenant_id',
+        'site_id',
         'customer_id',
         'box_id',
         'contract_number',
         'status',
+        'type',
         'start_date',
         'end_date',
+        'actual_end_date',
         'notice_period_days',
         'auto_renew',
+        'renewal_period',
         'monthly_price',
         'deposit_amount',
+        'deposit_paid',
         'discount_percentage',
         'discount_amount',
-        'terms_and_conditions',
-        'notes',
-        'signed_by_customer',
-        'signed_by_tenant',
-        'customer_signed_at',
-        'tenant_signed_at',
-        'customer_signature',
-        'tenant_signature',
+        'billing_frequency',
+        'billing_day',
+        'payment_method',
+        'auto_pay',
         'access_code',
-        'termination_date',
+        'key_given',
+        'key_returned',
+        'signed_by_customer',
+        'customer_signed_at',
+        'signed_by_staff',
+        'staff_user_id',
+        'pdf_path',
         'termination_reason',
-        'terminated_by',
+        'termination_notes',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'actual_end_date' => 'date',
         'customer_signed_at' => 'datetime',
-        'tenant_signed_at' => 'datetime',
-        'termination_date' => 'date',
         'monthly_price' => 'decimal:2',
         'deposit_amount' => 'decimal:2',
         'discount_percentage' => 'decimal:2',
         'discount_amount' => 'decimal:2',
         'notice_period_days' => 'integer',
+        'billing_day' => 'integer',
         'signed_by_customer' => 'boolean',
-        'signed_by_tenant' => 'boolean',
+        'signed_by_staff' => 'boolean',
         'auto_renew' => 'boolean',
+        'deposit_paid' => 'boolean',
+        'auto_pay' => 'boolean',
+        'key_given' => 'boolean',
+        'key_returned' => 'boolean',
     ];
 
     // Relationships
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
+    }
+
+    public function site(): BelongsTo
+    {
+        return $this->belongsTo(Site::class);
     }
 
     public function customer(): BelongsTo
@@ -69,6 +85,11 @@ class Contract extends Model
     public function box(): BelongsTo
     {
         return $this->belongsTo(Box::class);
+    }
+
+    public function staffUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'staff_user_id');
     }
 
     public function invoices(): HasMany
@@ -107,7 +128,7 @@ class Contract extends Model
 
     public function getIsFullySignedAttribute(): bool
     {
-        return $this->signed_by_customer && $this->signed_by_tenant;
+        return $this->signed_by_customer && $this->signed_by_staff;
     }
 
     public function getDaysUntilExpiryAttribute(): ?int
@@ -125,13 +146,13 @@ class Contract extends Model
         $this->box->makeOccupied();
     }
 
-    public function terminate(string $reason = null, int $terminatedBy = null): void
+    public function terminate(string $reason = null, string $notes = null): void
     {
         $this->update([
             'status' => 'terminated',
-            'termination_date' => now(),
+            'actual_end_date' => now(),
             'termination_reason' => $reason,
-            'terminated_by' => $terminatedBy,
+            'termination_notes' => $notes,
         ]);
         $this->box->makeAvailable();
     }

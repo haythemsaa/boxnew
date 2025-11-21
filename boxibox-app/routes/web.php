@@ -7,6 +7,7 @@ use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\SiteController;
 use App\Http\Controllers\Tenant\BoxController;
 use App\Http\Controllers\Tenant\CustomerController;
+use App\Http\Controllers\Tenant\ContractController;
 use Inertia\Inertia;
 
 /*
@@ -121,10 +122,8 @@ Route::middleware('auth')->group(function () {
         // Customers (Resource Controller)
         Route::resource('customers', CustomerController::class);
 
-        // Contracts
-        Route::get('/contracts', function () {
-            return Inertia::render('Tenant/Contracts/Index');
-        })->name('contracts.index');
+        // Contracts (Resource Controller)
+        Route::resource('contracts', ContractController::class);
 
         // Invoices
         Route::get('/invoices', function () {
