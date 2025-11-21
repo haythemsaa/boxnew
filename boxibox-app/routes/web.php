@@ -9,6 +9,7 @@ use App\Http\Controllers\Tenant\BoxController;
 use App\Http\Controllers\Tenant\CustomerController;
 use App\Http\Controllers\Tenant\ContractController;
 use App\Http\Controllers\Tenant\InvoiceController;
+use App\Http\Controllers\Tenant\PaymentController;
 use Inertia\Inertia;
 
 /*
@@ -128,6 +129,9 @@ Route::middleware('auth')->group(function () {
 
         // Invoices (Resource Controller)
         Route::resource('invoices', InvoiceController::class);
+
+        // Payments (Resource Controller)
+        Route::resource('payments', PaymentController::class);
 
         // Messages
         Route::get('/messages', function () {
