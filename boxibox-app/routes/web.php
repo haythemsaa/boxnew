@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Tenant\DashboardController;
 use App\Http\Controllers\Tenant\SiteController;
 use App\Http\Controllers\Tenant\BoxController;
+use App\Http\Controllers\Tenant\CustomerController;
 use Inertia\Inertia;
 
 /*
@@ -117,10 +118,8 @@ Route::middleware('auth')->group(function () {
         // Boxes (Resource Controller)
         Route::resource('boxes', BoxController::class);
 
-        // Customers
-        Route::get('/customers', function () {
-            return Inertia::render('Tenant/Customers/Index');
-        })->name('customers.index');
+        // Customers (Resource Controller)
+        Route::resource('customers', CustomerController::class);
 
         // Contracts
         Route::get('/contracts', function () {
