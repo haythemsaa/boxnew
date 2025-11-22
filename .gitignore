@@ -1,0 +1,33 @@
+# Composer dependencies
+/vendor/
+vendor/
+
+# Laravel specific
+.env
+.env.backup
+.env.production
+
+# Node modules
+node_modules/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build files
+/public/hot
+/public/storage
+/storage/*.key
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
