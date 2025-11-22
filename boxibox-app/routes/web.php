@@ -15,6 +15,7 @@ use App\Http\Controllers\Portal\PortalContractController;
 use App\Http\Controllers\Portal\PortalInvoiceController;
 use App\Http\Controllers\Portal\PortalPaymentController;
 use App\Http\Controllers\Portal\PortalProfileController;
+use App\Http\Controllers\Booking\BookingController;
 use Inertia\Inertia;
 
 /*
@@ -38,6 +39,20 @@ Route::get('/', function () {
 
     // Redirect to tenant dashboard for admins
     return redirect()->route('tenant.dashboard');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Online Booking Routes (Public)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('booking')->name('booking.')->group(function () {
+    Route::get('/', [BookingController::class, 'index'])->name('index');
+    Route::get('/box/{box}', [BookingController::class, 'show'])->name('show');
+    Route::get('/box/{box}/checkout', [BookingController::class, 'checkout'])->name('checkout');
+    Route::post('/box/{box}/reserve', [BookingController::class, 'store'])->name('store');
+    Route::get('/confirmation/{contract}', [BookingController::class, 'confirmation'])->name('confirmation');
 });
 
 /*
