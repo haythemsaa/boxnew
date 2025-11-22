@@ -9,6 +9,7 @@ use App\Http\Controllers\API\V1\CustomerController;
 use App\Http\Controllers\API\V1\ContractController;
 use App\Http\Controllers\API\V1\InvoiceController;
 use App\Http\Controllers\API\V1\PaymentController;
+use App\Http\Controllers\WebhookController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,6 +21,14 @@ use App\Http\Controllers\API\V1\PaymentController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+/*
+|--------------------------------------------------------------------------
+| Webhook Routes (No Authentication Required)
+|--------------------------------------------------------------------------
+*/
+
+Route::post('/webhooks/stripe', [WebhookController::class, 'handleStripe'])->name('webhooks.stripe');
 
 /*
 |--------------------------------------------------------------------------
