@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Invoice;
+use App\Notifications\InvoiceOverdueNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -108,14 +109,22 @@ class CheckOverdueInvoices extends Command
         $invoice->increment('reminder_count');
         $invoice->update(['last_reminder_sent' => now()]);
 
-        // TODO: Send actual email notification
-        // Notification::send($invoice->customer, new InvoiceOverdueNotification($invoice));
+        // Send email notification
+        try {
+            $invoice->customer->notify(new InvoiceOverdueNotification($invoice));
 
-        Log::info('Overdue invoice reminder sent', [
-            'invoice_id' => $invoice->id,
-            'invoice_number' => $invoice->invoice_number,
-            'customer_id' => $invoice->customer_id,
-            'reminder_count' => $invoice->reminder_count,
-        ]);
+            Log::info('Overdue invoice reminder sent', [
+                'invoice_id' => $invoice->id,
+                'invoice_number' => $invoice->invoice_number,
+                'customer_id' => $invoice->customer_id,
+                'reminder_count' => $invoice->reminder_count,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send overdue invoice notification', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
     }
 }

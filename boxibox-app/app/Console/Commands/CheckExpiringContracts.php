@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Contract;
+use App\Notifications\ContractExpiringNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -67,8 +68,17 @@ class CheckExpiringContracts extends Command
                 'days_until_expiry' => $daysUntilExpiry,
             ]);
 
-            // TODO: Send notification to customer and staff
-            // Notification::send($contract->customer, new ContractExpiringNotification($contract));
+            // Send notification to customer
+            try {
+                $contract->customer->notify(new ContractExpiringNotification($contract));
+                $this->line("    ✓ Notification sent to customer");
+            } catch (\Exception $e) {
+                $this->error("    ✗ Failed to send notification: {$e->getMessage()}");
+                Log::error('Failed to send contract expiring notification', [
+                    'contract_id' => $contract->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         $this->info("Processed {$expiringContracts->count()} expiring contract(s).");
