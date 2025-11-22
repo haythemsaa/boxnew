@@ -57,7 +57,7 @@ class DynamicPricingService
         } elseif ($occupancyRate < 0.85) {
             // Medium occupancy: Slight discount
             return 0.90; // -10%
-        } elseif ($occupancy Rate < 0.95) {
+        } elseif ($occupancyRate < 0.95) {
             // Good occupancy: Standard price
             return 1.0;
         } else {

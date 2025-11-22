@@ -16,6 +16,10 @@ use App\Http\Controllers\Portal\PortalInvoiceController;
 use App\Http\Controllers\Portal\PortalPaymentController;
 use App\Http\Controllers\Portal\PortalProfileController;
 use App\Http\Controllers\Booking\BookingController;
+use App\Http\Controllers\Tenant\AnalyticsController;
+use App\Http\Controllers\Tenant\PricingController;
+use App\Http\Controllers\Tenant\LeadController;
+use App\Http\Controllers\Tenant\AccessControlController;
 use Inertia\Inertia;
 
 /*
@@ -174,6 +178,39 @@ Route::middleware('auth')->group(function () {
 
         // Payments (Resource Controller)
         Route::resource('payments', PaymentController::class);
+
+        // Analytics Routes
+        Route::prefix('analytics')->name('analytics.')->group(function () {
+            Route::get('/occupancy', [AnalyticsController::class, 'occupancy'])->name('occupancy');
+            Route::get('/revenue', [AnalyticsController::class, 'revenue'])->name('revenue');
+            Route::get('/marketing', [AnalyticsController::class, 'marketing'])->name('marketing');
+            Route::get('/operations', [AnalyticsController::class, 'operations'])->name('operations');
+            Route::post('/export', [AnalyticsController::class, 'export'])->name('export');
+        });
+
+        // Dynamic Pricing Routes
+        Route::prefix('pricing')->name('pricing.')->group(function () {
+            Route::get('/dashboard', [PricingController::class, 'dashboard'])->name('dashboard');
+            Route::post('/calculate/{box}', [PricingController::class, 'calculateOptimalPrice'])->name('calculate');
+            Route::post('/apply-recommendation', [PricingController::class, 'applyRecommendation'])->name('apply-recommendation');
+            Route::get('/strategies', [PricingController::class, 'strategies'])->name('strategies.index');
+            Route::post('/strategies', [PricingController::class, 'storeStrategy'])->name('strategies.store');
+        });
+
+        // CRM / Leads Routes
+        Route::prefix('crm')->name('crm.')->group(function () {
+            Route::resource('leads', LeadController::class);
+            Route::post('/leads/{lead}/convert', [LeadController::class, 'convertToCustomer'])->name('leads.convert');
+            Route::get('/churn-risk', [LeadController::class, 'churnRisk'])->name('churn-risk');
+        });
+
+        // Access Control Routes
+        Route::prefix('access-control')->name('access-control.')->group(function () {
+            Route::get('/dashboard', [AccessControlController::class, 'dashboard'])->name('dashboard');
+            Route::get('/locks', [AccessControlController::class, 'locks'])->name('locks.index');
+            Route::put('/locks/{lock}', [AccessControlController::class, 'updateLock'])->name('locks.update');
+            Route::get('/logs', [AccessControlController::class, 'logs'])->name('logs.index');
+        });
 
         // Messages
         Route::get('/messages', function () {
