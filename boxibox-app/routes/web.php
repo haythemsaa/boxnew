@@ -10,6 +10,11 @@ use App\Http\Controllers\Tenant\CustomerController;
 use App\Http\Controllers\Tenant\ContractController;
 use App\Http\Controllers\Tenant\InvoiceController;
 use App\Http\Controllers\Tenant\PaymentController;
+use App\Http\Controllers\Portal\PortalDashboardController;
+use App\Http\Controllers\Portal\PortalContractController;
+use App\Http\Controllers\Portal\PortalInvoiceController;
+use App\Http\Controllers\Portal\PortalPaymentController;
+use App\Http\Controllers\Portal\PortalProfileController;
 use Inertia\Inertia;
 
 /*
@@ -18,9 +23,21 @@ use Inertia\Inertia;
 |--------------------------------------------------------------------------
 */
 
-// Home - Redirect based on auth status
+// Home - Redirect based on auth status and role
 Route::get('/', function () {
-    return Auth::check() ? redirect()->route('tenant.dashboard') : redirect()->route('login');
+    if (!Auth::check()) {
+        return redirect()->route('login');
+    }
+
+    $user = Auth::user();
+
+    // Redirect to portal if user is a client
+    if ($user->isClient()) {
+        return redirect()->route('portal.dashboard');
+    }
+
+    // Redirect to tenant dashboard for admins
+    return redirect()->route('tenant.dashboard');
 });
 
 /*
@@ -43,7 +60,15 @@ Route::middleware('guest')->group(function () {
 
         if (Auth::attempt($credentials, $request->boolean('remember'))) {
             $request->session()->regenerate();
-            return redirect()->intended(route('tenant.dashboard'));
+
+            $user = Auth::user();
+
+            // Redirect based on user role
+            $defaultRoute = $user->isClient()
+                ? route('portal.dashboard')
+                : route('tenant.dashboard');
+
+            return redirect()->intended($defaultRoute);
         }
 
         return back()->withErrors([
@@ -144,5 +169,33 @@ Route::middleware('auth')->group(function () {
         Route::get('/settings', function () {
             return Inertia::render('Tenant/Settings');
         })->name('settings');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Customer Portal Routes (Protected)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('portal')->name('portal.')->group(function () {
+        // Dashboard
+        Route::get('/dashboard', [PortalDashboardController::class, 'index'])->name('dashboard');
+
+        // Contracts
+        Route::get('/contracts', [PortalContractController::class, 'index'])->name('contracts.index');
+        Route::get('/contracts/{contract}', [PortalContractController::class, 'show'])->name('contracts.show');
+        Route::get('/contracts/{contract}/pdf', [PortalContractController::class, 'downloadPdf'])->name('contracts.pdf');
+
+        // Invoices
+        Route::get('/invoices', [PortalInvoiceController::class, 'index'])->name('invoices.index');
+        Route::get('/invoices/{invoice}', [PortalInvoiceController::class, 'show'])->name('invoices.show');
+        Route::get('/invoices/{invoice}/pdf', [PortalInvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
+
+        // Payments
+        Route::get('/payments', [PortalPaymentController::class, 'index'])->name('payments.index');
+        Route::get('/payments/{payment}', [PortalPaymentController::class, 'show'])->name('payments.show');
+
+        // Profile
+        Route::get('/profile', [PortalProfileController::class, 'edit'])->name('profile.edit');
+        Route::put('/profile', [PortalProfileController::class, 'update'])->name('profile.update');
     });
 });
