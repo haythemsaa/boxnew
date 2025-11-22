@@ -32,6 +32,14 @@ import LoyaltyScreen from '../screens/LoyaltyScreen';
 import PromotionsScreen from '../screens/PromotionsScreen';
 import PaymentRemindersScreen from '../screens/PaymentRemindersScreen';
 
+// Reservation Screens
+import SearchBoxesScreen from '../screens/SearchBoxesScreen';
+import BoxDetailsScreen from '../screens/BoxDetailsScreen';
+import ReservationsScreen from '../screens/ReservationsScreen';
+
+// Contract Termination
+import TerminateContractScreen from '../screens/TerminateContractScreen';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -174,6 +182,26 @@ const MainNavigator = () => {
         name="PaymentReminders"
         component={PaymentRemindersScreen}
         options={{ title: 'Rappels de paiement' }}
+      />
+      <Stack.Screen
+        name="SearchBoxes"
+        component={SearchBoxesScreen}
+        options={{ title: 'Rechercher un box' }}
+      />
+      <Stack.Screen
+        name="BoxDetails"
+        component={BoxDetailsScreen}
+        options={{ title: 'Détails du box' }}
+      />
+      <Stack.Screen
+        name="Reservations"
+        component={ReservationsScreen}
+        options={{ title: 'Mes réservations' }}
+      />
+      <Stack.Screen
+        name="TerminateContract"
+        component={TerminateContractScreen}
+        options={{ title: 'Résiliation de contrat' }}
       />
     </Stack.Navigator>
   );

@@ -202,6 +202,13 @@ const ContractDetailsScreen = ({ route, navigation }) => {
               title="Voir les factures"
               onPress={() => navigation.navigate('Invoices')}
               variant="outline"
+              style={styles.actionButton}
+            />
+            <Button
+              title="Demander la résiliation"
+              onPress={() => navigation.navigate('TerminateContract', { contract })}
+              variant="danger"
+              style={styles.actionButton}
             />
           </View>
         )}
@@ -280,6 +287,9 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginBottom: 24,
+  },
+  actionButton: {
+    marginBottom: 12,
   },
 });
 

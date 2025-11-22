@@ -126,6 +126,26 @@ const ProfileScreen = ({ navigation }) => {
             <Text style={styles.menuText}>Promotions</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Reservations')}
+          >
+            <Text style={styles.menuText}>Mes réservations</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('SearchBoxes')}
+          >
+            <Text style={styles.menuText}>Rechercher un box</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
         </Card>
 
         {/* Logout Button */}

@@ -48,11 +48,26 @@ Application mobile React Native pour la gestion des contrats de self-stockage Bo
 - ✅ Codes promotionnels
 - ✅ Conditions d'application
 
+### Réservations de box
+- ✅ Recherche de boxes disponibles
+- ✅ Filtres avancés (volume, site, caractéristiques)
+- ✅ Calcul de prix dynamique
+- ✅ Application de codes promo
+- ✅ Gestion des réservations
+- ✅ Annulation de réservation
+
+### Résiliation de contrat
+- ✅ Demande de résiliation en ligne
+- ✅ Formulaire avec date et motif
+- ✅ Informations de procédure
+- ✅ Suivi de la demande
+
 ### Autres fonctionnalités
 - ✅ Navigation intuitive avec onglets
 - ✅ Interface moderne et responsive
 - ✅ Gestion sécurisée des données
 - ✅ Mode offline (données en cache)
+- ✅ Actualisation automatique (Pull to refresh)
 
 ## 📋 Prérequis
 
