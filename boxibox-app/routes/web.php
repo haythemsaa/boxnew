@@ -212,6 +212,25 @@ Route::middleware('auth')->group(function () {
             Route::get('/logs', [AccessControlController::class, 'logs'])->name('logs.index');
         });
 
+        // Predictive Analytics Routes (ML/AI)
+        Route::prefix('analytics/predictive')->name('analytics.predictive.')->controller(\App\Http\Controllers\Tenant\PredictiveController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/occupation-forecast', 'occupationForecast')->name('occupation-forecast');
+            Route::get('/churn-predictions', 'churnPredictions')->name('churn-predictions');
+            Route::get('/upsell-opportunities', 'upsellOpportunities')->name('upsell-opportunities');
+            Route::post('/boxes/{box}/optimize-pricing', 'optimizePricing')->name('optimize-pricing');
+        });
+
+        // SMS Campaigns Routes (inside CRM)
+        Route::prefix('crm/campaigns')->name('crm.campaigns.')->controller(\App\Http\Controllers\Tenant\CampaignController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/create', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{campaign}', 'show')->name('show');
+            Route::post('/{campaign}/send', 'send')->name('send');
+            Route::delete('/{campaign}', 'destroy')->name('destroy');
+        });
+
         // Messages
         Route::get('/messages', function () {
             return Inertia::render('Tenant/Messages/Index');

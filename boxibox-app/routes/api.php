@@ -36,6 +36,14 @@ Route::post('/webhooks/stripe', [WebhookController::class, 'handleStripe'])->nam
 |--------------------------------------------------------------------------
 */
 
+/*
+|--------------------------------------------------------------------------
+| Public Chatbot API (No Auth Required)
+|--------------------------------------------------------------------------
+*/
+Route::post('/chatbot', [\App\Http\Controllers\API\ChatbotController::class, 'chat'])->name('api.chatbot.chat');
+Route::post('/chatbot/recommend-size', [\App\Http\Controllers\API\ChatbotController::class, 'recommendSize'])->name('api.chatbot.recommend-size');
+
 Route::prefix('v1')->group(function () {
     /*
     |--------------------------------------------------------------------------
