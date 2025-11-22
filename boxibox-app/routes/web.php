@@ -126,9 +126,11 @@ Route::middleware('auth')->group(function () {
 
         // Contracts (Resource Controller)
         Route::resource('contracts', ContractController::class);
+        Route::get('contracts/{contract}/pdf', [ContractController::class, 'downloadPdf'])->name('contracts.pdf');
 
         // Invoices (Resource Controller)
         Route::resource('invoices', InvoiceController::class);
+        Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
 
         // Payments (Resource Controller)
         Route::resource('payments', PaymentController::class);

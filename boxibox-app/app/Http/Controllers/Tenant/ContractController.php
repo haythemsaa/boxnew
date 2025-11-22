@@ -9,6 +9,7 @@ use App\Models\Contract;
 use App\Models\Site;
 use App\Models\Customer;
 use App\Models\Box;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -278,5 +279,34 @@ class ContractController extends Controller
         return redirect()
             ->route('tenant.contracts.index')
             ->with('success', 'Contract deleted successfully.');
+    }
+
+    /**
+     * Download the contract as PDF.
+     */
+    public function downloadPdf(Request $request, Contract $contract)
+    {
+        // Ensure tenant can only download their own contracts
+        if ($contract->tenant_id !== $request->user()->tenant_id) {
+            abort(403);
+        }
+
+        // Load relationships
+        $contract->load(['customer', 'box', 'site']);
+
+        // Get tenant information
+        $tenant = $request->user()->tenant;
+
+        // Generate PDF
+        $pdf = Pdf::loadView('pdf.contract', [
+            'contract' => $contract,
+            'tenant' => $tenant,
+        ]);
+
+        // Set paper size and orientation
+        $pdf->setPaper('a4', 'portrait');
+
+        // Return PDF for download
+        return $pdf->download("contract-{$contract->contract_number}.pdf");
     }
 }

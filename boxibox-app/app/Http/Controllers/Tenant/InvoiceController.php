@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Invoice;
 use App\Models\Customer;
 use App\Models\Contract;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
@@ -253,5 +254,34 @@ class InvoiceController extends Controller
         return redirect()
             ->route('tenant.invoices.index')
             ->with('success', 'Invoice deleted successfully.');
+    }
+
+    /**
+     * Download the invoice as PDF.
+     */
+    public function downloadPdf(Request $request, Invoice $invoice)
+    {
+        // Ensure tenant can only download their own invoices
+        if ($invoice->tenant_id !== $request->user()->tenant_id) {
+            abort(403);
+        }
+
+        // Load relationships
+        $invoice->load(['customer', 'contract.box', 'contract.site']);
+
+        // Get tenant information
+        $tenant = $request->user()->tenant;
+
+        // Generate PDF
+        $pdf = Pdf::loadView('pdf.invoice', [
+            'invoice' => $invoice,
+            'tenant' => $tenant,
+        ]);
+
+        // Set paper size and orientation
+        $pdf->setPaper('a4', 'portrait');
+
+        // Return PDF for download
+        return $pdf->download("invoice-{$invoice->invoice_number}.pdf");
     }
 }
