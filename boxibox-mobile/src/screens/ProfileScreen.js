@@ -62,24 +62,68 @@ const ProfileScreen = ({ navigation }) => {
           </Card>
         )}
 
-        {/* Menu Items */}
+        {/* Account Settings */}
         <Card>
-          <TouchableOpacity style={styles.menuItem}>
+          <Text style={styles.sectionTitle}>Mon compte</Text>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('EditProfile')}
+          >
             <Text style={styles.menuText}>Modifier le profil</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
 
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.menuItem}>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('ChangePassword')}
+          >
             <Text style={styles.menuText}>Changer le mot de passe</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
+        </Card>
+
+        {/* Other Features */}
+        <Card>
+          <Text style={styles.sectionTitle}>Services</Text>
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Issues')}
+          >
+            <Text style={styles.menuText}>Mes signalements</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
 
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.menuItem}>
-            <Text style={styles.menuText}>Notifications</Text>
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('PaymentReminders')}
+          >
+            <Text style={styles.menuText}>Rappels de paiement</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Loyalty')}
+          >
+            <Text style={styles.menuText}>Programme de fidélité</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('Promotions')}
+          >
+            <Text style={styles.menuText}>Promotions</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
         </Card>

@@ -18,6 +18,20 @@ import InvoicesScreen from '../screens/InvoicesScreen';
 import InvoiceDetailsScreen from '../screens/InvoiceDetailsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 
+// Profile & Account Screens
+import EditProfileScreen from '../screens/EditProfileScreen';
+import ChangePasswordScreen from '../screens/ChangePasswordScreen';
+
+// Issue Screens
+import IssuesScreen from '../screens/IssuesScreen';
+import IssueDetailsScreen from '../screens/IssueDetailsScreen';
+import CreateIssueScreen from '../screens/CreateIssueScreen';
+
+// Other Screens
+import LoyaltyScreen from '../screens/LoyaltyScreen';
+import PromotionsScreen from '../screens/PromotionsScreen';
+import PaymentRemindersScreen from '../screens/PaymentRemindersScreen';
+
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
@@ -120,6 +134,46 @@ const MainNavigator = () => {
         name="InvoiceDetails"
         component={InvoiceDetailsScreen}
         options={{ title: 'Détails de la facture' }}
+      />
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ title: 'Modifier le profil' }}
+      />
+      <Stack.Screen
+        name="ChangePassword"
+        component={ChangePasswordScreen}
+        options={{ title: 'Changer le mot de passe' }}
+      />
+      <Stack.Screen
+        name="Issues"
+        component={IssuesScreen}
+        options={{ title: 'Mes signalements' }}
+      />
+      <Stack.Screen
+        name="IssueDetails"
+        component={IssueDetailsScreen}
+        options={{ title: 'Détails du signalement' }}
+      />
+      <Stack.Screen
+        name="CreateIssue"
+        component={CreateIssueScreen}
+        options={{ title: 'Nouveau signalement' }}
+      />
+      <Stack.Screen
+        name="Loyalty"
+        component={LoyaltyScreen}
+        options={{ title: 'Programme de fidélité' }}
+      />
+      <Stack.Screen
+        name="Promotions"
+        component={PromotionsScreen}
+        options={{ title: 'Promotions' }}
+      />
+      <Stack.Screen
+        name="PaymentReminders"
+        component={PaymentRemindersScreen}
+        options={{ title: 'Rappels de paiement' }}
       />
     </Stack.Navigator>
   );

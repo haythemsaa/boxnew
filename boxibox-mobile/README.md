@@ -4,13 +4,55 @@ Application mobile React Native pour la gestion des contrats de self-stockage Bo
 
 ## 🚀 Fonctionnalités
 
-- ✅ Authentification (Login / Register)
-- ✅ Tableau de bord avec statistiques
-- ✅ Gestion des contrats
-- ✅ Consultation des factures
-- ✅ Gestion du profil utilisateur
-- ✅ Navigation intuitive avec onglets
+### Authentification & Profil
+- ✅ Connexion / Inscription
+- ✅ Modification du profil
+- ✅ Changement de mot de passe
+- ✅ Déconnexion sécurisée
+
+### Tableau de bord
+- ✅ Statistiques en temps réel
+- ✅ Vue d'ensemble des contrats actifs
 - ✅ Actualisation des données (Pull to refresh)
+
+### Gestion des contrats
+- ✅ Liste de tous les contrats
+- ✅ Détails complets de chaque contrat
+- ✅ Informations du box et du site
+
+### Gestion des factures
+- ✅ Liste de toutes les factures
+- ✅ Détails complets avec historique de paiement
+- ✅ Filtrage par statut
+
+### Signalements (Issues)
+- ✅ Création de nouveaux signalements
+- ✅ Liste de tous les signalements
+- ✅ Suivi du statut et de la résolution
+- ✅ Catégorisation par type et priorité
+
+### Rappels de paiement
+- ✅ Liste des rappels de paiement
+- ✅ Système de phases (amical, ferme, mise en demeure)
+- ✅ Accuser réception des rappels
+- ✅ Calcul automatique des pénalités
+
+### Programme de fidélité
+- ✅ Consultation du solde de points
+- ✅ Historique des transactions
+- ✅ Niveaux de fidélité
+- ✅ Avantages et réductions
+
+### Promotions
+- ✅ Liste des promotions actives
+- ✅ Codes promotionnels
+- ✅ Conditions d'application
+
+### Autres fonctionnalités
+- ✅ Navigation intuitive avec onglets
+- ✅ Interface moderne et responsive
+- ✅ Gestion sécurisée des données
+- ✅ Mode offline (données en cache)
 
 ## 📋 Prérequis
 
