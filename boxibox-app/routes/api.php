@@ -44,6 +44,19 @@ Route::post('/webhooks/stripe', [WebhookController::class, 'handleStripe'])->nam
 Route::post('/chatbot', [\App\Http\Controllers\API\ChatbotController::class, 'chat'])->name('api.chatbot.chat');
 Route::post('/chatbot/recommend-size', [\App\Http\Controllers\API\ChatbotController::class, 'recommendSize'])->name('api.chatbot.recommend-size');
 
+/*
+|--------------------------------------------------------------------------
+| Push Notifications API (Requires Auth)
+|--------------------------------------------------------------------------
+*/
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/notifications/register-token', [\App\Http\Controllers\API\NotificationController::class, 'registerToken'])->name('api.notifications.register');
+    Route::post('/notifications/unregister-token', [\App\Http\Controllers\API\NotificationController::class, 'unregisterToken'])->name('api.notifications.unregister');
+    Route::get('/notifications/tokens', [\App\Http\Controllers\API\NotificationController::class, 'getTokens'])->name('api.notifications.tokens');
+    Route::get('/notifications/preferences', [\App\Http\Controllers\API\NotificationController::class, 'getPreferences'])->name('api.notifications.preferences.get');
+    Route::put('/notifications/preferences', [\App\Http\Controllers\API\NotificationController::class, 'updatePreferences'])->name('api.notifications.preferences.update');
+});
+
 Route::prefix('v1')->group(function () {
     /*
     |--------------------------------------------------------------------------

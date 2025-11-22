@@ -83,6 +83,16 @@ const ProfileScreen = ({ navigation }) => {
             <Text style={styles.menuText}>Changer le mot de passe</Text>
             <Text style={styles.menuArrow}>›</Text>
           </TouchableOpacity>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.menuItem}
+            onPress={() => navigation.navigate('NotificationSettings')}
+          >
+            <Text style={styles.menuText}>Notifications</Text>
+            <Text style={styles.menuArrow}>›</Text>
+          </TouchableOpacity>
         </Card>
 
         {/* Other Features */}

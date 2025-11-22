@@ -41,4 +41,36 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4'),
+    ],
+
+    'twilio' => [
+        'account_sid' => env('TWILIO_ACCOUNT_SID'),
+        'auth_token' => env('TWILIO_AUTH_TOKEN'),
+        'from' => env('TWILIO_FROM'),
+    ],
+
+    'vonage' => [
+        'key' => env('VONAGE_KEY'),
+        'secret' => env('VONAGE_SECRET'),
+        'from' => env('VONAGE_SMS_FROM', 'BoxiBox'),
+    ],
+
+    'noke' => [
+        'api_key' => env('NOKE_API_KEY'),
+        'api_secret' => env('NOKE_API_SECRET'),
+    ],
+
+    'pti' => [
+        'api_key' => env('PTI_API_KEY'),
+        'api_url' => env('PTI_API_URL', 'https://api.ptisecurity.com'),
+    ],
+
+    'firebase' => [
+        'server_key' => env('FIREBASE_SERVER_KEY'),
+        'project_id' => env('FIREBASE_PROJECT_ID'),
+    ],
+
 ];

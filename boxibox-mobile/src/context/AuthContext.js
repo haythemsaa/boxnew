@@ -1,6 +1,7 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import authService from '../services/authService';
 import { storeToken, getToken, removeToken, storeUserData, getUserData, clearAll } from '../utils/storage';
+import { initializePushNotifications } from '../services/notificationService';
 
 const AuthContext = createContext({});
 
@@ -22,6 +23,11 @@ export const AuthProvider = ({ children }) => {
       if (token && userData) {
         setUser(userData);
         setIsAuthenticated(true);
+
+        // Initialize push notifications
+        initializePushNotifications().catch(err =>
+          console.log('Push notification init error:', err)
+        );
       } else {
         setUser(null);
         setIsAuthenticated(false);
@@ -50,6 +56,11 @@ export const AuthProvider = ({ children }) => {
         // Update state
         setUser(response.user);
         setIsAuthenticated(true);
+
+        // Initialize push notifications
+        initializePushNotifications().catch(err =>
+          console.log('Push notification init error:', err)
+        );
 
         return { success: true };
       } else {
@@ -80,6 +91,11 @@ export const AuthProvider = ({ children }) => {
         // Update state
         setUser(response.user);
         setIsAuthenticated(true);
+
+        // Initialize push notifications
+        initializePushNotifications().catch(err =>
+          console.log('Push notification init error:', err)
+        );
 
         return { success: true };
       } else {

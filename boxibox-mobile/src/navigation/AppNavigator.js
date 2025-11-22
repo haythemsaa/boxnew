@@ -21,6 +21,7 @@ import ProfileScreen from '../screens/ProfileScreen';
 // Profile & Account Screens
 import EditProfileScreen from '../screens/EditProfileScreen';
 import ChangePasswordScreen from '../screens/ChangePasswordScreen';
+import NotificationSettingsScreen from '../screens/NotificationSettingsScreen';
 
 // Issue Screens
 import IssuesScreen from '../screens/IssuesScreen';
@@ -152,6 +153,11 @@ const MainNavigator = () => {
         name="ChangePassword"
         component={ChangePasswordScreen}
         options={{ title: 'Changer le mot de passe' }}
+      />
+      <Stack.Screen
+        name="NotificationSettings"
+        component={NotificationSettingsScreen}
+        options={{ title: 'Paramètres des notifications' }}
       />
       <Stack.Screen
         name="Issues"
