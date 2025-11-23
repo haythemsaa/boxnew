@@ -9,14 +9,12 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('payments', function (Blueprint $table) {
-            $table->string('payment_gateway')->default('stripe')->after('payment_method'); // stripe, paypal, adyen, mollie
-            $table->string('gateway_payment_id')->nullable()->after('payment_gateway'); // Gateway-specific payment ID
-            $table->string('gateway_customer_id')->nullable()->after('gateway_payment_id'); // Gateway customer ID
-            $table->string('payment_intent_id')->nullable()->after('gateway_customer_id'); // Stripe payment intent
-            $table->boolean('auto_pay')->default(false)->after('status'); // Automatic payment enabled
-            $table->integer('retry_count')->default(0)->after('auto_pay'); // Number of retry attempts
-            $table->timestamp('next_retry_at')->nullable()->after('retry_count'); // Next retry date
-            $table->json('gateway_metadata')->nullable()->after('notes'); // Additional gateway data
+            // Note: gateway_payment_id and gateway_customer_id already exist in create_payments_table
+            $table->string('payment_intent_id')->nullable(); // Stripe payment intent
+            $table->boolean('auto_pay')->default(false); // Automatic payment enabled
+            $table->integer('retry_count')->default(0); // Number of retry attempts
+            $table->timestamp('next_retry_at')->nullable(); // Next retry date
+            $table->json('gateway_metadata')->nullable(); // Additional gateway data
         });
 
         // Create payment methods table for saved payment methods
@@ -46,9 +44,6 @@ return new class extends Migration
 
         Schema::table('payments', function (Blueprint $table) {
             $table->dropColumn([
-                'payment_gateway',
-                'gateway_payment_id',
-                'gateway_customer_id',
                 'payment_intent_id',
                 'auto_pay',
                 'retry_count',

@@ -35,7 +35,6 @@ return new class extends Migration
 
             $table->index(['tenant_id', 'sender_id']);
             $table->index(['tenant_id', 'recipient_id']);
-            $table->index('thread_id');
         });
     }
 

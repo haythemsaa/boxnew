@@ -62,8 +62,6 @@ return new class extends Migration
 
             $table->index(['tenant_id', 'customer_id']);
             $table->index(['tenant_id', 'status']);
-            $table->index('gateway_payment_id');
-            $table->index('payment_number');
         });
     }
 
