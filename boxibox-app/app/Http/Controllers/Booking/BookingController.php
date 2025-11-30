@@ -21,7 +21,7 @@ class BookingController extends Controller
      */
     public function index(Request $request): Response
     {
-        $sites = Site::where('status', 'active')
+        $sites = Site::where('is_active', true)
             ->select('id', 'name', 'city', 'address')
             ->get();
 

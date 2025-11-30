@@ -77,6 +77,11 @@ class Invoice extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function reminders(): HasMany
+    {
+        return $this->hasMany(PaymentReminder::class);
+    }
+
     // Scopes
     public function scopeOverdue($query)
     {

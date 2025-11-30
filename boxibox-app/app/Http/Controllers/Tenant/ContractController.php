@@ -9,6 +9,7 @@ use App\Models\Contract;
 use App\Models\Site;
 use App\Models\Customer;
 use App\Models\Box;
+use App\Services\ExcelExportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -37,7 +38,7 @@ class ContractController extends Controller
                                 ->orWhere('company_name', 'like', "%{$search}%");
                         })
                         ->orWhereHas('box', function ($q) use ($search) {
-                            $q->where('code', 'like', "%{$search}%");
+                            $q->where('number', 'like', "%{$search}%");
                         });
                 });
             })
@@ -97,8 +98,8 @@ class ContractController extends Controller
         $boxes = Box::where('tenant_id', $tenantId)
             ->where('status', 'available')
             ->with(['site', 'building', 'floor'])
-            ->select('id', 'code', 'site_id', 'building_id', 'floor_id', 'base_price')
-            ->orderBy('code')
+            ->select('id', 'number', 'site_id', 'building_id', 'floor_id', 'base_price')
+            ->orderBy('number')
             ->get();
 
         return Inertia::render('Tenant/Contracts/Create', [
@@ -197,8 +198,8 @@ class ContractController extends Controller
                     ->orWhere('id', $contract->box_id);
             })
             ->with(['site', 'building', 'floor'])
-            ->select('id', 'code', 'site_id', 'building_id', 'floor_id', 'base_price', 'status')
-            ->orderBy('code')
+            ->select('id', 'number', 'site_id', 'building_id', 'floor_id', 'base_price', 'status')
+            ->orderBy('number')
             ->get();
 
         return Inertia::render('Tenant/Contracts/Edit', [
@@ -308,5 +309,24 @@ class ContractController extends Controller
 
         // Return PDF for download
         return $pdf->download("contract-{$contract->contract_number}.pdf");
+    }
+
+    /**
+     * Export contracts to Excel (CSV).
+     */
+    public function export(Request $request, ExcelExportService $exportService)
+    {
+        $this->authorize('view_contracts');
+
+        $tenantId = $request->user()->tenant_id;
+        $status = $request->query('status');
+
+        $result = $exportService->exportContracts($tenantId, $status);
+        $csv = $exportService->generateCSV($result['data']);
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $result['filename'] . '"',
+        ]);
     }
 }

@@ -32,7 +32,7 @@ return new class extends Migration
             $table->string('status')->default('active'); // active, completed, unsubscribed, bounced
             $table->integer('current_step')->default(0);
             $table->timestamp('next_send_at')->nullable();
-            $table->timestamp('enrolled_at');
+            $table->timestamp('enrolled_at')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();
 

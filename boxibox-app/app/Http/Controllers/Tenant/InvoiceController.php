@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Invoice;
 use App\Models\Customer;
 use App\Models\Contract;
+use App\Services\ExcelExportService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -283,5 +284,24 @@ class InvoiceController extends Controller
 
         // Return PDF for download
         return $pdf->download("invoice-{$invoice->invoice_number}.pdf");
+    }
+
+    /**
+     * Export invoices to Excel (CSV).
+     */
+    public function export(Request $request, ExcelExportService $exportService)
+    {
+        $this->authorize('view_invoices');
+
+        $tenantId = $request->user()->tenant_id;
+        $status = $request->query('status');
+
+        $result = $exportService->exportInvoices($tenantId, $status);
+        $csv = $exportService->generateCSV($result['data']);
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $result['filename'] . '"',
+        ]);
     }
 }

@@ -29,7 +29,11 @@ class SiteController extends Controller
                 });
             })
             ->when($request->status, function ($query, $status) {
-                $query->where('status', $status);
+                if ($status === 'active') {
+                    $query->where('is_active', true);
+                } elseif ($status === 'inactive') {
+                    $query->where('is_active', false);
+                }
             })
             ->withCount('boxes')
             ->latest()
@@ -38,7 +42,7 @@ class SiteController extends Controller
 
         $stats = [
             'total' => Site::where('tenant_id', $tenantId)->count(),
-            'active' => Site::where('tenant_id', $tenantId)->where('status', 'active')->count(),
+            'active' => Site::where('tenant_id', $tenantId)->where('is_active', true)->count(),
             'total_boxes' => \App\Models\Box::where('tenant_id', $tenantId)->count(),
         ];
 

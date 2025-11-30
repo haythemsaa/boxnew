@@ -27,13 +27,11 @@ class DemoTenantSeeder extends Seeder
             'city' => 'Paris',
             'postal_code' => '75001',
             'country' => 'France',
-            'primary_color' => '#3b82f6',
-            'secondary_color' => '#1e40af',
             'plan' => 'professional',
             'max_sites' => 10,
             'max_boxes' => 500,
             'max_users' => 20,
-            'status' => 'active',
+            'is_active' => true,
             'trial_ends_at' => now()->addDays(30),
             'subscription_ends_at' => now()->addYear(),
             'settings' => [
@@ -41,6 +39,8 @@ class DemoTenantSeeder extends Seeder
                 'timezone' => 'Europe/Paris',
                 'language' => 'fr',
                 'date_format' => 'd/m/Y',
+                'primary_color' => '#3b82f6',
+                'secondary_color' => '#1e40af',
             ],
             'features' => [
                 'floor_plan_editor',

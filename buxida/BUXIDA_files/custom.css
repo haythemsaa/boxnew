@@ -1,0 +1,1114 @@
+
+/* bouton tableau de bord */
+.cta1 {
+  position: relative;
+  margin: auto;
+  padding: 12px 18px;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.cta1:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  border-radius: 50px;
+  background: #2ab4c0;
+  width: 45px;
+  height: 45px;
+  transition: all 0.3s ease;
+}
+
+.cta1 span {
+  position: relative;
+  font-family: "Ubuntu", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #234567;
+}
+
+.cta1 svg {
+  position: relative;
+  top: 0;
+  margin-left: 10px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: #234567;
+  stroke-width: 2;
+  transform: translateX(-5px);
+  transition: all 0.3s ease;
+}
+
+.cta1:hover:before {
+  width: 100%;
+  background: #2ab4c0;
+}
+
+.cta1:hover svg {
+  transform: translateX(0);
+}
+
+.cta1:active {
+  transform: scale(0.95);
+}
+
+.cta2 {
+  position: relative;
+  margin: auto;
+  padding: 12px 18px;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.cta2:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  border-radius: 50px;
+  background: #FCCB67;
+  width: 45px;
+  height: 45px;
+  transition: all 0.3s ease;
+}
+
+.cta2 span {
+  position: relative;
+  font-family: "Ubuntu", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #234567;
+}
+
+.cta2 svg {
+  position: relative;
+  top: 0;
+  margin-left: 10px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: #234567;
+  stroke-width: 2;
+  transform: translateX(-5px);
+  transition: all 0.3s ease;
+}
+
+.cta2:hover:before {
+  width: 100%;
+  background: #FCCB67;
+}
+
+.cta2:hover svg {
+  transform: translateX(0);
+}
+
+.cta2:active {
+  transform: scale(0.95);
+}
+
+.cta3 {
+  position: relative;
+  margin: auto;
+  padding: 12px 18px;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.cta3:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  border-radius: 50px;
+  background: #6CC2D9;
+  width: 45px;
+  height: 45px;
+  transition: all 0.3s ease;
+}
+
+.cta3 span {
+  position: relative;
+  font-family: "Ubuntu", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #234567;
+}
+
+.cta3 svg {
+  position: relative;
+  top: 0;
+  margin-left: 10px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: #234567;
+  stroke-width: 2;
+  transform: translateX(-5px);
+  transition: all 0.3s ease;
+}
+
+.cta3:hover:before {
+  width: 100%;
+  background: #6CC2D9;
+}
+
+.cta3:hover svg {
+  transform: translateX(0);
+}
+
+.cta3:active {
+  transform: scale(0.95);
+}
+
+.cta4 {
+  position: relative;
+  margin: auto;
+  padding: 12px 18px;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.cta4:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  border-radius: 50px;
+  background: #F5C7A9;
+  width: 45px;
+  height: 45px;
+  transition: all 0.3s ease;
+}
+
+.cta4 span {
+  position: relative;
+  font-family: "Ubuntu", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #234567;
+}
+
+.cta4 svg {
+  position: relative;
+  top: 0;
+  margin-left: 10px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: #234567;
+  stroke-width: 2;
+  transform: translateX(-5px);
+  transition: all 0.3s ease;
+}
+
+.cta4:hover:before {
+  width: 100%;
+  background: #F5C7A9;
+}
+
+.cta4:hover svg {
+  transform: translateX(0);
+}
+
+.cta4:active {
+  transform: scale(0.95);
+}
+
+.cta5 {
+  position: relative;
+  margin: auto;
+  padding: 12px 18px;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.cta5:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  border-radius: 50px;
+  background: #98CCC1;
+  width: 45px;
+  height: 45px;
+  transition: all 0.3s ease;
+}
+
+.cta5 span {
+  position: relative;
+  font-family: "Ubuntu", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #234567;
+}
+
+.cta5 svg {
+  position: relative;
+  top: 0;
+  margin-left: 10px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: #234567;
+  stroke-width: 2;
+  transform: translateX(-5px);
+  transition: all 0.3s ease;
+}
+
+.cta5:hover:before {
+  width: 100%;
+  background: #98CCC1;
+}
+
+.cta5:hover svg {
+  transform: translateX(0);
+}
+
+.cta5:active {
+  transform: scale(0.95);
+}
+
+.cta6 {
+  position: relative;
+  margin: auto;
+  padding: 12px 18px;
+  transition: all 0.2s ease;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.cta6:before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+  border-radius: 50px;
+  background: #8399c2;
+  width: 45px;
+  height: 45px;
+  transition: all 0.3s ease;
+}
+
+.cta6 span {
+  position: relative;
+  font-family: "Ubuntu", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: #234567;
+}
+
+.cta6 svg {
+  position: relative;
+  top: 0;
+  margin-left: 10px;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke: #234567;
+  stroke-width: 2;
+  transform: translateX(-5px);
+  transition: all 0.3s ease;
+}
+
+.cta6:hover:before {
+  width: 100%;
+  background: #8399c2;
+}
+
+.cta6:hover svg {
+  transform: translateX(0);
+}
+
+.cta6:active {
+  transform: scale(0.95);
+}
+/* Fin bouton tableau de bord */
+
+
+.card {
+  position: relative;
+   padding: 20px;
+  box-shadow: 3px 10px 20px rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  border: 0;
+  .circlecard {
+    border-radius: 3px;
+    width: 43px;
+    height: 76px;
+    background: black;
+    position: absolute;
+    right: 0px;
+    top: 0;
+    background-image: linear-gradient(to top, #fbc2eb 0%, #a6c1ee 100%);
+    border-bottom-left-radius: 170px;
+  }
+  .contentcard {
+    margin-top: 25px;
+    display: flex;
+    flex-direction: column;
+  }
+  h1card {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 0;
+  }
+  h2card {
+    font-size: 18px;
+    letter-spacing: 0.5px;
+    font-weight: 200;
+  }
+  .elemcard {
+    margin-bottom: 5px;
+      a {
+   text-decoration: none !important;
+   color: black;
+    margin-left: 8px;
+    font-weight: 300;
+    i {
+      font-weight: 400;
+    }
+  }
+  }
+  .location {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    i {
+      color: red;
+    }
+    p {
+      font-weight: 300;
+    }
+  }
+  }
+.page-header .page-header-top .page-logoB {
+    float: left;
+    display: block;
+    height: 75px
+}
+
+.page-header .page-header-top .page-logoB .logo-default {
+    margin: 2px 0 0
+}
+
+.iban {
+    width: 300px;
+    padding: 5px;
+    text-transform: uppercase;
+    font-size: 14px;
+}
+
+    #bounce-loader{
+        margin: 50% auto;
+    }
+
+    div#previsualisation{
+        position: fixed;
+        z-index: 9999;
+        right: -150%;
+        width: 40%;
+        height: 100%;
+        top: 1%;
+        box-shadow: -2px 4px 13px 1px #8d8d8d;
+        background-color: white;
+        border-radius: 5px 0px 0px 0px;
+    }
+
+    div.previsuTopBar{
+        background-color: #67809f;
+        color: white; 
+        padding-top: 10px;  
+        padding-bottom: 5px;
+        border-radius: 5px 0px 0px 0px;
+        height: 45px;
+
+    }
+
+    div#previsualisation .ti-close{
+        font-size: 2em;
+        position: absolute;
+        left: 10px;
+        top : 10px;
+    }
+
+    div#previsualisation iframe{
+        border: none;
+    }
+
+
+    @media (min-width: 992px) and (max-width: 1200px){
+        div#previsualisation{
+            width: 55%;
+        }
+    }
+
+    @media (min-width: 768px) and (max-width: 992px){
+        div#previsualisation{
+            width: 70%;
+        }
+    }
+
+    @media (max-width: 768px){
+        div#previsualisation{
+            width: 100%;
+        }
+
+    }
+
+    @media (max-width: 450px){
+        div#previsualisation{
+            position: absolute;
+            box-shadow: none;
+            top: 5px;
+        }
+
+    }
+.upload-buttons input[type="file"] {
+    width: 6.3em \0/ IE9;
+}
+
+.upload-button {
+    Height: 26px;
+    line-height: 30px;
+    padding: 0 10px;
+    background: #CCC;
+    appearance: button;
+    -moz-appearance: button; /* Firefox */
+    -webkit-appearance: button; /* Safari and Chrome */
+    position: relative;
+    text-align: center;
+    top: 7px;
+    cursor: pointer;
+}
+
+.sel-file {
+    padding: 1px 5px;
+    font-size: smaller;
+    color: grey;
+}
+
+.response {
+    padding: 0;
+    padding-top: 10px;
+    margin: 3px 0;
+    clear: both;
+    list-style: none;
+}
+
+.response .sel-file li, .response .reqh {
+    color: blue;
+    padding-bottom: 5px;
+}
+
+fieldset {
+    border: 1px solid #DDD;
+    width: 620px;
+    padding: 10px;
+    line-height: 23px;
+}
+
+fieldset label {
+    /*font-size: smaller;*/
+}
+/* 
+.progress {
+    display: inline-block;
+    width: 100px;
+    border: 3px groove #CCC;
+    margin-left: 50px;
+}
+
+.progress div {
+    font-size: smaller;
+    background: blue;
+    width: 0;
+}
+*/
+.drop-box {
+    background: #F8F8F8;
+    border: 5px dashed #DDD;
+    width: 90%;
+    text-align: center;
+    padding: 50px 50px;
+    margin-left: 50px;
+}
+
+.up-buttons {
+    float: right;
+}
+
+.drop-box.dragover {
+    border: 5px dashed blue;
+}
+
+.drop-box.dragover-err {
+    border: 5px dashed red;
+}
+
+/* for IE*/
+.js-fileapi-wrapper {
+    display: inline-block;
+    vertical-align: middle;
+}
+
+button {
+    padding: 1px 5px;
+    font-size: smaller;
+    margin: 0 3px;
+}
+
+.ng-v {
+    float: right;
+}
+
+.thumb {
+    float: left;
+    width: 18px;
+    height: 18px;
+    padding-right: 10px;
+}
+
+.thumb {
+    width: 24px;
+    height: 24px;
+    float: none;
+    position: relative;
+    top: 7px;
+}
+
+.progress {
+    line-height: 15px;
+}
+
+.edit-area {
+    font-size: 14px;
+    background: black;
+    color: #f9f9f9;
+    padding: 5px 1px;
+}
+
+#htmlEdit {
+    margin-bottom: 25px;
+}
+
+.edit-div {
+    font-size: smaller;
+}
+
+.CodeMirror {
+    font-size: 14px;
+    border: 1px solid #ccc;
+    margin-bottom: 15px;
+}
+
+form button {
+    padding: 3px 10px;
+    font-weight: bold;
+    margin-top: 10px;
+}
+
+.sub {
+    font-size: smaller;
+    color: #777;
+    padding-top: 5px;
+    padding-left: 25px;
+}
+
+.err {
+    font-size: 12px;
+    color: #C53F00;
+    margin: 15px;
+    padding: 15px;
+    background-color: #F0F0F0;
+    border: 1px solid black;
+}
+
+.s3 {
+    font-size: smaller;
+    color: #333;
+    margin-left: 20px;
+}
+
+.s3 fieldset {
+    border: 1px solid #AAA;
+}
+
+.s3 label {
+    width: 180px;
+    display: inline-block;
+}
+
+.s3 input {
+    width: 300px;
+}
+
+.s3 .helper {
+    margin-left: 5px;
+}
+
+.howto {
+    margin-left: 10px;
+    line-height: 20px;
+}
+
+.server {
+    margin-bottom: 20px;
+}
+
+.srv-title {
+    font-weight: bold;
+    padding: 5px 0 10px 0;
+}
+
+:not(output):-moz-ui-invalid {
+    box-shadow: none;
+}
+
+.preview {
+    clear: both;
+}
+
+.preview img, .preview audio, .preview video {
+    max-width: 300px;
+    max-height: 150px;
+    float: right;
+}
+
+
+#loader {
+  /* Uncomment this to make it run! */
+  /*
+     animation: loader 5s linear infinite; 
+  */
+  
+  position: absolute;
+  top: calc(50% - 20px);
+  left: calc(50% - 20px);
+}
+@keyframes loader {
+  0% { left: -100px }
+  100% { left: 110%; }
+}
+#box {
+  width: 50px;
+  height: 50px;
+  background: #fff;
+  animation: animate .5s linear infinite;
+  position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 3px;
+}
+@keyframes animate {
+  17% { border-bottom-right-radius: 3px; }
+  25% { transform: translateY(9px) rotate(22.5deg); }
+  50% {
+    transform: translateY(18px) scale(1,.9) rotate(45deg) ;
+    border-bottom-right-radius: 40px;
+  }
+  75% { transform: translateY(9px) rotate(67.5deg); }
+  100% { transform: translateY(0) rotate(90deg); }
+} 
+#shadow { 
+  width: 50px;
+  height: 5px;
+  background: #000;
+  opacity: 0.1;
+  position: absolute;
+  top: 59px;
+  left: 0;
+  border-radius: 50%;
+  animation: shadow .5s linear infinite;
+}
+@keyframes shadow {
+  50% {
+    transform: scale(1.2,1);
+  }
+}
+
+
+#bodyloader {
+  background: #6997DB; 
+  overflow: hidden;
+}
+#h4 {
+  position: absolute;
+  bottom: 20px;
+  left: 20px;
+  margin: 0;
+  font-weight: 200;
+  opacity: .5;
+	font-family: sans-serif;
+  color: #fff;
+}
+/***
+Notes
+***/
+.note {
+  margin: 0 0 20px 0;
+  padding: 15px 30px 15px 15px;
+  border-left: 5px solid #eee;
+  -webkit-border-radius: 0 4px 4px 0;
+  -moz-border-radius: 0 4px 4px 0;
+  -ms-border-radius: 0 4px 4px 0;
+  -o-border-radius: 0 4px 4px 0;
+  border-radius: 0 4px 4px 0; }
+  .note h1,
+  .note h2,
+  .note h3,
+  .note h4,
+  .note h5,
+  .note h6 {
+    margin-top: 0; }
+    .note h1 .close,
+    .note h2 .close,
+    .note h3 .close,
+    .note h4 .close,
+    .note h5 .close,
+    .note h6 .close {
+      margin-right: -10px; }
+  .note p {
+    margin: 0;
+    font-size: 13px; }
+    .note p:last-child {
+      margin-bottom: 0; }
+  .note code,
+  .note .highlight {
+    background-color: #fff; }
+  .note.note-default {
+    background-color: white;
+    border-color: #b0c1d2;
+    color: black; }
+    .note.note-default.note-bordered {
+      background-color: #eef1f5;
+      border-color: #c0cedb; }
+    .note.note-default.note-shadow {
+      background-color: #f1f4f7;
+      border-color: #d1dbe4;
+      box-shadow: 5px 5px rgba(212, 221, 230, 0.2); }
+  .note.note-success {
+    background-color: #c0edf1;
+    border-color: #58d0da;
+    color: black; }
+    .note.note-success.note-bordered {
+      background-color: #a7e6ec;
+      border-color: #6dd6df; }
+    .note.note-success.note-shadow {
+      background-color: #abe7ed;
+      border-color: #81dbe3;
+      box-shadow: 5px 5px rgba(134, 221, 228, 0.2); }
+  .note.note-info {
+    background-color: #f5f8fd;
+    border-color: #8bb4e7;
+    color: #010407; }
+    .note.note-info.note-bordered {
+      background-color: #dbe8f8;
+      border-color: #a0c2ec; }
+    .note.note-info.note-shadow {
+      background-color: #e0ebf9;
+      border-color: #b5cff0;
+      box-shadow: 5px 5px rgba(185, 210, 241, 0.2); }
+  .note.note-warning {
+    background-color: #faeaa9;
+    border-color: #f3cc31;
+    color: black; }
+    .note.note-warning.note-bordered {
+      background-color: #f8e38c;
+      border-color: #f4d249; }
+    .note.note-warning.note-shadow {
+      background-color: #f9e491;
+      border-color: #f6d861;
+      box-shadow: 5px 5px rgba(246, 217, 102, 0.2); }
+  .note.note-danger {
+    background-color: #fef7f8;
+    border-color: #f0868e;
+    color: #210406; }
+    .note.note-danger.note-bordered {
+      background-color: #fbdcde;
+      border-color: #f39da3; }
+    .note.note-danger.note-shadow {
+      background-color: #fbe1e3;
+      border-color: #f6b3b8;
+      box-shadow: 5px 5px rgba(246, 184, 189, 0.2); }
+
+/* NEW */
+.admin-toolbar {
+    position: fixed;
+    top: 100px;
+    right: 20px;
+    z-index: 1000;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    transition: all 0.3s ease;
+}
+
+.admin-toolbar .toolbar-header {
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.admin-toolbar .btn-group {
+    display: block;
+    margin-bottom: 10px;
+}
+
+.admin-toolbar .btn-group:last-child {
+    margin-bottom: 0;
+}
+
+/* Curseur pour indiquer le mode */
+[id^="plan_div"] {
+    cursor: crosshair;
+}
+
+[id^="plan_div"] image {
+    cursor: pointer;
+}
+
+[id^="plan_div"] image[data-ftStatus="1"] {
+    cursor: move;
+}
+
+/* ============================================ */
+/* STYLES POUR LA VALIDATION DES SELECT2 */
+/* ============================================ */
+
+/* Astérisque obligatoire */
+.required {
+    color: #e73d4a;
+    font-weight: bold;
+    margin-left: 2px;
+}
+
+/* Groupe de formulaire avec erreur */
+.form-group.has-error label {
+    color: #e73d4a;
+}
+
+/* Select2 avec erreur */
+.has-error .select2-container--default .select2-selection--single {
+    border-color: #e73d4a !important;
+    box-shadow: 0 0 0 0.2rem rgba(231, 61, 74, 0.25);
+}
+
+.has-error .select2-container--default .select2-selection--single:focus,
+.has-error .select2-container--default .select2-selection--single:hover {
+    border-color: #d32535 !important;
+}
+
+/* Message d'aide (erreur) */
+.help-block {
+    color: #e73d4a;
+    font-size: 12px;
+    margin-top: 5px;
+    display: block;
+    font-style: italic;
+}
+
+/* Animation pour l'apparition du message d'erreur */
+.help-block.ng-enter {
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ============================================ */
+/* STYLES POUR L'OPTION PAR DÉFAUT */
+/* ============================================ */
+
+/* Option "Merci de faire une sélection" en italique et grisé */
+.select2-results__option[aria-disabled="true"],
+select option[disabled] {
+    color: #999 !important;
+    font-style: italic;
+    cursor: not-allowed;
+}
+
+/* Style du placeholder dans Select2 */
+.select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #999;
+    font-style: italic;
+}
+
+/* Option sélectionnée par défaut (value="0") */
+.select2-selection__rendered[title="Merci de faire une sélection"] {
+    color: #999 !important;
+    font-style: italic;
+}
+
+/* ============================================ */
+/* STYLES POUR LES BOUTONS */
+/* ============================================ */
+
+/* Bouton désactivé quand formulaire invalide */
+.btn[disabled],
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Animation du bouton au survol (quand activé) */
+.btn:not([disabled]):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+}
+
+/* ============================================ */
+/* STYLES POUR LES TOOLTIPS DE VALIDATION */
+/* ============================================ */
+
+/* Tooltip personnalisé pour erreurs */
+.validation-tooltip {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1000;
+    margin-top: 5px;
+    padding: 5px 10px;
+    background-color: #e73d4a;
+    color: white;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.validation-tooltip::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: 20px;
+    border: 5px solid transparent;
+    border-bottom-color: #e73d4a;
+}
+
+/* ============================================ */
+/* STYLES POUR SELECT2 READONLY/DISABLED */
+/* ============================================ */
+
+/* Select2 en lecture seule */
+.select2-container--disabled .select2-selection--single {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+}
+
+.select2-container--disabled .select2-selection__rendered {
+    color: #999;
+}
+
+/* ============================================ */
+/* AMÉLIORATION VISUELLE GÉNÉRALE */
+/* ============================================ */
+
+/* Focus sur Select2 */
+.select2-container--default.select2-container--focus .select2-selection--single {
+    border-color: #66afe9;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(102, 175, 233, 0.25);
+}
+
+/* Select2 valide (optionnel, pour feedback positif) */
+.has-success .select2-container--default .select2-selection--single {
+    border-color: #5cb85c;
+}
+
+.has-success .select2-container--default .select2-selection--single:focus {
+    border-color: #5cb85c;
+    box-shadow: 0 0 0 0.2rem rgba(92, 184, 92, 0.25);
+}
+
+/* ============================================ */
+/* RESPONSIVE */
+/* ============================================ */
+
+@media (max-width: 768px) {
+    .help-block {
+        font-size: 11px;
+    }
+    
+    .validation-tooltip {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+}
+
+
+/* ============================================ */
+/* PRINT STYLES */
+/* ============================================ */
+
+@media print {
+    .help-block,
+    .validation-tooltip {
+        display: none !important;
+    }
+    
+    .has-error .select2-container--default .select2-selection--single {
+        border-color: #000 !important;
+    }
+}
+
+/* ============================================ */
+/* ANIMATIONS ADDITIONNELLES */
+/* ============================================ */
+
+/* Shake animation pour erreur */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+}
+
+.has-error.animate-shake {
+    animation: shake 0.5s ease;
+}
+
+/* Pulse animation pour focus */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(102, 175, 233, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(102, 175, 233, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(102, 175, 233, 0); }
+}
+
+.select2-container--default.select2-container--focus .select2-selection--single.animate-pulse {
+    animation: pulse 1.5s infinite;
+}

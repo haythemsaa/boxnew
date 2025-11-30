@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCustomerRequest;
 use App\Http\Requests\UpdateCustomerRequest;
 use App\Models\Customer;
+use App\Services\ExcelExportService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -158,5 +159,23 @@ class CustomerController extends Controller
         return redirect()
             ->route('tenant.customers.index')
             ->with('success', 'Customer deleted successfully.');
+    }
+
+    /**
+     * Export customers to Excel (CSV).
+     */
+    public function export(Request $request, ExcelExportService $exportService)
+    {
+        $this->authorize('view_customers');
+
+        $tenantId = $request->user()->tenant_id;
+
+        $result = $exportService->exportCustomers($tenantId);
+        $csv = $exportService->generateCSV($result['data']);
+
+        return response($csv, 200, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $result['filename'] . '"',
+        ]);
     }
 }

@@ -159,7 +159,7 @@
                                         'bg-yellow-100 text-yellow-800': site.status === 'maintenance'
                                     }"
                                 >
-                                    {{ site.status.charAt(0).toUpperCase() + site.status.slice(1) }}
+                                    {{ site.status ? (site.status.charAt(0).toUpperCase() + site.status.slice(1)) : 'Unknown' }}
                                 </span>
                             </td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

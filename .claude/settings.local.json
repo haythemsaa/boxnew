@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone:*)",
+      "Bash(php -v:*)",
+      "Bash(composer:*)",
+      "Bash(php -r:*)",
+      "Bash(php:*)",
+      "Bash(npm install:*)",
+      "Bash(mysql:*)",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"CREATE DATABASE IF NOT EXISTS boxibox CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
+      "Bash(timeout 120 php artisan:*)",
+      "Bash(timeout 180 php artisan:*)",
+      "Bash(npm run build)",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; SELECT COUNT(*) as users FROM users; SELECT COUNT(*) as tenants FROM tenants; SELECT COUNT(*) as roles FROM roles;\")",
+      "Bash(timeout 30 php artisan tinker:*)",
+      "Bash(timeout 300 php artisan:*)",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; SELECT id, code, tenant_id FROM sites WHERE code IN (''DEMO-MAIN'', ''DEMO-NORTH'');\")",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; SELECT COUNT(*) as sites FROM sites; SELECT COUNT(*) as boxes FROM boxes; SELECT COUNT(*) as customers FROM customers; SELECT COUNT(*) as contracts FROM contracts; SELECT COUNT(*) as invoices FROM invoices; SELECT COUNT(*) as payments FROM payments;\")",
+      "WebSearch",
+      "Bash(dir \"C:\\xampp2025\\htdocs\\boxnew\")",
+      "Bash(findstr:*)",
+      "Bash(dir:*)",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; DROP TABLE IF EXISTS migrations; CREATE TABLE migrations (id int unsigned NOT NULL AUTO_INCREMENT, migration varchar(255) NOT NULL, batch int NOT NULL, PRIMARY KEY (id)) ENGINE=InnoDB;\")",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; ALTER TABLE migrations DISCARD TABLESPACE;\")",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; DROP TABLE IF EXISTS migrations;\")",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"DROP DATABASE IF EXISTS boxibox; CREATE DATABASE boxibox CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\")",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; SELECT COUNT(*) as prospects FROM prospects; SELECT COUNT(*) as signatures FROM signatures; SELECT COUNT(*) as sepa_mandates FROM sepa_mandates; SELECT COUNT(*) as payment_reminders FROM payment_reminders;\")",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; SELECT id, name, slug FROM tenants; SELECT id, name, email, tenant_id FROM users LIMIT 5;\")",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"SELECT 1\")",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"SELECT 1 as test\")",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; DESCRIBE contracts;\")",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; DESCRIBE invoices;\")",
+      "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; SELECT COUNT(*) as tenants FROM tenants; SELECT COUNT(*) as sites FROM sites; SELECT COUNT(*) as boxes FROM boxes; SELECT COUNT(*) as customers FROM customers; SELECT COUNT(*) as contracts FROM contracts; SELECT COUNT(*) as invoices FROM invoices;\")",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

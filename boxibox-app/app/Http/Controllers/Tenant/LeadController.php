@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Tenant;
 use App\Http\Controllers\Controller;
 use App\Services\CRMService;
 use App\Models\Lead;
+use App\Models\Site;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -34,6 +36,51 @@ class LeadController extends Controller
         return Inertia::render('Tenant/CRM/Leads/Index', [
             'leads' => $leads,
             'analytics' => $analytics,
+        ]);
+    }
+
+    /**
+     * Show create form
+     */
+    public function create(Request $request)
+    {
+        $tenantId = $request->user()->tenant_id;
+
+        return Inertia::render('Tenant/CRM/Leads/Create', [
+            'sites' => Site::where('tenant_id', $tenantId)->get(['id', 'name']),
+            'users' => User::where('tenant_id', $tenantId)->get(['id', 'name']),
+        ]);
+    }
+
+    /**
+     * Show lead details
+     */
+    public function show(Request $request, Lead $lead)
+    {
+        $this->authorize('view', $lead);
+
+        $lead->load(['site', 'assignedTo']);
+
+        return Inertia::render('Tenant/CRM/Leads/Show', [
+            'lead' => $lead,
+            'activities' => [], // Could be lead activities/history
+            'users' => User::where('tenant_id', $request->user()->tenant_id)->get(['id', 'name']),
+        ]);
+    }
+
+    /**
+     * Show edit form
+     */
+    public function edit(Request $request, Lead $lead)
+    {
+        $this->authorize('update', $lead);
+
+        $tenantId = $request->user()->tenant_id;
+
+        return Inertia::render('Tenant/CRM/Leads/Edit', [
+            'lead' => $lead,
+            'sites' => Site::where('tenant_id', $tenantId)->get(['id', 'name']),
+            'users' => User::where('tenant_id', $tenantId)->get(['id', 'name']),
         ]);
     }
 

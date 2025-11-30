@@ -10,6 +10,9 @@ use App\Models\Customer;
 use App\Models\Contract;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Prospect;
+use App\Models\Signature;
+use App\Services\DynamicPricingService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -28,7 +31,7 @@ class DashboardController extends Controller
         $stats = [
             // Sites
             'total_sites' => Site::where('tenant_id', $tenantId)->count(),
-            'active_sites' => Site::where('tenant_id', $tenantId)->where('status', 'active')->count(),
+            'active_sites' => Site::where('tenant_id', $tenantId)->where('is_active', true)->count(),
 
             // Boxes
             'total_boxes' => Box::where('tenant_id', $tenantId)->count(),
@@ -88,8 +91,94 @@ class DashboardController extends Controller
             ? round(($stats['occupied_boxes'] / $stats['total_boxes']) * 100, 2)
             : 0;
 
+        // Additional stats for new Dashboard
+        $stats['reserved_boxes'] = Box::where('tenant_id', $tenantId)->where('status', 'reserved')->count();
+
+        // Overdue amount
+        $stats['overdue_amount'] = Invoice::where('tenant_id', $tenantId)
+            ->where('status', 'overdue')
+            ->sum('total');
+
+        // Last month revenue for comparison
+        $lastMonthStart = now()->subMonth()->startOfMonth();
+        $lastMonthEnd = now()->subMonth()->endOfMonth();
+        $stats['last_month_revenue'] = Payment::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->where('type', 'payment')
+            ->whereBetween('paid_at', [$lastMonthStart, $lastMonthEnd])
+            ->sum('amount');
+
+        // New customers this month
+        $monthStart = now()->startOfMonth();
+        $stats['new_customers_this_month'] = Customer::where('tenant_id', $tenantId)
+            ->where('created_at', '>=', $monthStart)
+            ->count();
+
+        // Pending actions count (expiring contracts + overdue invoices + pending signatures)
+        $stats['pending_actions'] = $stats['expiring_soon'] + $stats['overdue_invoices'];
+
+        // Advanced KPIs
+        // RevPAU - Revenue Per Available Unit
+        $stats['revpau'] = $stats['total_boxes'] > 0
+            ? round($stats['monthly_revenue'] / $stats['total_boxes'], 2)
+            : 0;
+
+        // Average contract value
+        $stats['average_contract_value'] = $stats['active_contracts'] > 0
+            ? round($stats['monthly_revenue'] / $stats['active_contracts'], 2)
+            : 0;
+
+        // Churn rate (contracts terminated this month / total active contracts)
+        $terminatedThisMonth = Contract::where('tenant_id', $tenantId)
+            ->where('status', 'terminated')
+            ->where('actual_end_date', '>=', now()->startOfMonth())
+            ->count();
+        $stats['churn_rate'] = $stats['active_contracts'] > 0
+            ? round(($terminatedThisMonth / ($stats['active_contracts'] + $terminatedThisMonth)) * 100, 2)
+            : 0;
+
+        // Customer Acquisition Cost (simplified - based on marketing spend if available)
+        $stats['cac'] = 0; // Placeholder - would need marketing data
+
+        // Average duration of contracts (in months)
+        $avgDuration = Contract::where('tenant_id', $tenantId)
+            ->where('status', 'active')
+            ->whereNotNull('start_date')
+            ->get()
+            ->avg(fn($c) => $c->start_date->diffInMonths(now()));
+        $stats['avg_contract_duration'] = round($avgDuration ?? 0, 1);
+
+        // Prospects/Leads stats
+        $stats['total_prospects'] = Prospect::where('tenant_id', $tenantId)->count();
+        $stats['hot_prospects'] = Prospect::where('tenant_id', $tenantId)
+            ->where('status', 'hot')
+            ->count();
+        $stats['prospects_this_month'] = Prospect::where('tenant_id', $tenantId)
+            ->where('created_at', '>=', now()->startOfMonth())
+            ->count();
+
+        // Conversion rate (prospects converted to customers this month)
+        $convertedThisMonth = Prospect::where('tenant_id', $tenantId)
+            ->where('status', 'converted')
+            ->where('converted_at', '>=', now()->startOfMonth())
+            ->count();
+        $totalProspectsMonthBefore = Prospect::where('tenant_id', $tenantId)
+            ->where('created_at', '<', now()->startOfMonth())
+            ->count();
+        $stats['conversion_rate'] = $totalProspectsMonthBefore > 0
+            ? round(($convertedThisMonth / $totalProspectsMonthBefore) * 100, 1)
+            : 0;
+
+        // Signatures pending
+        $stats['pending_signatures'] = Signature::where('tenant_id', $tenantId)
+            ->whereIn('status', ['pending', 'sent', 'viewed'])
+            ->count();
+
         // Get monthly revenue trend (last 6 months)
         $revenueTrend = $this->getMonthlyRevenueTrend($tenantId, 6);
+
+        // Get monthly summary (current month)
+        $monthlySummary = $this->getMonthlySummary($tenantId);
 
         // Get recent contracts
         $recentContracts = Contract::where('tenant_id', $tenantId)
@@ -182,6 +271,7 @@ class DashboardController extends Controller
 
         return Inertia::render('Tenant/Dashboard', [
             'stats' => $stats,
+            'monthlySummary' => $monthlySummary,
             'revenueTrend' => $revenueTrend,
             'recentContracts' => $recentContracts,
             'expiringContracts' => $expiringContracts,
@@ -215,5 +305,73 @@ class DashboardController extends Controller
         }
 
         return $trend;
+    }
+
+    /**
+     * Get monthly summary for current month.
+     */
+    private function getMonthlySummary(int $tenantId): array
+    {
+        $monthStart = now()->startOfMonth();
+        $monthEnd = now()->endOfMonth();
+
+        // Revenue this month (completed payments)
+        $revenue = Payment::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->where('type', 'payment')
+            ->whereBetween('paid_at', [$monthStart, $monthEnd])
+            ->sum('amount');
+
+        $revenueCount = Payment::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->where('type', 'payment')
+            ->whereBetween('paid_at', [$monthStart, $monthEnd])
+            ->count();
+
+        // Invoices this month
+        $invoicesCount = Invoice::where('tenant_id', $tenantId)
+            ->whereBetween('invoice_date', [$monthStart, $monthEnd])
+            ->count();
+
+        $invoicesTotal = Invoice::where('tenant_id', $tenantId)
+            ->whereBetween('invoice_date', [$monthStart, $monthEnd])
+            ->sum('total');
+
+        // Payments this month
+        $paymentsCount = Payment::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->whereBetween('paid_at', [$monthStart, $monthEnd])
+            ->count();
+
+        $paymentsTotal = Payment::where('tenant_id', $tenantId)
+            ->where('status', 'completed')
+            ->whereBetween('paid_at', [$monthStart, $monthEnd])
+            ->sum('amount');
+
+        // New contracts this month
+        $newContracts = Contract::where('tenant_id', $tenantId)
+            ->whereBetween('start_date', [$monthStart, $monthEnd])
+            ->count();
+
+        $newContractsValue = Contract::where('tenant_id', $tenantId)
+            ->whereBetween('start_date', [$monthStart, $monthEnd])
+            ->sum('monthly_price');
+
+        // New customers this month
+        $newCustomers = Customer::where('tenant_id', $tenantId)
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->count();
+
+        return [
+            'revenue' => $revenue,
+            'revenue_count' => $revenueCount,
+            'invoices_count' => $invoicesCount,
+            'invoices_total' => $invoicesTotal,
+            'payments_count' => $paymentsCount,
+            'payments_total' => $paymentsTotal,
+            'new_contracts' => $newContracts,
+            'new_contracts_value' => $newContractsValue,
+            'new_customers' => $newCustomers,
+        ];
     }
 }

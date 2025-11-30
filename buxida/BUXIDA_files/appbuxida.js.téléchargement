@@ -1,0 +1,1664 @@
+angular.module('exceptionOverride', []).factory('$exceptionHandler', function () {
+    return function (exception, cause) {
+        Bugsnag.notifyException(exception, {diagnostics:{cause: cause}});
+    };
+});
+// ============================================
+// GESTION AUTOMATIQUE DES VERSIONS
+// ============================================
+// Charger la version (sera définie par js/version.js)
+var APP_VERSION = typeof APP_VERSION !== 'undefined' ? APP_VERSION : '1';
+
+// Fonction helper pour ajouter automatiquement la version
+function vFile(path) {
+    return path + '?v=' + APP_VERSION;
+}
+// ============================================
+
+var Cookies2 = Cookies.noConflict();
+
+var BUXIDA = angular.module("BUXIDA", [
+    "ui.router", 
+    "ui.bootstrap",
+    "oc.lazyLoad",  
+    "ngSanitize",
+    "summernote",
+    "ngDialog",
+    "ui.grid",
+    "ui.grid.selection",
+    "ngIdle",
+    "ngFileUpload",
+    "cp.ngConfirm",
+    "pascalprecht.translate"
+]);
+
+BUXIDA.config(['$translateProvider', function ($translateProvider) {
+  // add translation table
+  $translateProvider.translations('en', translationsEN);
+  $translateProvider.translations('fr', translationsFR);
+  $translateProvider.fallbackLanguage('fr');
+  $translateProvider.preferredLanguage('fr');
+}]);
+
+BUXIDA.config(['$ocLazyLoadProvider', function($ocLazyLoadProvider) {
+    $ocLazyLoadProvider.config({
+        // global configs go here
+    });
+}]);
+
+BUXIDA.config(['$controllerProvider', function($controllerProvider) {
+  // this option might be handy for migrating old apps, but please don't use it
+  // in new ones!
+  $controllerProvider.allowGlobals();
+}]);
+
+BUXIDA.config(function(IdleProvider, KeepaliveProvider) {
+    IdleProvider.idle(480); 
+    IdleProvider.timeout(120);
+    KeepaliveProvider.interval(30); 
+    var sid = Cookies2.get('PHPSESSID');
+    var CUI = Cookies2.get('C_UIU');
+    KeepaliveProvider.http('php/check.php?sid='+sid+'&cui='+CUI); 
+});
+
+BUXIDA.factory('phpCookies', function($rootScope,$http)
+{
+    return Cookies2.noConflict();
+});
+
+BUXIDA.factory('settings', ['$rootScope','$http', function($rootScope,$http) {
+    // supported languages
+    var settings = {
+        layout: {
+            pageSidebarClosed: false, // sidebar menu state
+            pageContentWhite: true, // set page content layout
+            pageBodySolid: false, // solid body color state
+            pageAutoScrollOnLoad: 1000 // auto scroll to top on page load
+        },
+        assetsPath: './',
+        globalPath: './',
+        layoutPath: './layout',
+        repinit:'/admin', //prod
+        bloburl:'https://ubicx.blob.core.windows.net/bbc/'
+    };
+    //var Cookies2 = Cookies.noConflict();
+    $rootScope.settings = settings;
+    $rootScope.soc = {
+                UI:Cookies2.get('UI'),
+                UE:Cookies2.get('ue'),
+                C_UIU:Cookies2.get('C_UIU'),
+                LOGO:Cookies2.get('LOGO'),
+                C_rs:Cookies2.get('C_rs'),
+                C_email:Cookies2.get('username'),
+                ID_SECURITESYS:"0",
+                B_MB:"0",
+                IT:"0"
+            };
+    $http({
+       url : "php/societe.php",
+       method: "POST",
+       headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+       data : {id:'12', CUI:$rootScope.soc.UI}
+           })
+       .success(function (data, status, headers, config)
+       {
+           $rootScope.soc.ID_SECURITESYS = data.ID_SECURITESYS;
+           $rootScope.soc.B_MB = data.B_mondialbox;
+           $rootScope.soc.I_NBDEC = data.I_NBDEC;
+           $rootScope.soc.B_MESS = data.B_MESS;
+		   $rootScope.soc.C_currency = data.C_currency;
+		   $rootScope.soc.C_codepays = data.C_codepays;
+		   $rootScope.soc.paramsoc = data.paramsoc;
+       })
+       .error(function (data, status, headers, config)
+       {
+           var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+       });
+    $http({
+            url : "php/client.php",
+            method: "POST",
+            headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+            data : {id:'45', CUI:$rootScope.soc.C_UIU}
+        })
+        .success(function (data, status, headers, config)
+        {
+            $rootScope.soc.IT = data.I_type;
+            $rootScope.soc.B_demo = data.B_demo;
+			$rootScope.soc.B_majtarif = data.B_majtarif;
+            $rootScope.soc.C_name = data.C_name;
+			//woopra.identify({
+			//	Type : data.I_type,
+			//	Demo: data.B_demo,
+			//	company: $rootScope.soc.C_rs
+			//  });	
+			//heap.addUserProperties({'Name': data.C_name,'email': $rootScope.soc.C_email,'societe': $rootScope.soc.C_rs});
+        })
+        .error(function (data, status, headers, config)
+        {
+            var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+        });
+    return settings;
+}]);
+
+/* Setup App Main Controller */
+BUXIDA.controller('AppController', ['$scope', '$rootScope', function($scope, $rootScope) {
+    $scope.$on('$viewContentLoaded', function() {
+        App.initComponents();
+    });
+}]);
+
+BUXIDA.controller('QuickSidebarController', ['$scope','$rootScope','$http','$interval', function($scope,$rootScope,$http,$interval) {    
+    $scope.$on('$includeContentLoaded', function() {
+       setTimeout(function(){
+            QuickSidebar.init($scope,$rootScope,$http,$interval); // init quick sidebar        
+        }, 2000)
+    });
+}]);
+
+BUXIDA.controller('HeaderController', ['$rootScope','$scope','BUXIDASERVICES','$http','$translate','$timeout', function($rootScope,$scope,BUXIDASERVICES,$http,$translate,$timeout) {
+    $scope.$on('$includeContentLoaded', function() {
+        Layout.initHeader();
+		$http({
+            url : "php/table.TB_SUIVIS.php?all=2&ui="+$rootScope.soc.UI,
+            method: "POST",
+            headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
+        })
+        .success(function (data, status, headers, config)
+        {
+            $scope.prospects = data;
+        })
+        $http({
+          url : "php/table.TB_CONTRATLISTALERTE.php?b_contratactif=1&ui="+$rootScope.soc.UI,
+          method: "POST",
+          headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
+        })
+        .success(function (data, status, headers, config)
+        {
+          $scope.dedites = data;
+        })
+        var timer = $timeout( function refresh(){
+        // maj alerte 
+        $http({
+          url : "php/table.TB_CONTRATLISTALERTE.php?b_contratactif=1&ui="+$rootScope.soc.UI,
+          method: "POST",
+          headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
+        })
+        .success(function (data, status, headers, config)
+        {
+          $scope.dedites = data;
+        })
+        timer = $timeout(refresh, 30000);
+        }, 30000); 
+        $scope.addcontrat = function()
+        {
+            BUXIDASERVICES.ajoutcontrat($scope, '', '','HeaderController');
+        }
+        $scope.changeLanguage = function (langKey)
+        {
+          $translate.use(langKey);
+        };
+        $scope.gotoclient = function (C_nom,C_prenom,C_email,C_tel,C_UI)
+        {
+          if ( window.location != "#/profile/contrats") {
+            $rootScope.client = {
+              C_nom:C_nom,
+              C_prenom:C_prenom,
+              C_email:C_email,
+              C_tel:C_tel,
+              C_UI:C_UI,
+              B_ACTIF:1};
+            window.location = "#/profile/contrats"; 
+           } 
+        };
+		$scope.changeia = function (B_ia)
+        {
+	                $http({
+                    url : "php/utilisateurs.php",
+                    method: "POST",
+                    headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                    data: { id:'45',
+                        B_ia:B_ia,
+                        C_UIU:$rootScope.soc.C_UIU}
+                })
+						.success(function (data, status, headers, config)
+						{
+						if(data.res == "1")
+						{
+							if (B_ia == "1") {
+								window.Intercom('update', {"Bia": "true"});
+							} else {
+								window.Intercom('update', {"Bia": "false"});	
+							}
+							location.reload();
+						}
+						else
+						{
+							var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+						}
+					})
+						.error(function (data, status, headers, config)
+							   {
+						console.log(status);
+						alert('Erreur de connexion au serveur ');
+					});
+				
+		};	
+    });
+
+}]);
+
+BUXIDA.controller('PageHeadController', ['$scope', function($scope) {
+    $scope.$on('$includeContentLoaded', function() {        
+        //Demo.init();
+    });
+}]);
+
+BUXIDA.controller('FooterController', ['$scope', function($scope) {
+    $scope.$on('$includeContentLoaded', function() {
+        Layout.initFooter(); 
+    });
+}]);
+
+BUXIDA.config(['$stateProvider', '$urlRouterProvider', function($stateProvider, $urlRouterProvider) 
+{
+    $urlRouterProvider.otherwise("/dashboard.html");
+    
+    $stateProvider
+        // Dashboard
+        .state('dashboard', {
+            url: "/dashboard.html",
+            templateUrl: "views/dashboard.html?v=050825",
+            data: {pageTitle: 'Tableau de bord', pageSubTitle: "Vue globale de l'activité"},
+            controller: "DashboardController",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        insertBefore: '#ng_load_plugins_before',
+                        files: [
+                            'plugins/jquery-idle-timeout/jquery.idletimeout.js',
+                            'plugins/jquery-idle-timeout/jquery.idletimer.js',
+                            'plugins/year-select.js',
+                            'js/controllers/DashboardController.js?v=250725'
+                        ] 
+                    });
+                }]
+            }
+        })      
+		// PROSPECT
+        .state('prospect', {
+            url: "/prospects.html",
+            templateUrl: "views/prospects.html?v=121224",
+            data: {pageTitle: 'Prospects', pageSubTitle: 'Gestion des prospects'},
+            controller: "ProspectControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                                                                                                       
+                            'js/controllers/ProspectControler.js?v=140525'
+                        ]
+                    });
+                }]
+            }
+        })
+	    // PROSPECT
+        .state('suivi', {
+            url: "/suivi.html",
+            templateUrl: "views/suivi.html?v=070524",
+            data: {pageTitle: 'Prospects', pageSubTitle: 'Gestion des suivis'},
+            controller: "SuiviprospectControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                                                                                                       
+                            'js/controllers/SuiviprospectControler.js?v=070524'
+                        ]
+                    });
+                }]
+            }
+        })
+        // CLIENT
+        .state('client', {
+            url: "/clients.html",
+            templateUrl: "views/clients.html?v=150425",
+            data: {pageTitle: 'Clients', pageSubTitle: 'Gestion des clients'},
+            controller: "ClientControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                                                                                                       
+                            'js/controllers/ClientControler.js?v=040525'
+                        ]
+                    });
+                }]
+            }
+        })
+        // CONTRAT
+        .state('contrats', {
+            url: "/listcontrats1.html?v=270824",
+            templateUrl: "views/listcontrats1.html",
+            data: {pageTitle: 'Contrats', pageSubTitle: 'Gestion des contrats'},
+            controller: "ContratControler1",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                             
+                            'js/controllers/ContratControler1.js?v=270824' 
+                        ]
+                    });
+                }]
+            }
+        })
+        // factures
+        .state('Factures', {
+            url: "/listfactures1.html",
+            templateUrl: "views/listfactures1.html?v=030125b",
+            data: {pageTitle: 'Factures', pageSubTitle: 'Gestion des factures'},
+            controller: "FactureControler1",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                             
+                            'js/controllers/FactureControler1.js?v=030125b' 
+                        ]
+                    });
+                }]
+            }
+        })
+        // REGLEMENT
+        .state('reglements', {
+            url: "/listregl.html",
+            templateUrl: vFile('views/listregl.html'),
+            data: {pageTitle: 'Règlements', pageSubTitle: 'Liste des règlements'},
+            controller: "ReglControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            vFile('js/controllers/ReglControler.js')
+                        ]
+                    });
+                }]
+            }
+        })
+        // RELANCES
+        .state('relances', {
+            url: "/listrelances.html",
+            templateUrl: "views/listrelances.html",
+            data: {pageTitle: 'Relances', pageSubTitle: 'Liste des relances'},
+            controller: "RelanceControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                              
+                            'js/controllers/RelanceControler.js?v=240125' 
+                        ]
+                    });
+                }]
+            }
+        })
+        // RELANCES en masse
+        .state('relancescreation', {
+            url: "/relancescreation.html?v=300719b",
+            templateUrl: "views/relancescreation.html",
+            data: {pageTitle: 'Relances', pageSubTitle: 'Création de relances'},
+            controller: "relancecreationControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [        
+                            'plugins/bootstrap-summernote/summernote.css',
+                            'plugins/bootstrap-summernote/summernote.min.js',
+                            'plugins/bootstrap-summernote/lang/summernote-fr-FR.js',
+                            'js/controllers/relancecreationControler.js?v=300719b' 
+                        ]
+                    });
+                }]
+            }
+        })
+        // planning
+        .state('planning', {
+            url: "/planning.html",
+            templateUrl: "views/planning.html",
+            data: {pageTitle: 'Planning', pageSubTitle: 'Planning des contrats réservés, en cours et en litige'},
+            controller: "PlanningControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [  
+                            'js/controllers/PlanningControler.js'
+                        ]
+                    });
+                }]
+            }
+        })
+        // facturation contrats
+        .state('contratsfact', {
+            url: "/listcontrats.html",
+            templateUrl: "views/listcontrats.html?v=220924",
+            data: {pageTitle: 'Contrats', pageSubTitle: 'Facturation des contrats'},
+            controller: "ContratControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                                                                                                
+                            'js/controllers/ContratControler.js?v=030725'
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        
+        // FACTURE
+        .state('contratfactures', {
+            url: "/listfactures.html",
+            templateUrl: "views/listfactures.html?v=290424",
+            data: {pageTitle: 'Factures', pageSubTitle: 'Gestion des factures'},
+            controller: "FactureControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                             
+                            'js/controllers/FactureControler.js?v=290424' 
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        // creation  fichier SEPA
+        .state('SEPA', {
+            url: "/sepa.html",
+            templateUrl: vFile('views/sepa.html'),
+            data: {pageTitle: 'SEPA', pageSubTitle: 'Création du fichier SEPA'},
+            controller: "SEPAControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                             
+                            vFile('js/controllers/sepaControler.js')
+                        ]
+                    });
+                }]
+            }
+        })
+        // liste  fichier SEPA
+        .state('SEPALIST', {
+            url: "/sepalist.html",
+            templateUrl: vFile('views/sepalist.html'),
+            data: {pageTitle: 'SEPA', pageSubTitle: 'Liste des fichiers SEPA'},
+            controller: "SEPAControler2",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                             
+                            'plugins/jstree/dist/themes/default/style.min.css',
+                                                                                
+                            'plugins/jstree/dist/jstree.min.js',
+                            'plugins/bootstrap-growl/jquery.bootstrap-growl.min.js',
+                            'js/ui-tree.js',
+                            vFile('js/controllers/sepaControler2.js')
+                        ]
+                    });
+                }]
+            }
+        })
+  
+        // liste Signature contrat
+        .state('SIGNCONTRAT', {
+            url: "/signcontrat.html",
+            templateUrl: "views/signcontrat.html?v=210717",
+            data: {pageTitle: 'Signatures', pageSubTitle: 'Liste des signatures de contrat'},
+            controller: "signcontratControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                             
+                            'js/controllers/signcontratControler.js?v=210717'
+                        ]
+                    });
+                }]
+            }
+        })   
+  
+          // liste Signature mandat
+        .state('SIGNMANDAT', {
+            url: "/signmandat.html",
+            templateUrl: "views/signmandat.html?v=210717",
+            data: {pageTitle: 'Signatures', pageSubTitle: 'Liste des signatures de mandat'},
+            controller: "signmandatControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                             
+                            'js/controllers/signmandatControler.js?v=210717'
+                        ]
+                    });
+                }]
+            }
+        })   
+        // SOCIETE
+        .state('societe', {
+            url: "/societe.html",
+            templateUrl: "views/societe.html",
+            data: {pageTitle: 'Société', pageSubTitle: 'Gestion des sociétés'},
+            controller: "SocieteControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                  
+                            'js/controllers/SocieteControler.js'
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        // UTILISATEUR
+        .state('utilisateur', {
+            url: "/utilisateur.html",
+            templateUrl: "views/utilisateur.html",
+            data: {pageTitle: 'Utilisateur', pageSubTitle: 'Gestion des utilisateurs'},
+            controller: "UtilisateurControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [   
+                            'css/dataTables.editor.min.css', 
+                            'js/editor/dataTables.editor.js',  
+                            'js/controllers/UtilisateurControler.js'
+                        ]
+                    });
+                }]
+            }
+        }) 
+
+        // FAMILLE
+        .state('famille', {
+            url: "/famille.html",
+            templateUrl: "views/famille.html?v=171024",
+            data: {pageTitle: 'Familles', pageSubTitle: 'Gestion des familles'},
+            controller: "FamilleControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/FamilleControler.js?v=171024'
+                        ]
+                    });
+                }]
+            }
+        })
+
+        // EMPLACEMENT
+        .state('emplacement', {
+            url: "/emplacement.html",
+            templateUrl: "views/emplacement.html?v=110724b",
+            data: {pageTitle: 'Emplacement', pageSubTitle: 'Gestion des emplacements'},
+            controller: "EmplacementControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/EmplacementControler.js?v=110724b'
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        
+        // BOX
+        .state('box', {
+            url: "/box.html",
+            templateUrl: "views/box.html?v=200225",
+            data: {pageTitle: 'Box', pageSubTitle: 'Gestion des box'},
+            controller: "BoxControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'plugins/bootstrap-summernote/summernote.css',
+                            'plugins/bootstrap-summernote/summernote.min.js',
+                            'plugins/bootstrap-summernote/lang/summernote-fr-FR.js',
+                            'js/controllers/BoxControler.js?v=200225b'
+                        ]
+                    });
+                }]
+            }
+        })
+        
+	  	// MAJ contrat
+        .state('majcontrat', {
+            url: "/majcontrat.html",
+            templateUrl: "views/majcontrats.html?v=151222",
+            data: {pageTitle: 'Contrat', pageSubTitle: 'Gestion des tarif des contrats actifs'},
+            controller: "MajcontratControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/MajcontratControler.js?v=220224'
+                        ]
+                    });
+                }]
+            }
+        })
+        // PRODUITS
+        .state('produits', {
+            url: "/produits.html",
+            templateUrl: "views/produits.html?v=230425",
+            data: {pageTitle: 'Produits', pageSubTitle: 'Gestion des la base articles'},
+            controller: "ProduitsControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'plugins/bootstrap-summernote/summernote.css',
+                            'plugins/bootstrap-summernote/summernote.min.js',
+                            'plugins/bootstrap-summernote/lang/summernote-fr-FR.js',
+
+                            'js/controllers/ProduitsControler.js?v=230425'
+                        ]
+                    });
+                }]
+            }
+        })
+	
+        // PROMO
+        .state('promo', {
+            url: "/promo.html",
+            templateUrl: vFile('views/promo.html'),
+            data: {pageTitle: 'Produits', pageSubTitle: 'Gestion des promotions'},
+            controller: "PromoControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'plugins/bootstrap-summernote/summernote.css',
+                            'plugins/bootstrap-summernote/summernote.min.js',
+                            'plugins/bootstrap-summernote/lang/summernote-fr-FR.js',
+							vFile('js/controllers/PromoControler.js')
+                        ]
+                    });
+                }]
+            }
+        })
+	
+        // BALANCE CLIENT
+        .state('balance', {
+            url: "/balance.html",
+            templateUrl: "views/balance.html?v=030420",
+            data: {pageTitle: 'Balance', pageSubTitle: 'Balance clients'},
+            controller: "BalanceControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                            
+                            'js/controllers/BalanceControler.js?v=030420' 
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        // REMISE DE CHEQUE
+        .state('remisecheque', {
+            url: "/remisecheque.html",
+            templateUrl: "views/remisecheque.html?v=010419",
+            data: {pageTitle: 'Contrat', pageSubTitle: 'Contrat edites par mois'},
+            controller: "RemiseChequeControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                            
+                            'js/controllers/RemiseChequeControler.js?v=010419' 
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        // Encaissement / decaisssment
+		.state('tresob', {
+            url: "/tresob.html",
+            templateUrl: "views/tresob.html?v=010419",
+            data: {pageTitle: 'Comptabilité', pageSubTitle: 'Encaissements-Décaissements'},
+            controller: "TresoControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                            
+                            'js/controllers/TresoControlerb.js?v=010419' 
+                        ]
+                    });
+                }]
+            }
+        })
+        .state('treso', {
+            url: "/treso.html",
+            templateUrl: "views/treso.html?v=010419",
+            data: {pageTitle: 'Comptabilité', pageSubTitle: 'Encaissements-Décaissements'},
+            controller: "TresoControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                            
+                            'js/controllers/TresoControler.js?v=010419' 
+                        ]
+                    });
+                }]
+            }
+        })
+		.state('tresolst', {
+            url: "/tresolst.html",
+            templateUrl: "views/tresolst.html?v=080720",
+            data: {pageTitle: 'Comptabilité', pageSubTitle: 'Encaissements-Décaissements'},
+            controller: "tresolstControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                            
+                            'js/controllers/tresolstControler.js?v=080720' 
+                        ]
+                    });
+                }]
+            }
+        })
+ 		// Export document
+        .state('exportdoc', {
+            url: "/exportdoc.html",
+            templateUrl: "views/exportdoc.html?v=110124",
+            data: {pageTitle: 'Exportation', pageSubTitle: 'documents'},
+            controller: "exportdocControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                            
+                            'js/controllers/exportdocControler.js?v=110124' 
+                        ]
+                    });
+                }]
+            }
+        })
+        // Export 
+        .state('exportcpta', {
+            url: "/exportcpta.html",
+            templateUrl: "views/exportcpta.html?v=260922",
+            data: {pageTitle: 'Comptabilité', pageSubTitle: 'Exportation'},
+            controller: "exportcptaControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                            
+                            'js/controllers/exportcptaControler.js?v=260922' 
+                        ]
+                    });
+                }]
+            }
+        })
+        // Export list
+        .state('exportcptalst', {
+            url: "/exportcptalst.html",
+            templateUrl: "views/exportcptalst.html?v=080720",
+            data: {pageTitle: 'Comptabilité', pageSubTitle: 'Historique'},
+            controller: "exportcptalstControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [                            
+                            'js/controllers/exportcptalstControler.js?v=080720' 
+                        ]
+                    });
+                }]
+            }
+        })
+        // STAT CONTRAT EDITES
+        .state('statcontratsedites', {
+            url: "/statcontratsedites.html",
+            templateUrl: "views/statcontratsedites.html",
+            data: {pageTitle: 'Contrat édités', pageSubTitle: 'Contrat édités'},
+            controller: "StatContratEditeControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/StatContratEditeControler.js'
+                        ]
+                    });
+                }]
+            }
+        })
+
+        // STAT CAUTION ENREGISTRES
+        .state('statcautionsenregistres', {
+            url: "/statcautionsenregistres.html",
+            templateUrl: "views/statcautionsenregistres.html?v=260224",
+            data: {pageTitle: 'Cautions enregistrées', pageSubTitle: 'Cautions enregistrées'},
+            controller: "StatCautionsEnregistresControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/StatCautionsEnregistresControler.js?v=070524'
+                        ]
+                    });
+                }]
+            }
+        })
+
+        // STAT RELANCES CLIENTS
+        .state('statrelancesclients', {
+            url: "/statrelancesclients.html",
+            templateUrl: "views/statrelancesclients.html",
+            data: {pageTitle: 'Relances clients', pageSubTitle: 'Relances clients'},
+            controller: "StatRelancesClientsControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/StatRelancesClientsControler.js?v=070524'
+                        ]
+                    });
+                }]
+            }
+        })
+  
+        // STAT ORIGINE CLIENTS
+        .state('statorigineclients', {
+            url: "/statorigineclients.html",
+            templateUrl: "views/statorigineclients.html",
+            data: {pageTitle: 'Origines clients', pageSubTitle: 'Origines clients'},
+            controller: "statorigineclientsControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/StatorigineClientsControler.js?v=070524'
+                        ]
+                    });
+                }]
+            }
+        })
+	
+        // FICHE CLIENT
+        .state("profile", {
+            url: "/profile",
+            templateUrl: "views/profile/main.html?v=050825",
+            data: {pageTitle: 'Fiche client', pageSubTitle: 'information du compte'},
+            controller: "UserProfileController",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',  
+                        files: [
+                            'css/profile.css',
+                            'js/controllers/UserProfileController.js?v=220125b'
+                        ]                    
+                    });
+                }]
+            }
+        })
+        
+        // User Profile contrats
+        .state("profile.contrats", {
+            url: "/contrats",
+            templateUrl: "views/profile/contrats.html?v=200225",
+            data: {pageTitle: 'Espace Client', pageSubTitle: 'Contrats'},
+            controller: "UserContratControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/fileinput/fileinput.min.css',
+                            'js/fileinput/fileinput.min.js',
+                            'js/controllers/UserContratControler.js?v=200225'
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        // User Profile mandats
+        .state("profile.mandat", {
+            url: "/mandats",
+            templateUrl: "views/profile/mandats.html?v=060825",
+            data: {pageTitle: 'Espace Client', pageSubTitle: 'Mandats SEPA'},
+            controller: "UserMandatControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/fileinput/fileinput.min.css',
+                            'js/iban.js',
+                            'js/bic.js?v=230622',
+                            'js/fileinput/fileinput.min.js',
+                            'js/controllers/UserMandatControler.js?v=050825'
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        // User Profile fact
+        .state("profile.fact", {
+            url: "/fact",
+            templateUrl: "views/profile/fact.html?v=101024",
+            data: {pageTitle: 'Espace Client', pageSubTitle: 'Factures'},      
+            controller: "UserFactControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'plugins/bootstrap-summernote/summernote.css',
+                            'plugins/bootstrap-summernote/summernote.min.js',
+                            'plugins/bootstrap-summernote/lang/summernote-fr-FR.js',
+
+                            'js/controllers/UserFactControler.js?v=230924'
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        // User Profile regl
+        .state("profile.regl", {
+            url: "/regl",
+            templateUrl: "views/profile/regl.html?v=290724",
+            data: {pageTitle: 'Espace Client', pageSubTitle: 'Règlements'},      
+            controller: "UserReglControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/UserReglControler.js?v=290724"'
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        // User Profile relances
+        .state("profile.relances", {
+            url: "/relances",
+            templateUrl: "views/profile/relances.html?v=240125",
+            data: {pageTitle: 'Espace Client', pageSubTitle: 'Relances'},      
+            controller: "UserRelancesControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/UserRelancesControler.js?v=240125'
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        // User Profile info
+        .state("profile.info", {
+            url: "/account",
+            templateUrl: "views/profile/account.html?v=020625",
+            data: {pageTitle: 'Espace Client', pageSubTitle: 'Information client'},
+            controller: "UserInfoControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load([
+                        {
+                        name: 'BUXIDA',
+                        files: [
+                            'js/iban.js',
+                            'js/components-form-tools.js',
+                            'js/controllers/UserInfoControler.js?v=150125'
+                        ]
+                    }]);
+                }]
+            }
+        })
+        // User Profile mess
+        .state("profile.messages", {
+            url: "/messages",
+            templateUrl: "views/profile/mess.html?v=070717",
+            data: {pageTitle: 'Espace Client', pageSubTitle: 'Messages'},
+            controller: "UserMessControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'plugins/bootstrap-summernote/summernote.css',
+                            'plugins/bootstrap-summernote/summernote.min.js',
+                            'plugins/bootstrap-summernote/lang/summernote-fr-FR.js',
+                            'js/controllers/UserMessControler.js?v=070717'
+                        ]
+                    });
+                }]
+            }
+        })
+        // User Profile suivi
+        .state("profile.suivi", {
+            url: "/suivicli",
+            templateUrl: "views/profile/suivi.html?v=220623",
+            data: {pageTitle: 'Espace Client', pageSubTitle: 'suivi'},
+            controller: "UserSuiviControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/UserSuiviControler.js?v=220623'
+                        ]
+                    });
+                }]
+            }
+        })
+ 		// User Profile fichiers
+        .state("profile.fichiers", {
+            url: "/fichiers",
+            templateUrl: "views/profile/fichiers.html?v=220922",
+            data: {pageTitle: 'Espace Client', pageSubTitle: 'Fichiers'},
+            controller: "UserFichiersControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/fileinput/fileinput.min.css',
+                            'js/fileinput/fileinput.min.js',
+                            'js/controllers/UserFichiersControler.js?v=220922'
+                        ]
+                    });
+                }]
+            }
+        })
+	        // adnim
+        .state("admin", {
+            url: "/admin",
+            templateUrl:  vFile("views/admin/main.html"),
+            data: {pageTitle: 'Fiche client', pageSubTitle: 'information du compte'},
+            controller: "AdminmainController",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',  
+                        files: [
+                            'css/profile.css',
+                             vFile('js/controllers/AdminmainController.js')
+                        ]                    
+                    });
+                }]
+            }
+        })
+          // admin email1
+        .state("admin.email1", {
+            url: "/email1",
+            templateUrl: "views/admin/email1.html?v=280817",
+            data: {pageTitle: 'Email', pageSubTitle: 'Informations'},
+            controller: "AdminEmail1Controler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/AdminEmail1Controler.js?v=280817'
+                        ]
+                    });
+                }]
+            }
+        })
+          // admin email2
+        .state("admin.email2", {
+            url: "/email2",
+            templateUrl: "views/admin/email2.html?v=280817",
+            data: {pageTitle: 'Email', pageSubTitle: 'Informations'},
+            controller: "AdminEmail2Controler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/AdminEmail2Controler.js?v=280817'
+                        ]
+                    });
+                }]
+            }
+        })
+          // admin email3
+        .state("admin.email3", {
+            url: "/email3",
+            templateUrl: "views/admin/email3.html?v=280817",
+            data: {pageTitle: 'Email', pageSubTitle: 'Informations'},
+            controller: "AdminEmail3Controler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/AdminEmail3Controler.js?v=280817'
+                        ]
+                    });
+                }]
+            }
+        })
+          // admin email4
+        .state("admin.email4", {
+            url: "/email4",
+            templateUrl: "views/admin/email4.html?v=280817",
+            data: {pageTitle: 'Email', pageSubTitle: 'Informations'},
+            controller: "AdminEmail4Controler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/AdminEmail4Controler.js?v=280817'
+                        ]
+                    });
+                }]
+            }
+        })
+          // admin email5
+        .state("admin.email5", {
+            url: "/email5",
+            templateUrl: "views/admin/email5.html?v=280817",
+            data: {pageTitle: 'Email', pageSubTitle: 'Informations'},
+            controller: "AdminEmail5Controler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/AdminEmail5Controler.js?v=280817'
+                        ]
+                    });
+                }]
+            }
+        })
+	
+        // admin emailGeneric
+        .state("admin.emailGeneric", {
+            url: "/emailGeneric",
+            templateUrl: vFile("views/admin/emailGeneric.html"),
+            data: {pageTitle: 'Email', pageSubTitle: 'Informations'},
+            controller: "AdminEmailGenericControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            vFile('js/controllers/AdminEmailGenericControler.js')
+                        ]
+                    });
+                }]
+            }
+        })
+	
+        // admin soc
+        .state("admin.infos", {
+            url: "/infos",
+            templateUrl: "views/admin/infos.html?v=300625",
+            data: {pageTitle: 'profil', pageSubTitle: 'Informations'},
+            controller: "AdminControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/fileinput/fileinput.min.css',
+                            'js/fileinput/fileinput.min.js',
+                            'js/iban.js',
+                            'js/components-form-tools.js',
+                            'js/controllers/AdminControler.js?v=300625'
+                        ]
+                    });
+                }]
+            }
+        })
+	
+        // FICHE SOC
+        .state("fichesociete", {
+            url: "/fichesociete",
+            templateUrl: "views/profiles/main.html",
+            data: {pageTitle: 'Fiche client', pageSubTitle: 'information du compte'},
+            controller: "SocProfileController",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',  
+                        files: [
+                            'css/profile.css',
+                            'js/controllers/SocProfileController.js'
+                        ]                    
+                    });
+                }]
+            }
+        })
+        
+        // infos soc
+        .state("fichesociete.infos", {
+            url: "/infos",
+            templateUrl: "views/profiles/infos.html?v=280817",
+            data: {pageTitle: 'profil', pageSubTitle: 'Informations'},
+            controller: "SocInfoControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/fileinput/fileinput.min.css',
+                            'js/fileinput/fileinput.min.js',
+                            'js/iban.js',
+                            'js/components-form-tools.js',
+                            'js/controllers/SocInfoControler.js?v=071021'
+                        ]
+                    });
+                }]
+            }
+        })
+        
+        // infos soc
+        .state("fichesociete.templ", {
+            url: "/templ",
+            templateUrl: "views/profiles/templ.html",
+            data: {pageTitle: 'profil', pageSubTitle: 'Modèles'},
+            controller: "SocTemplControler",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+
+                            'plugins/bootstrap-summernote/summernote.css',
+                            'plugins/bootstrap-summernote/summernote.min.js',
+                            'plugins/bootstrap-summernote/lang/summernote-fr-FR.js',
+
+                            'js/controllers/SocTemplControler.js'
+                        ]
+                    });
+                }]
+            }
+        })
+	
+        // infos soc
+        .state("fichesociete.templ2", {
+            url: "/templ2",
+            templateUrl: "views/profiles/templ2.html",
+            data: {pageTitle: 'profil', pageSubTitle: 'Modèles'},
+            controller: "SocTemplControler2",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'plugins/bootstrap-summernote/summernote.css',
+                            'plugins/bootstrap-summernote/summernote.min.js',
+                            'plugins/bootstrap-summernote/lang/summernote-fr-FR.js',
+                            'js/controllers/SocTemplControler2.js'
+                        ]
+                    });
+                }]
+            }
+        })
+        // infos soc templ3
+        .state("fichesociete.templ3", {
+            url: "/templ3",
+            templateUrl: "views/profiles/templ3.html",
+            data: {pageTitle: 'profil', pageSubTitle: 'Modèles'},
+            controller: "SocTemplControler3",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'plugins/bootstrap-summernote/summernote.css',
+                            'plugins/bootstrap-summernote/summernote.min.js',
+                            'plugins/bootstrap-summernote/lang/summernote-fr-FR.js',
+                            'js/controllers/SocTemplControler3.js'
+                        ]
+                    });
+                }]
+            }
+        })   
+        // Contrôles des logs
+        .state("fichesociete.blog", {
+            url: "/blog",
+            templateUrl: "views/profiles/blog.html?v=270524",
+            data: {pageTitle: 'Contrôles', pageSubTitle: 'Contrôles des logs'},
+            controller: "SocBlog",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'plugins/year-select.js',
+                            'js/controllers/SocBlog.js?v=100323b'
+                        ]
+                    });
+                }]
+            }
+        })
+	
+        // Contrôles du JET
+        .state("fichesociete.jet", {
+            url: "/jet",
+            templateUrl: "views/profiles/jet.html?v=281223",
+            data: {pageTitle: 'Contrôles', pageSubTitle: 'Contrôles du JET'},
+            controller: "SocJet",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'plugins/year-select.js',
+                            'js/controllers/SocJET.js'
+                        ]
+                    });
+                }]
+            }
+        })
+  
+        // PLAN
+        .state("plan", {
+            url: "/plan.html",
+            templateUrl: "views/plan.html",
+            data: {pageTitle: 'Plans', pageSubTitle: 'Etat des boxes'},
+            controller: "PlanController",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',  
+                        files: [
+                            'js/controllers/PlanController.js?v=240625',
+                        ]                    
+                    });
+                }]
+            }
+        })
+  
+        // ADMIN list PLAN
+        .state("planadmin2", {
+            url: "/planadmin2.html",
+            templateUrl: "views/planadmin2.html",
+            data: {pageTitle: 'Plans', pageSubTitle: 'Gestion des plans'},
+            controller: "PlanadminController2",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/PlanadminController2.js?v=051023',
+                        ]
+                    });
+                }]
+            }
+        })
+        // ADMIN pos PLAN
+        .state("planadmin", {
+            url: "/planadmin.html",
+            templateUrl: "views/planadmin.html",
+            data: {pageTitle: 'Plans', pageSubTitle: 'Positionnement des boxs'},
+            controller: "PlanadminController",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/PlanadminController.js?v=051023',
+                        ]
+                    });
+                }]
+            }
+        })
+
+        // ADMIN utilisateur
+        .state("util", {
+            url: "/util.html",
+            templateUrl: "views/util.html?v=090124",
+            data: {pageTitle: 'Utilisateurs', pageSubTitle: 'Gestion des utilisateurs'},
+            controller: "UtilController",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/UtilController.js?v=090124',
+                        ]
+                    });
+                }]
+            }
+        })
+	// suivi buxidz
+        .state("buxida", {
+            url: "/buxida.html",
+            templateUrl: "views/buxida.html",
+            data: {pageTitle: 'BUXIDA', pageSubTitle: 'suivi de BUXIDA'},
+            controller: "SuiviController",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/SuiviController.js',
+                        ]
+                    });
+                }]
+            }
+        })
+         // maintenance
+        .state("maintenance", {
+            url: "/maintenance.html",
+            templateUrl: "views/maintenance.html?v260125",
+            data: {pageTitle: 'BUXIDA', pageSubTitle: 'Maintenance de la base clients'},
+            controller: "MaintenanceController",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',
+                        files: [
+                            'js/controllers/MaintenanceController.js?v260125',
+                        ]
+                    });
+                }]
+            }
+        })
+	    // Paramètrage facture
+	    .state("paramfacture", {
+            url: "/paramfacture.html",
+            templateUrl: "views/paramfacture.html",
+            data: {pageTitle: 'Factures', pageSubTitle: 'Paramètrage'},
+            controller: "SocTemplControlerFacture",
+            resolve: {
+                deps: ['$ocLazyLoad', function($ocLazyLoad) {
+                    return $ocLazyLoad.load({
+                        name: 'BUXIDA',  
+                        files: [
+							'js/cfk/content-styles.css',
+                            'js/cfk/ckeditor.js',
+                            'js/controllers/SocTemplControlerFacture.js'
+                        ]                    
+                    });
+                }]
+            }
+        })
+}]);
+
+/* Init global settings and run the app */
+BUXIDA.run(["$rootScope", "settings", "$state","Idle","Keepalive","Title","$log","ngDialog","$uibModal","$http","$window", function($rootScope, settings, $state,Idle,Keepalive,Title,$log,ngDialog,$uibModal,$http,$window) {
+	
+	
+	$http({
+        url : "php/client.php",
+        method: "POST",
+        headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+        data : {id:'45', CUI:$rootScope.soc.C_UIU}
+    })
+    .success(function (data, status, headers, config)
+    {
+		
+        $rootScope.soc.IT = data.I_type;
+        $rootScope.soc.B_demo = data.B_demo;
+        $rootScope.soc.C_name = data.C_name;
+		$rootScope.soc.C_nom = data.C_nom;
+		$rootScope.soc.C_prenom = data.C_prenom;
+		$rootScope.soc.C_tel = data.C_tel;
+		$rootScope.soc.B_majtarif = data.B_majtarif;
+		$rootScope.soc.user_hash = data.user_hash;
+		$rootScope.soc.bprod = data.bprod;
+        window.Intercom("boot", {
+            api_base: "https://api-iam.intercom.io",
+            app_id: "xuh8uo1x",
+            name: $rootScope.soc.C_name, 
+            email: $rootScope.soc.C_email,
+			init_bprod: data.bprod,
+			init_bemplacement: data.bemplacement,
+			init_bbox: data.bbox,
+			init_bplan: data.bplan,
+			init_bmodelecontrat: data.bmodelecontrat,
+			sid: data.C_sid,
+			Bia: data.B_ia,
+            company: {
+              id: $rootScope.soc.UI,
+              name: $rootScope.soc.C_rs,
+              currency: $rootScope.soc.C_currency,
+              codepays: $rootScope.soc.C_codepays,
+              paramsoc: $rootScope.soc.paramsoc,
+			  init_bprodcentre: data.bprod,
+			  appsoc:'BUXIDA'
+            },
+            phone: $rootScope.soc.C_tel,
+            demo: $rootScope.soc.B_demo,
+            majtarif: $rootScope.soc.B_majtarif,
+            currency: $rootScope.soc.C_currency,
+            user_id:$rootScope.soc.C_UIU,
+            app:'BUXIDA',
+            paramsoc:$rootScope.soc.paramsoc,
+            user_hash:$rootScope.soc.user_hash  
+        });	
+		//window.Intercom('update');
+    })
+    .error(function (data, status, headers, config)
+    {
+        var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+    });
+	$rootScope.$on('$locationChangeSuccess', function() 
+    {
+		window.Intercom('update',{"init_bprod": $rootScope.soc.bprod});
+		window.Intercom('trackEvent', $state.current.name);
+		//hj('stateChange', $location.url());
+	  //woopra.track();
+	   //mixpanel.track($state.current.name);
+      // zE(function() {
+		//	zE.identify({
+		//	  name: $rootScope.soc.C_name,
+		//	  email: $rootScope.soc.C_email,
+		//	  organization: $rootScope.soc.C_rs
+		//	});
+		//  });
+     });
+    function closeModals()
+    {
+        if ($rootScope.warning)
+        {
+            $rootScope.warning.close();
+            $rootScope.warning = null;
+        }
+
+    }
+    $rootScope.$state = $state; 
+    $rootScope.$settings = settings;
+    Idle.watch();
+    Keepalive.start();
+    Title.idleMessage('{{seconds}} secondes avant la fin de votre session !');
+    $rootScope.$on('IdleStart', function()
+    {
+        closeModals();
+        //$log.debug('IdleStart'+ new Date());
+    });
+    $rootScope.$on('IdleEnd', function()
+    {
+        closeModals();
+        //$log.debug('IdleEnd'+ new Date());
+    });
+    $rootScope.$on('IdleWarn', function(e, countdown) {
+        if (!$rootScope.warning)
+        {
+            $rootScope.warning = ngDialog.open({
+                template: 'views/ngd-timeout.html',
+                className: 'ngdialog-theme-default'
+            });
+        }
+
+    });
+    $rootScope.$on('IdleTimeout', function()
+    {
+        closeModals();
+        //$log.debug('IdleTimeout'+ new Date());
+        //window.location="index.html";
+		window.location="php/logoff.php?m=1";
+    });
+    $rootScope.$on('Keepalive', function() {
+       // $log.debug('Keepalive'+ new Date());
+    });
+    $rootScope.$on('KeepaliveResponse', function(event, data, status)
+    {
+        if (status == 200)
+        {
+            if(data.res == "1")
+            {
+                //console.log('check ok');
+            }
+            else
+            {
+                //console.log('check pas ok');
+                window.location="php/logoff.php?m=2";
+            }
+            //$log.debug('KeepaliveResponse '+ data.res + " " + status);
+        }
+        else
+        {
+            //$log.debug('KeepaliveResponse '+ event + " " + status);
+        }
+
+    });
+}]);

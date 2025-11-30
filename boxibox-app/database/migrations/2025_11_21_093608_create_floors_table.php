@@ -18,7 +18,7 @@ return new class extends Migration
             $table->foreignId('building_id')->constrained()->onDelete('cascade');
             $table->integer('floor_number'); // 0 = Ground, 1 = First, -1 = Basement
             $table->string('name')->nullable(); // e.g., "Ground Floor", "Basement"
-            $table->foreignId('floor_plan_id')->nullable()->constrained()->onDelete('set null');
+            $table->unsignedBigInteger('floor_plan_id')->nullable(); // FK constraint will be added later after floor_plans table exists
             $table->integer('total_boxes')->default(0);
             $table->decimal('total_area', 10, 2)->nullable(); // in m²
             $table->json('settings')->nullable();

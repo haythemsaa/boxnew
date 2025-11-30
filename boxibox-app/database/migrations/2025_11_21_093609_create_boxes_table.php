@@ -49,8 +49,8 @@ return new class extends Migration
             $table->json('position')->nullable(); // {x, y} coordinates on floor plan
 
             // Current rental
-            $table->foreignId('current_contract_id')->nullable()->constrained('contracts')->onDelete('set null');
-            $table->foreignId('current_customer_id')->nullable()->constrained('customers')->onDelete('set null');
+            $table->unsignedBigInteger('current_contract_id')->nullable(); // FK will be added later
+            $table->unsignedBigInteger('current_customer_id')->nullable(); // FK will be added later
             $table->date('occupied_since')->nullable();
 
             // Access

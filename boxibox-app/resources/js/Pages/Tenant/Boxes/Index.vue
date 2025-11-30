@@ -1,212 +1,367 @@
 <template>
-    <AuthenticatedLayout title="Boxes">
-        <!-- Success Message -->
-        <div v-if="$page.props.flash?.success" class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p class="text-sm text-green-600">{{ $page.props.flash.success }}</p>
+    <TenantLayout title="Boxes">
+        <!-- Header Section -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-8">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900">Gestion des Boxes</h2>
+                <p class="text-gray-500 mt-1">Gerez vos espaces de stockage et leur disponibilite</p>
+            </div>
+            <div class="flex items-center space-x-3 mt-4 md:mt-0">
+                <Link
+                    :href="route('tenant.boxes.plan')"
+                    class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl font-medium text-sm hover:from-cyan-600 hover:to-cyan-700 transition-all shadow-lg shadow-cyan-500/25"
+                >
+                    <MapIcon class="w-5 h-5 mr-2" />
+                    Plan visuel
+                </Link>
+                <Link
+                    :href="route('tenant.boxes.create')"
+                    class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-xl font-medium text-sm hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-primary-500/25"
+                >
+                    <PlusIcon class="w-5 h-5 mr-2" />
+                    Nouveau box
+                </Link>
+            </div>
         </div>
 
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold text-gray-900">Storage Boxes</h2>
-            <Link
-                :href="route('tenant.boxes.create')"
-                class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Total Boxes</p>
+                        <p class="text-3xl font-bold text-gray-900 mt-1">{{ stats.total }}</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
+                        <ArchiveBoxIcon class="w-6 h-6 text-purple-600" />
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Disponibles</p>
+                        <p class="text-3xl font-bold text-emerald-600 mt-1">{{ stats.available }}</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-emerald-100 flex items-center justify-center">
+                        <CheckCircleIcon class="w-6 h-6 text-emerald-600" />
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                            class="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                            :style="{ width: `${(stats.available / stats.total) * 100}%` }"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Occupes</p>
+                        <p class="text-3xl font-bold text-amber-600 mt-1">{{ stats.occupied }}</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
+                        <LockClosedIcon class="w-6 h-6 text-amber-600" />
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                            class="h-full bg-amber-500 rounded-full transition-all duration-500"
+                            :style="{ width: `${(stats.occupied / stats.total) * 100}%` }"
+                        ></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">Revenus/mois</p>
+                        <p class="text-3xl font-bold text-blue-600 mt-1">{{ formatCurrency(stats.total_revenue) }}</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                        <CurrencyEuroIcon class="w-6 h-6 text-blue-600" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+            <div class="flex flex-col md:flex-row md:items-center gap-4">
+                <!-- Search -->
+                <div class="flex-1 relative">
+                    <MagnifyingGlassIcon class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <input
+                        v-model="search"
+                        type="text"
+                        placeholder="Rechercher par nom, code..."
+                        class="w-full pl-11 pr-4 py-2.5 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-primary-500 focus:bg-white transition-all"
+                        @input="handleSearch"
+                    />
+                </div>
+
+                <!-- Status Filter -->
+                <div class="relative">
+                    <select
+                        v-model="statusFilter"
+                        class="appearance-none pl-4 pr-10 py-2.5 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-primary-500 transition-all cursor-pointer"
+                        @change="handleFilterChange"
+                    >
+                        <option value="">Tous les statuts</option>
+                        <option value="available">Disponible</option>
+                        <option value="occupied">Occupe</option>
+                        <option value="reserved">Reserve</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+                    <ChevronDownIcon class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                </div>
+
+                <!-- Site Filter -->
+                <div class="relative">
+                    <select
+                        v-model="siteFilter"
+                        class="appearance-none pl-4 pr-10 py-2.5 bg-gray-50 border-0 rounded-xl focus:ring-2 focus:ring-primary-500 transition-all cursor-pointer"
+                        @change="handleFilterChange"
+                    >
+                        <option value="">Tous les sites</option>
+                        <option v-for="site in sites" :key="site.id" :value="site.id">
+                            {{ site.name }}
+                        </option>
+                    </select>
+                    <ChevronDownIcon class="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+                </div>
+
+                <!-- View Toggle -->
+                <div class="flex items-center bg-gray-100 rounded-xl p-1">
+                    <button
+                        @click="viewMode = 'table'"
+                        :class="[
+                            'p-2 rounded-lg transition-all',
+                            viewMode === 'table' ? 'bg-white shadow text-primary-600' : 'text-gray-500 hover:text-gray-700'
+                        ]"
+                    >
+                        <Bars3Icon class="w-5 h-5" />
+                    </button>
+                    <button
+                        @click="viewMode = 'grid'"
+                        :class="[
+                            'p-2 rounded-lg transition-all',
+                            viewMode === 'grid' ? 'bg-white shadow text-primary-600' : 'text-gray-500 hover:text-gray-700'
+                        ]"
+                    >
+                        <Squares2X2Icon class="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grid View -->
+        <div v-if="viewMode === 'grid'" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+            <div
+                v-for="box in boxes.data"
+                :key="box.id"
+                class="group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-lg hover:border-primary-200 transition-all overflow-hidden"
             >
-                + Add Box
-            </Link>
-        </div>
-
-        <!-- Filters -->
-        <div class="bg-white rounded-lg shadow p-4 mb-6">
-            <div class="grid gap-4 md:grid-cols-3">
-                <input
-                    v-model="search"
-                    type="text"
-                    placeholder="Search boxes..."
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    @input="handleSearch"
-                />
-                <select
-                    v-model="statusFilter"
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    @change="handleFilterChange"
-                >
-                    <option value="">All Statuses</option>
-                    <option value="available">Available</option>
-                    <option value="occupied">Occupied</option>
-                    <option value="reserved">Reserved</option>
-                    <option value="maintenance">Maintenance</option>
-                </select>
-
-                <select
-                    v-model="siteFilter"
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    @change="handleFilterChange"
-                >
-                    <option value="">All Sites</option>
-                    <option v-for="site in sites" :key="site.id" :value="site.id">
-                        {{ site.name }}
-                    </option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Stats Grid -->
-        <div class="grid gap-6 mb-8 md:grid-cols-4">
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="flex items-center">
-                    <div class="bg-purple-100 rounded-full p-3">
-                        <svg class="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
+                <!-- Box Header -->
+                <div class="relative p-4 pb-0">
+                    <div :class="[
+                        'absolute top-4 right-4 px-2.5 py-1 rounded-full text-xs font-semibold',
+                        getStatusClass(box.status)
+                    ]">
+                        {{ getStatusLabel(box.status) }}
                     </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Total Boxes</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
+                    <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-lg mb-3">
+                        {{ box.code?.substring(0, 2) }}
+                    </div>
+                    <h3 class="font-semibold text-gray-900 text-lg">{{ box.name }}</h3>
+                    <p class="text-sm text-gray-500 font-mono">{{ box.code }}</p>
+                </div>
+
+                <!-- Box Info -->
+                <div class="p-4">
+                    <div class="space-y-2 text-sm">
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500">Site</span>
+                            <span class="font-medium text-gray-900">{{ box.site?.name || '-' }}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500">Dimensions</span>
+                            <span class="font-medium text-gray-900">{{ box.length }}x{{ box.width }}x{{ box.height }}m</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-gray-500">Surface</span>
+                            <span class="font-medium text-gray-900">{{ (box.length * box.width).toFixed(1) }} m²</span>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-4 border-t border-gray-100">
+                        <div class="flex items-center justify-between">
+                            <span class="text-2xl font-bold text-gray-900">{{ formatCurrency(box.current_price) }}</span>
+                            <span class="text-sm text-gray-500">/mois</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Box Actions -->
+                <div class="px-4 py-3 bg-gray-50 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Link
+                        :href="route('tenant.boxes.show', box.id)"
+                        class="text-sm font-medium text-primary-600 hover:text-primary-700"
+                    >
+                        Voir details
+                    </Link>
+                    <div class="flex items-center space-x-2">
+                        <Link
+                            :href="route('tenant.boxes.edit', box.id)"
+                            class="p-1.5 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                        >
+                            <PencilIcon class="w-4 h-4" />
+                        </Link>
+                        <button
+                            @click="confirmDelete(box)"
+                            class="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                            <TrashIcon class="w-4 h-4" />
+                        </button>
                     </div>
                 </div>
             </div>
 
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="flex items-center">
-                    <div class="bg-green-100 rounded-full p-3">
-                        <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Available</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ stats.available }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="flex items-center">
-                    <div class="bg-orange-100 rounded-full p-3">
-                        <svg class="h-8 w-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Occupied</p>
-                        <p class="text-2xl font-bold text-gray-900">{{ stats.occupied }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-lg shadow p-6">
-                <div class="flex items-center">
-                    <div class="bg-blue-100 rounded-full p-3">
-                        <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <div class="ml-4">
-                        <p class="text-sm font-medium text-gray-600">Monthly Revenue</p>
-                        <p class="text-2xl font-bold text-gray-900">${{ stats.total_revenue ? stats.total_revenue.toFixed(2) : '0.00' }}</p>
-                    </div>
+            <!-- Empty State -->
+            <div v-if="boxes.data.length === 0" class="col-span-full">
+                <div class="bg-white rounded-2xl border border-gray-100 p-12 text-center">
+                    <ArchiveBoxIcon class="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Aucun box trouve</h3>
+                    <p class="text-gray-500 mb-6">
+                        {{ filters.search || filters.status || filters.site_id ? 'Essayez de modifier vos filtres' : 'Commencez par creer votre premier box' }}
+                    </p>
+                    <Link
+                        v-if="!filters.search && !filters.status && !filters.site_id"
+                        :href="route('tenant.boxes.create')"
+                        class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-xl font-medium text-sm hover:bg-primary-700 transition-colors"
+                    >
+                        <PlusIcon class="w-5 h-5 mr-2" />
+                        Ajouter un box
+                    </Link>
                 </div>
             </div>
         </div>
 
-        <!-- Boxes Table -->
-        <div class="bg-white rounded-lg shadow overflow-hidden">
+        <!-- Table View -->
+        <div v-else class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
             <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Box Info
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-gray-50 border-b border-gray-100">
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Box
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 Site
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 Dimensions
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Price
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Prix
                             </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Status
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Statut
                             </th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
                                 Actions
                             </th>
                         </tr>
                     </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
+                    <tbody class="divide-y divide-gray-50">
                         <tr v-if="boxes.data.length === 0">
-                            <td colspan="6" class="px-6 py-12 text-center text-gray-500">
-                                <div class="flex flex-col items-center">
-                                    <svg class="h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                    </svg>
-                                    <p class="text-lg font-medium mb-2">No boxes found</p>
-                                    <p class="text-sm text-gray-500 mb-4">
-                                        {{ filters.search || filters.status || filters.site_id ? 'Try adjusting your filters' : 'Get started by creating your first box' }}
-                                    </p>
-                                    <Link
-                                        v-if="!filters.search && !filters.status && !filters.site_id"
-                                        :href="route('tenant.boxes.create')"
-                                        class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                                    >
-                                        + Add Box
-                                    </Link>
-                                </div>
+                            <td colspan="6" class="px-6 py-12 text-center">
+                                <ArchiveBoxIcon class="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                                <h3 class="text-lg font-semibold text-gray-900 mb-2">Aucun box trouve</h3>
+                                <p class="text-sm text-gray-500 mb-4">
+                                    {{ filters.search || filters.status || filters.site_id ? 'Essayez de modifier vos filtres' : 'Commencez par creer votre premier box' }}
+                                </p>
+                                <Link
+                                    v-if="!filters.search && !filters.status && !filters.site_id"
+                                    :href="route('tenant.boxes.create')"
+                                    class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg font-medium text-sm hover:bg-primary-700 transition-colors"
+                                >
+                                    <PlusIcon class="w-4 h-4 mr-2" />
+                                    Ajouter un box
+                                </Link>
                             </td>
                         </tr>
-                        <tr v-else v-for="box in boxes.data" :key="box.id" class="hover:bg-gray-50">
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div>
-                                    <div class="text-sm font-medium text-gray-900">{{ box.name }}</div>
-                                    <div class="text-sm text-gray-500 font-mono">{{ box.code }}</div>
+                        <tr
+                            v-else
+                            v-for="box in boxes.data"
+                            :key="box.id"
+                            class="hover:bg-gray-50/50 transition-colors"
+                        >
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-semibold text-sm">
+                                        {{ box.code?.substring(0, 2) }}
+                                    </div>
+                                    <div>
+                                        <p class="font-semibold text-gray-900">{{ box.name }}</p>
+                                        <p class="text-sm text-gray-500 font-mono">{{ box.code }}</p>
+                                    </div>
                                 </div>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ box.site?.name || 'N/A' }}</div>
-                                <div v-if="box.building" class="text-sm text-gray-500">{{ box.building.name }}</div>
+                            <td class="px-6 py-4">
+                                <p class="text-gray-900">{{ box.site?.name || '-' }}</p>
+                                <p v-if="box.building" class="text-sm text-gray-500">{{ box.building.name }}</p>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ box.length }}m × {{ box.width }}m × {{ box.height }}m</div>
-                                <div class="text-sm text-gray-500">{{ box.volume }} m³</div>
+                            <td class="px-6 py-4">
+                                <p class="text-gray-900">{{ box.length }}m × {{ box.width }}m × {{ box.height }}m</p>
+                                <p class="text-sm text-gray-500">{{ box.volume || (box.length * box.width * box.height).toFixed(1) }} m³</p>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">${{ box.current_price }}</div>
-                                <div v-if="box.current_price !== box.base_price" class="text-xs text-gray-500">Base: ${{ box.base_price }}</div>
+                            <td class="px-6 py-4">
+                                <p class="font-semibold text-gray-900">{{ formatCurrency(box.current_price) }}</p>
+                                <p v-if="box.current_price !== box.base_price" class="text-xs text-gray-500">
+                                    Base: {{ formatCurrency(box.base_price) }}
+                                </p>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                                    :class="{
-                                        'bg-green-100 text-green-800': box.status === 'available',
-                                        'bg-orange-100 text-orange-800': box.status === 'occupied',
-                                        'bg-yellow-100 text-yellow-800': box.status === 'maintenance',
-                                        'bg-blue-100 text-blue-800': box.status === 'reserved'
-                                    }"
-                                >
-                                    {{ box.status.charAt(0).toUpperCase() + box.status.slice(1) }}
+                            <td class="px-6 py-4">
+                                <span :class="[
+                                    'inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold',
+                                    getStatusClass(box.status)
+                                ]">
+                                    <span :class="[
+                                        'w-1.5 h-1.5 rounded-full mr-1.5',
+                                        getStatusDotClass(box.status)
+                                    ]"></span>
+                                    {{ getStatusLabel(box.status) }}
                                 </span>
                             </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <div class="flex items-center justify-end space-x-3">
+                            <td class="px-6 py-4 text-right">
+                                <div class="flex items-center justify-end space-x-1">
                                     <Link
                                         :href="route('tenant.boxes.show', box.id)"
-                                        class="text-primary-600 hover:text-primary-900"
+                                        class="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                        title="Voir"
                                     >
-                                        View
+                                        <EyeIcon class="w-4 h-4" />
                                     </Link>
                                     <Link
                                         :href="route('tenant.boxes.edit', box.id)"
-                                        class="text-indigo-600 hover:text-indigo-900"
+                                        class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                        title="Modifier"
                                     >
-                                        Edit
+                                        <PencilIcon class="w-4 h-4" />
                                     </Link>
                                     <button
                                         @click="confirmDelete(box)"
-                                        class="text-red-600 hover:text-red-900"
+                                        class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Supprimer"
                                     >
-                                        Delete
+                                        <TrashIcon class="w-4 h-4" />
                                     </button>
                                 </div>
                             </td>
@@ -216,79 +371,99 @@
             </div>
 
             <!-- Pagination -->
-            <div v-if="boxes.data.length > 0" class="px-6 py-4 border-t border-gray-200">
-                <div class="flex items-center justify-between">
-                    <div class="text-sm text-gray-700">
-                        Showing <span class="font-medium">{{ boxes.from }}</span> to <span class="font-medium">{{ boxes.to }}</span> of <span class="font-medium">{{ boxes.total }}</span> results
-                    </div>
-                    <div class="flex space-x-2">
-                        <Link
-                            v-for="link in boxes.links"
-                            :key="link.label"
-                            :href="link.url"
-                            :class="{
-                                'px-4 py-2 border rounded-lg transition-colors': true,
-                                'bg-primary-600 text-white border-primary-600': link.active,
-                                'bg-white text-gray-700 border-gray-300 hover:bg-gray-50': !link.active && link.url,
-                                'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed': !link.url
-                            }"
-                            :preserve-scroll="true"
-                            v-html="link.label"
-                        />
+            <div v-if="boxes.data.length > 0" class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <p class="text-sm text-gray-600">
+                        Affichage <span class="font-semibold">{{ boxes.from }}</span> a <span class="font-semibold">{{ boxes.to }}</span> sur <span class="font-semibold">{{ boxes.total }}</span> resultats
+                    </p>
+                    <div class="flex items-center space-x-1">
+                        <template v-for="link in boxes.links" :key="link.label">
+                            <Link
+                                v-if="link.url"
+                                :href="link.url"
+                                :class="[
+                                    'px-3 py-1.5 text-sm rounded-lg transition-colors',
+                                    link.active
+                                        ? 'bg-primary-600 text-white font-semibold'
+                                        : 'text-gray-600 hover:bg-gray-100'
+                                ]"
+                                :preserve-scroll="true"
+                                v-html="link.label"
+                            />
+                            <span
+                                v-else
+                                class="px-3 py-1.5 text-sm text-gray-400"
+                                v-html="link.label"
+                            />
+                        </template>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Delete Confirmation Modal -->
-        <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto">
-            <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-                <div class="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" @click="closeDeleteModal"></div>
+        <Teleport to="body">
+            <transition name="modal">
+                <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto">
+                    <div class="flex items-center justify-center min-h-screen px-4">
+                        <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" @click="closeDeleteModal"></div>
 
-                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                        <div class="sm:flex sm:items-start">
-                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                                <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
+                        <div class="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scale-in">
+                            <div class="flex items-center justify-center w-14 h-14 mx-auto bg-red-100 rounded-full mb-4">
+                                <ExclamationTriangleIcon class="w-7 h-7 text-red-600" />
                             </div>
-                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                                <h3 class="text-lg leading-6 font-medium text-gray-900">Delete Box</h3>
-                                <div class="mt-2">
-                                    <p class="text-sm text-gray-500">
-                                        Are you sure you want to delete <strong>{{ boxToDelete?.name }}</strong>? This action cannot be undone.
-                                    </p>
-                                </div>
+
+                            <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Supprimer ce box ?</h3>
+                            <p class="text-gray-500 text-center mb-6">
+                                Etes-vous sur de vouloir supprimer <strong class="text-gray-900">{{ boxToDelete?.name }}</strong> ?
+                                Cette action est irreversible.
+                            </p>
+
+                            <div class="flex items-center space-x-3">
+                                <button
+                                    @click="closeDeleteModal"
+                                    :disabled="deleteForm.processing"
+                                    class="flex-1 px-4 py-2.5 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl font-medium transition-colors disabled:opacity-50"
+                                >
+                                    Annuler
+                                </button>
+                                <button
+                                    @click="deleteBox"
+                                    :disabled="deleteForm.processing"
+                                    class="flex-1 px-4 py-2.5 text-white bg-red-600 hover:bg-red-700 rounded-xl font-medium transition-colors disabled:opacity-50 flex items-center justify-center"
+                                >
+                                    <span v-if="deleteForm.processing" class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2"></span>
+                                    {{ deleteForm.processing ? 'Suppression...' : 'Supprimer' }}
+                                </button>
                             </div>
                         </div>
                     </div>
-                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                        <button
-                            @click="deleteBox"
-                            :disabled="deleteForm.processing"
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                        >
-                            {{ deleteForm.processing ? 'Deleting...' : 'Delete' }}
-                        </button>
-                        <button
-                            @click="closeDeleteModal"
-                            :disabled="deleteForm.processing"
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
-                        >
-                            Cancel
-                        </button>
-                    </div>
                 </div>
-            </div>
-        </div>
-    </AuthenticatedLayout>
+            </transition>
+        </Teleport>
+    </TenantLayout>
 </template>
 
 <script setup>
 import { ref } from 'vue'
 import { router, useForm, Link } from '@inertiajs/vue3'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import TenantLayout from '@/Layouts/TenantLayout.vue'
+import {
+    PlusIcon,
+    MagnifyingGlassIcon,
+    ChevronDownIcon,
+    ArchiveBoxIcon,
+    CheckCircleIcon,
+    LockClosedIcon,
+    CurrencyEuroIcon,
+    MapIcon,
+    EyeIcon,
+    PencilIcon,
+    TrashIcon,
+    ExclamationTriangleIcon,
+    Bars3Icon,
+    Squares2X2Icon,
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     boxes: Object,
@@ -300,12 +475,51 @@ const props = defineProps({
 const search = ref(props.filters.search || '')
 const statusFilter = ref(props.filters.status || '')
 const siteFilter = ref(props.filters.site_id || '')
+const viewMode = ref('table')
 
 const showDeleteModal = ref(false)
 const boxToDelete = ref(null)
 const deleteForm = useForm({})
 
 let searchTimeout = null
+
+const formatCurrency = (value) => {
+    return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 0,
+    }).format(value || 0)
+}
+
+const getStatusClass = (status) => {
+    const classes = {
+        available: 'bg-emerald-100 text-emerald-700',
+        occupied: 'bg-amber-100 text-amber-700',
+        reserved: 'bg-blue-100 text-blue-700',
+        maintenance: 'bg-gray-100 text-gray-700',
+    }
+    return classes[status] || 'bg-gray-100 text-gray-700'
+}
+
+const getStatusDotClass = (status) => {
+    const classes = {
+        available: 'bg-emerald-500',
+        occupied: 'bg-amber-500',
+        reserved: 'bg-blue-500',
+        maintenance: 'bg-gray-500',
+    }
+    return classes[status] || 'bg-gray-500'
+}
+
+const getStatusLabel = (status) => {
+    const labels = {
+        available: 'Disponible',
+        occupied: 'Occupe',
+        reserved: 'Reserve',
+        maintenance: 'Maintenance',
+    }
+    return labels[status] || status
+}
 
 const handleSearch = () => {
     clearTimeout(searchTimeout)
@@ -350,3 +564,20 @@ const deleteBox = () => {
     })
 }
 </script>
+
+<style scoped>
+.modal-enter-active,
+.modal-leave-active {
+    transition: all 0.3s ease;
+}
+
+.modal-enter-from,
+.modal-leave-to {
+    opacity: 0;
+}
+
+.modal-enter-from .animate-scale-in,
+.modal-leave-to .animate-scale-in {
+    transform: scale(0.95);
+}
+</style>

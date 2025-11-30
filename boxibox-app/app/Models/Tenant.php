@@ -44,12 +44,14 @@ class Tenant extends Model
         'tax_id',
         'settings',
         'features',
+        'plan_elements',
         'last_activity_at',
     ];
 
     protected $casts = [
         'settings' => 'array',
         'features' => 'array',
+        'plan_elements' => 'array',
         'trial_ends_at' => 'datetime',
         'subscription_ends_at' => 'datetime',
         'last_activity_at' => 'datetime',

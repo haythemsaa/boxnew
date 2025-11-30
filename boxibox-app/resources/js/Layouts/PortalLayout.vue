@@ -69,14 +69,14 @@
                                 class="flex items-center space-x-2 rounded-full bg-white p-2 text-gray-400 hover:text-gray-500"
                             >
                                 <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-white font-semibold">
-                                    {{ $page.props.auth.user?.name?.charAt(0) }}
+                                    {{ $page.props.auth.user?.name?.charAt(0) || 'U' }}
                                 </div>
                             </button>
 
                             <div
                                 v-if="showUserMenu"
                                 @click.away="showUserMenu = false"
-                                class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black ring-opacity-5"
+                                class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5"
                             >
                                 <Link
                                     :href="route('portal.profile')"
@@ -157,7 +157,7 @@
                 <div class="border-t border-gray-200 pb-3 pt-4">
                     <div class="flex items-center px-4">
                         <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white font-semibold">
-                            {{ $page.props.auth.user?.name?.charAt(0) }}
+                            {{ $page.props.auth.user?.name?.charAt(0) || 'U' }}
                         </div>
                         <div class="ml-3">
                             <div class="text-base font-medium text-gray-800">{{ $page.props.auth.user?.name }}</div>
