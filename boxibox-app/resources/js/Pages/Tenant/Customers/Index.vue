@@ -93,7 +93,7 @@
                     </div>
                     <div class="ml-4">
                         <p class="text-sm font-medium text-gray-600">Revenue</p>
-                        <p class="text-2xl font-bold text-gray-900">${{ stats.total_revenue ? stats.total_revenue.toFixed(2) : '0.00' }}</p>
+                        <p class="text-2xl font-bold text-gray-900">${{ (stats.total_revenue || 0) > 0 ? parseFloat(stats.total_revenue).toFixed(2) : '0.00' }}</p>
                     </div>
                 </div>
             </div>
@@ -185,7 +185,7 @@
                                         {{ customer.type === 'company' ? customer.company_name : `${customer.first_name} ${customer.last_name}` }}
                                     </div>
                                     <div v-if="customer.civility && customer.type === 'individual'" class="text-sm text-gray-500">
-                                        {{ customer.civility.toUpperCase() }}
+                                        {{ customer.civility ? customer.civility.toUpperCase() : '' }}
                                     </div>
                                 </div>
                             </td>

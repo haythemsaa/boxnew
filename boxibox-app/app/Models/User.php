@@ -31,6 +31,15 @@ class User extends Authenticatable
         'avatar',
         'role',
         'status',
+        'two_factor_enabled',
+        'two_factor_secret',
+        'two_factor_backup_codes',
+        'two_factor_confirmed_at',
+        'last_login_at',
+        'last_login_ip',
+        'failed_login_attempts',
+        'locked_until',
+        'whitelisted_ips',
     ];
 
     /**
@@ -53,6 +62,11 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'two_factor_confirmed_at' => 'datetime',
+            'two_factor_backup_codes' => 'array',
+            'last_login_at' => 'datetime',
+            'locked_until' => 'datetime',
+            'whitelisted_ips' => 'array',
         ];
     }
 

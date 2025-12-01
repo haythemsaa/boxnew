@@ -45,7 +45,8 @@
       "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; SELECT COUNT(*) as total_tables FROM information_schema.tables WHERE table_schema = ''boxibox'';\")",
       "Bash(timeout 30 php artisan:*)",
       "Bash(timeout 60 php artisan:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(/c/xampp2025/mysql/bin/mysql:*)"
     ],
     "deny": [],
     "ask": []
