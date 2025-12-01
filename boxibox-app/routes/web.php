@@ -218,6 +218,11 @@ Route::middleware('auth')->group(function () {
         Route::resource('contracts', ContractController::class);
 
         // Invoices (Resource Controller)
+        Route::post('invoices/generate', [InvoiceController::class, 'generateInvoices'])->name('invoices.generate');
+        Route::get('invoices/overdue/list', [InvoiceController::class, 'overdueInvoices'])->name('invoices.overdue');
+        Route::post('invoices/{invoice}/payment', [InvoiceController::class, 'recordPayment'])->name('invoices.record-payment');
+        Route::post('invoices/{invoice}/send', [InvoiceController::class, 'sendInvoice'])->name('invoices.send');
+        Route::post('invoices/{invoice}/reminder', [InvoiceController::class, 'sendReminder'])->name('invoices.reminder');
         Route::get('invoices/export/excel', [InvoiceController::class, 'export'])->name('invoices.export');
         Route::get('invoices/{invoice}/pdf', [InvoiceController::class, 'downloadPdf'])->name('invoices.pdf');
         Route::resource('invoices', InvoiceController::class);

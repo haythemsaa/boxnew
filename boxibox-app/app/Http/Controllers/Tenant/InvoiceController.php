@@ -8,7 +8,9 @@ use App\Http\Requests\UpdateInvoiceRequest;
 use App\Models\Invoice;
 use App\Models\Customer;
 use App\Models\Contract;
+use App\Models\Payment;
 use App\Services\ExcelExportService;
+use App\Services\InvoiceGenerationService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -302,6 +304,150 @@ class InvoiceController extends Controller
         return response($csv, 200, [
             'Content-Type' => 'text/csv; charset=UTF-8',
             'Content-Disposition' => 'attachment; filename="' . $result['filename'] . '"',
+        ]);
+    }
+
+    /**
+     * Generate invoices for active contracts.
+     */
+    public function generateInvoices(Request $request, InvoiceGenerationService $service): RedirectResponse
+    {
+        $this->authorize('create_invoices');
+
+        $tenantId = $request->user()->tenant_id;
+        $result = $service->generateInvoicesForContracts($tenantId);
+
+        $message = "Generated {$result['total']} invoice(s).";
+        if (count($result['failed']) > 0) {
+            $message .= " Failed: " . count($result['failed']);
+        }
+
+        return redirect()
+            ->route('tenant.invoices.index')
+            ->with('success', $message);
+    }
+
+    /**
+     * Record payment for an invoice.
+     */
+    public function recordPayment(Request $request, Invoice $invoice): RedirectResponse
+    {
+        $this->authorize('update_invoices');
+
+        // Ensure tenant can only update their own invoices
+        if ($invoice->tenant_id !== $request->user()->tenant_id) {
+            abort(403);
+        }
+
+        // Validate request
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:0.01',
+            'payment_method' => 'required|string|in:bank_transfer,card,cash,sepa',
+            'payment_date' => 'nullable|date',
+            'reference' => 'nullable|string|max:255',
+        ]);
+
+        $paymentDate = $validated['payment_date'] ?? now()->toDateString();
+
+        // Record payment
+        $invoice->recordPayment($validated['amount']);
+
+        // Create payment record
+        Payment::create([
+            'invoice_id' => $invoice->id,
+            'tenant_id' => $invoice->tenant_id,
+            'amount' => $validated['amount'],
+            'payment_method' => $validated['payment_method'],
+            'payment_date' => $paymentDate,
+            'reference' => $validated['reference'] ?? 'Manual payment',
+        ]);
+
+        // Update customer revenue if invoice is now paid
+        if ($invoice->status === 'paid' && $invoice->customer) {
+            $invoice->customer->increment('total_revenue', $invoice->total);
+        }
+
+        return redirect()
+            ->route('tenant.invoices.show', $invoice->id)
+            ->with('success', 'Payment recorded successfully.');
+    }
+
+    /**
+     * Send invoice to customer (mark as sent).
+     */
+    public function sendInvoice(Request $request, Invoice $invoice, InvoiceGenerationService $service): RedirectResponse
+    {
+        $this->authorize('update_invoices');
+
+        // Ensure tenant can only update their own invoices
+        if ($invoice->tenant_id !== $request->user()->tenant_id) {
+            abort(403);
+        }
+
+        // Only draft invoices can be sent
+        if ($invoice->status !== 'draft') {
+            return redirect()
+                ->back()
+                ->with('error', 'Only draft invoices can be sent.');
+        }
+
+        $service->sendInvoice($invoice);
+
+        return redirect()
+            ->route('tenant.invoices.show', $invoice->id)
+            ->with('success', 'Invoice sent to customer.');
+    }
+
+    /**
+     * Send payment reminder for an invoice.
+     */
+    public function sendReminder(Request $request, Invoice $invoice): RedirectResponse
+    {
+        $this->authorize('update_invoices');
+
+        // Ensure tenant can only update their own invoices
+        if ($invoice->tenant_id !== $request->user()->tenant_id) {
+            abort(403);
+        }
+
+        // Only unpaid invoices can receive reminders
+        if (!in_array($invoice->status, ['sent', 'overdue', 'partial'])) {
+            return redirect()
+                ->back()
+                ->with('error', 'Only unpaid invoices can receive reminders.');
+        }
+
+        $invoice->sendReminder();
+
+        // TODO: Send email reminder
+
+        return redirect()
+            ->route('tenant.invoices.show', $invoice->id)
+            ->with('success', 'Payment reminder sent.');
+    }
+
+    /**
+     * Get overdue invoices summary.
+     */
+    public function overdueInvoices(Request $request): Response
+    {
+        $this->authorize('view_invoices');
+
+        $tenantId = $request->user()->tenant_id;
+
+        $invoices = Invoice::overdue()
+            ->where('tenant_id', $tenantId)
+            ->with(['customer', 'contract'])
+            ->orderBy('due_date')
+            ->paginate(10);
+
+        $totalAmount = Invoice::overdue()
+            ->where('tenant_id', $tenantId)
+            ->sum('total');
+
+        return Inertia::render('Tenant/Invoices/Overdue', [
+            'invoices' => $invoices,
+            'totalAmount' => $totalAmount,
         ]);
     }
 }
