@@ -1,9 +1,17 @@
 <script setup>
-import { Link } from '@inertiajs/vue3'
+import { ref } from 'vue'
+import { useForm, Link } from '@inertiajs/vue3'
 import TenantLayout from '@/Layouts/TenantLayout.vue'
 
 const props = defineProps({
     contract: Object,
+})
+
+const showTerminationModal = ref(false)
+const terminationForm = useForm({
+    termination_reason: 'customer_request',
+    termination_notes: '',
+    effective_date: new Date().toISOString().split('T')[0],
 })
 
 const formatDate = (date) => {
@@ -56,6 +64,15 @@ const getInvoiceStatusColor = (status) => {
         cancelled: 'bg-gray-100 text-gray-800',
     }
     return colors[status] || 'bg-gray-100 text-gray-800'
+}
+
+const submitTermination = () => {
+    terminationForm.post(route('tenant.contracts.terminate', props.contract.id), {
+        onSuccess: () => {
+            showTerminationModal.value = false
+            terminationForm.reset()
+        },
+    })
 }
 </script>
 
@@ -344,6 +361,66 @@ const getInvoiceStatusColor = (status) => {
                                 </div>
                             </dl>
                         </div>
+                    </div>
+
+                    <!-- Contract Actions -->
+                    <div v-if="contract.status === 'active'" class="bg-white shadow rounded-lg overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <h2 class="text-lg font-medium text-gray-900">Actions</h2>
+                        </div>
+                        <div class="px-6 py-4 space-y-3">
+                            <Link
+                                :href="route('tenant.contracts.renewal-options', contract.id)"
+                                class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700"
+                            >
+                                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Renew
+                            </Link>
+                            <button
+                                @click="showTerminationModal = true"
+                                class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700"
+                            >
+                                <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Terminate
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Termination Modal -->
+            <div v-if="showTerminationModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                    <div class="mt-3 text-center">
+                        <h3 class="text-lg font-medium text-gray-900 mb-4">Terminate Contract</h3>
+                        <form @submit.prevent="submitTermination" class="space-y-4 text-left">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Reason</label>
+                                <select v-model="terminationForm.termination_reason" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required>
+                                    <option value="customer_request">Customer Request</option>
+                                    <option value="non_payment">Non-Payment</option>
+                                    <option value="breach">Breach of Contract</option>
+                                    <option value="end_of_term">End of Term</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Effective Date</label>
+                                <input v-model="terminationForm.effective_date" type="date" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500" required />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                                <textarea v-model="terminationForm.termination_notes" rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"></textarea>
+                            </div>
+                            <div class="flex gap-3 pt-4">
+                                <button type="submit" class="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Terminate</button>
+                                <button type="button" @click="showTerminationModal = false" class="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400">Cancel</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             </div>

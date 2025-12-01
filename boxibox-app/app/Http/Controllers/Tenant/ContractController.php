@@ -483,4 +483,99 @@ class ContractController extends Controller
 
         return $filename;
     }
+
+    /**
+     * Terminate a contract.
+     */
+    public function terminate(Request $request, Contract $contract): RedirectResponse
+    {
+        $this->authorize('update_contracts');
+
+        // Ensure tenant can only update their own contracts
+        if ($contract->tenant_id !== $request->user()->tenant_id) {
+            abort(403);
+        }
+
+        // Only active contracts can be terminated
+        if ($contract->status !== 'active') {
+            return redirect()
+                ->back()
+                ->with('error', 'Seuls les contrats actifs peuvent être résiliés.');
+        }
+
+        // Validate request
+        $validated = $request->validate([
+            'termination_reason' => 'required|string|in:customer_request,non_payment,breach,end_of_term,other',
+            'termination_notes' => 'nullable|string|max:1000',
+            'effective_date' => 'required|date|after_or_equal:today',
+        ]);
+
+        // Update contract with termination data
+        $contract->update([
+            'status' => 'terminated',
+            'termination_reason' => $validated['termination_reason'],
+            'termination_notes' => $validated['termination_notes'],
+            'actual_end_date' => $validated['effective_date'],
+        ]);
+
+        // Make box available again
+        if ($contract->box) {
+            $contract->box->update(['status' => 'available']);
+        }
+
+        // Decrement customer's contract count
+        if ($contract->customer) {
+            $contract->customer->decrement('total_contracts');
+        }
+
+        return redirect()
+            ->route('tenant.contracts.show', $contract->id)
+            ->with('success', 'Le contrat a été résilié avec succès.');
+    }
+
+    /**
+     * Show renewal options for a contract.
+     */
+    public function renewalOptions(Request $request, Contract $contract): Response
+    {
+        $this->authorize('view_contracts');
+
+        // Ensure tenant can only view their own contracts
+        if ($contract->tenant_id !== $request->user()->tenant_id) {
+            abort(403);
+        }
+
+        $contract->load(['customer', 'box']);
+
+        return Inertia::render('Tenant/Contracts/RenewalOptions', [
+            'contract' => $contract,
+        ]);
+    }
+
+    /**
+     * Renew a contract.
+     */
+    public function renew(Request $request, Contract $contract): RedirectResponse
+    {
+        $this->authorize('update_contracts');
+
+        // Ensure tenant can only update their own contracts
+        if ($contract->tenant_id !== $request->user()->tenant_id) {
+            abort(403);
+        }
+
+        // Validate request
+        $validated = $request->validate([
+            'months' => 'required|integer|in:1,3,6,12',
+        ]);
+
+        // Renew the contract
+        $contract->update([
+            'end_date' => $contract->end_date->addMonths($validated['months']),
+        ]);
+
+        return redirect()
+            ->route('tenant.contracts.show', $contract->id)
+            ->with('success', 'Le contrat a été renouvelé avec succès pour ' . $validated['months'] . ' mois.');
+    }
 }
