@@ -1,5 +1,6 @@
 import './bootstrap';
 import '../css/app.css';
+import '../css/modern.css';
 
 import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
@@ -22,6 +23,14 @@ import TextareaInput from './Components/Form/TextareaInput.vue';
 // Import transition components
 import PageTransition from './Components/Transitions/PageTransition.vue';
 import ListTransition from './Components/Transitions/ListTransition.vue';
+
+// Import modern components
+import AnimatedInput from './Components/Modern/AnimatedInput.vue';
+import ModernButton from './Components/Modern/ModernButton.vue';
+import ModernCard from './Components/Modern/ModernCard.vue';
+import DynamicForm from './Components/Modern/DynamicForm.vue';
+import ModernModal from './Components/Modern/ModernModal.vue';
+import ModernTable from './Components/Modern/ModernTable.vue';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Boxibox';
 
@@ -49,6 +58,14 @@ createInertiaApp({
         // Register global transition components
         app.component('PageTransition', PageTransition);
         app.component('ListTransition', ListTransition);
+
+        // Register modern components globally
+        app.component('AnimatedInput', AnimatedInput);
+        app.component('ModernButton', ModernButton);
+        app.component('ModernCard', ModernCard);
+        app.component('DynamicForm', DynamicForm);
+        app.component('ModernModal', ModernModal);
+        app.component('ModernTable', ModernTable);
 
         return app.mount(el);
     },
