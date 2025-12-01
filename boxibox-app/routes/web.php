@@ -209,6 +209,8 @@ Route::middleware('auth')->group(function () {
         // Contracts (Resource Controller)
         Route::get('contracts/export/excel', [ContractController::class, 'export'])->name('contracts.export');
         Route::get('contracts/{contract}/pdf', [ContractController::class, 'downloadPdf'])->name('contracts.pdf');
+        Route::get('contracts/{contract}/sign', [ContractController::class, 'sign'])->name('contracts.sign');
+        Route::post('contracts/{contract}/sign', [ContractController::class, 'saveSignatures'])->name('contracts.save-signatures');
         Route::get('contracts/create/wizard', [ContractController::class, 'createWizard'])->name('contracts.create-wizard');
         Route::resource('contracts', ContractController::class);
 

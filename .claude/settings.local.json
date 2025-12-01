@@ -43,7 +43,9 @@
       "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; DROP TABLE IF EXISTS chart_of_accounts, accounting_entry_lines, accounting_entries, accounting_journals, fec_exports, accounting_entity_mappings, accounting_sync_logs, accounting_connections, accounting_providers;\")",
       "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; DELETE FROM migrations WHERE migration = ''2025_11_30_100700_create_accounting_integrations_tables'';\")",
       "Bash(\"/c/xampp2025/mysql/bin/mysql\" -u root -e \"USE boxibox; SELECT COUNT(*) as total_tables FROM information_schema.tables WHERE table_schema = ''boxibox'';\")",
-      "Bash(timeout 30 php artisan:*)"
+      "Bash(timeout 30 php artisan:*)",
+      "Bash(timeout 60 php artisan:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

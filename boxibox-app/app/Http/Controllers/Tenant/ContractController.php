@@ -362,4 +362,125 @@ class ContractController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $result['filename'] . '"',
         ]);
     }
+
+    /**
+     * Show the contract signing page.
+     */
+    public function sign(Request $request, Contract $contract): Response
+    {
+        $this->authorize('view_contracts');
+
+        // Ensure tenant can only sign their own contracts
+        if ($contract->tenant_id !== $request->user()->tenant_id) {
+            abort(403);
+        }
+
+        // Only allow signing if contract is in pending_signature status
+        if ($contract->status !== 'pending_signature') {
+            return redirect()
+                ->route('tenant.contracts.show', $contract->id)
+                ->with('warning', 'Ce contrat n\'est pas en attente de signature.');
+        }
+
+        $contract->load(['customer', 'box', 'site']);
+
+        return Inertia::render('Tenant/Contracts/Sign', [
+            'contract' => $contract,
+        ]);
+    }
+
+    /**
+     * Save contract signatures.
+     */
+    public function saveSignatures(Request $request, Contract $contract): RedirectResponse
+    {
+        $this->authorize('update_contracts');
+
+        // Ensure tenant can only update their own contracts
+        if ($contract->tenant_id !== $request->user()->tenant_id) {
+            abort(403);
+        }
+
+        // Validate request
+        $validated = $request->validate([
+            'customer_signature' => 'required|string',
+            'staff_signature' => 'required|string',
+            'confirmed' => 'required|boolean|accepted',
+        ]);
+
+        // Save signature images to storage
+        $customerSignaturePath = null;
+        $staffSignaturePath = null;
+
+        if ($validated['customer_signature']) {
+            $customerSignaturePath = $this->saveSignatureImage(
+                $validated['customer_signature'],
+                $contract->id,
+                'customer'
+            );
+        }
+
+        if ($validated['staff_signature']) {
+            $staffSignaturePath = $this->saveSignatureImage(
+                $validated['staff_signature'],
+                $contract->id,
+                'staff'
+            );
+        }
+
+        // Update contract with signature data
+        $contract->update([
+            'customer_signature' => $customerSignaturePath,
+            'staff_signature' => $staffSignaturePath,
+            'customer_signed_at' => now(),
+            'staff_user_id' => $request->user()->id,
+            'staff_signed_at' => now(),
+            'status' => 'active',
+        ]);
+
+        // Update box status to occupied
+        if ($contract->box) {
+            $contract->box->update(['status' => 'occupied']);
+        }
+
+        // Update customer statistics
+        if ($contract->customer) {
+            $contract->customer->increment('total_contracts');
+        }
+
+        return redirect()
+            ->route('tenant.contracts.show', $contract->id)
+            ->with('success', 'Signatures enregistrées avec succès. Le contrat est maintenant actif.');
+    }
+
+    /**
+     * Save a signature image to storage.
+     *
+     * @param string $signatureData Base64-encoded PNG data
+     * @param int $contractId
+     * @param string $type customer|staff
+     * @return string Path to saved file
+     */
+    private function saveSignatureImage(string $signatureData, int $contractId, string $type): string
+    {
+        // Remove data URL prefix if present
+        $signatureData = str_replace('data:image/png;base64,', '', $signatureData);
+
+        // Decode base64
+        $imageContent = base64_decode($signatureData);
+
+        // Create filename with timestamp
+        $filename = sprintf(
+            'signatures/%d/%s_%s_%d.png',
+            $contractId,
+            $type,
+            date('YmdHis'),
+            random_int(1000, 9999)
+        );
+
+        // Store in public disk
+        \Storage::disk('public')->put($filename, $imageContent);
+
+        return $filename;
+    }
 }
