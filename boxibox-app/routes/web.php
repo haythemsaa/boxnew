@@ -209,6 +209,7 @@ Route::middleware('auth')->group(function () {
         // Contracts (Resource Controller)
         Route::get('contracts/export/excel', [ContractController::class, 'export'])->name('contracts.export');
         Route::get('contracts/{contract}/pdf', [ContractController::class, 'downloadPdf'])->name('contracts.pdf');
+        Route::get('contracts/create/wizard', [ContractController::class, 'createWizard'])->name('contracts.create-wizard');
         Route::resource('contracts', ContractController::class);
 
         // Invoices (Resource Controller)
@@ -328,11 +329,14 @@ Route::middleware('auth')->group(function () {
         // Plan Routes (Visual Box Layout)
         Route::prefix('plan')->name('plan.')->group(function () {
             Route::get('/', [PlanController::class, 'index'])->name('index');
+            Route::get('/templates', [PlanController::class, 'templates'])->name('templates');
+            Route::post('/create', [PlanController::class, 'create'])->name('create');
             Route::get('/editor', [PlanController::class, 'editor'])->name('editor');
             Route::post('/sites/{site}/elements', [PlanController::class, 'saveElements'])->name('save-elements');
             Route::post('/sites/{site}/configuration', [PlanController::class, 'saveConfiguration'])->name('save-configuration');
             Route::post('/sites/{site}/auto-generate', [PlanController::class, 'autoGenerate'])->name('auto-generate');
             Route::get('/boxes/{box}/details', [PlanController::class, 'getBoxDetails'])->name('box-details');
+            Route::get('/floors/{site}', [PlanController::class, 'getFloors'])->name('get-floors');
         });
     });
 

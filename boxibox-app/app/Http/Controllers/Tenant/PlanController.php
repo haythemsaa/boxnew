@@ -7,6 +7,7 @@ use App\Models\Box;
 use App\Models\Floor;
 use App\Models\PlanConfiguration;
 use App\Models\PlanElement;
+use App\Models\PlanTemplate;
 use App\Models\Site;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -99,15 +100,15 @@ class PlanController extends Controller
 
         // Get box types for legend
         $boxTypes = Box::where('site_id', $currentSite->id)
-            ->select('size_m3')
+            ->select('volume')
             ->selectRaw('COUNT(*) as count')
             ->selectRaw('SUM(CASE WHEN EXISTS (SELECT 1 FROM contracts WHERE contracts.box_id = boxes.id AND contracts.status = "active") THEN 1 ELSE 0 END) as occupied')
-            ->groupBy('size_m3')
-            ->orderBy('size_m3')
+            ->groupBy('volume')
+            ->orderBy('volume')
             ->get()
             ->map(function ($type) {
                 return [
-                    'size' => $type->size_m3 . 'm³',
+                    'size' => $type->volume . 'm³',
                     'total' => $type->count,
                     'occupied' => $type->occupied,
                     'available' => $type->count - $type->occupied,
@@ -168,7 +169,7 @@ class PlanController extends Controller
 
         // Get all boxes for this site (for linking)
         $boxes = Box::where('site_id', $currentSite->id)
-            ->select('id', 'code', 'size_m3', 'width', 'depth', 'height', 'monthly_price', 'status')
+            ->select('id', 'number', 'volume', 'length', 'width', 'height', 'current_price', 'base_price', 'status')
             ->get();
 
         // Get boxes not yet on the plan
@@ -298,7 +299,7 @@ class PlanController extends Controller
         }
 
         $boxes = Box::where('site_id', $site->id)
-            ->orderBy('code')
+            ->orderBy('number')
             ->get();
 
         // Delete existing elements
@@ -312,9 +313,9 @@ class PlanController extends Controller
         $padding = 10;
 
         foreach ($boxes as $index => $box) {
-            // Calculate box dimensions based on size
-            $width = max(60, min(150, $box->size_m3 * 8));
-            $height = max(50, min(120, $box->size_m3 * 6));
+            // Calculate box dimensions based on volume
+            $width = max(60, min(150, $box->volume * 8));
+            $height = max(50, min(120, $box->volume * 6));
 
             // Check if we need to wrap to next row
             if ($x + $width > $canvasWidth) {
@@ -332,7 +333,7 @@ class PlanController extends Controller
                 'width' => $width,
                 'height' => $height,
                 'z_index' => $index,
-                'label' => $box->code,
+                'label' => $box->number,
                 'stroke_color' => '#1e3a5f',
                 'stroke_width' => 2,
             ]);
@@ -342,6 +343,119 @@ class PlanController extends Controller
         }
 
         return back()->with('success', 'Plan généré automatiquement');
+    }
+
+    /**
+     * Display template selector
+     */
+    public function templates(Request $request)
+    {
+        $tenant = auth()->user()->tenant;
+
+        $templates = PlanTemplate::where('tenant_id', $tenant->id)
+            ->orWhere('is_public', true)
+            ->orderBy('category')
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $recentPlans = Site::where('tenant_id', $tenant->id)
+            ->orderBy('updated_at', 'desc')
+            ->limit(5)
+            ->get(['id', 'name', 'updated_at']);
+
+        return Inertia::render('Tenant/Plan/TemplateSelector', [
+            'templates' => $templates,
+            'recentPlans' => $recentPlans,
+        ]);
+    }
+
+    /**
+     * Create a new plan from template
+     */
+    public function create(Request $request)
+    {
+        $tenant = auth()->user()->tenant;
+
+        $request->validate([
+            'template_id' => 'nullable|exists:plan_templates,id',
+        ]);
+
+        // Get first site or redirect to templates if none exist
+        $site = Site::where('tenant_id', $tenant->id)->first();
+
+        if (!$site) {
+            return redirect()->route('tenant.sites.create')
+                ->with('warning', 'Veuillez d\'abord créer un site');
+        }
+
+        // If template is provided, copy its elements
+        if ($request->template_id) {
+            $template = PlanTemplate::findOrFail($request->template_id);
+
+            // Create configuration from template
+            PlanConfiguration::updateOrCreate(
+                ['site_id' => $site->id],
+                [
+                    'canvas_width' => $template->width,
+                    'canvas_height' => $template->height,
+                ]
+            );
+
+            // Copy template elements if available
+            if ($template->template_data) {
+                PlanElement::where('site_id', $site->id)->delete();
+
+                foreach ($template->template_data as $elementData) {
+                    PlanElement::create([
+                        'site_id' => $site->id,
+                        'element_type' => $elementData['element_type'],
+                        'x' => $elementData['x'],
+                        'y' => $elementData['y'],
+                        'width' => $elementData['width'],
+                        'height' => $elementData['height'],
+                        'rotation' => $elementData['rotation'] ?? 0,
+                        'fill_color' => $elementData['fill_color'] ?? null,
+                        'stroke_color' => $elementData['stroke_color'] ?? null,
+                        'stroke_width' => $elementData['stroke_width'] ?? 1,
+                        'opacity' => $elementData['opacity'] ?? 1,
+                        'label' => $elementData['label'] ?? null,
+                    ]);
+                }
+            }
+        } else {
+            // Create default configuration
+            PlanConfiguration::firstOrCreate(
+                ['site_id' => $site->id],
+                [
+                    'canvas_width' => 1920,
+                    'canvas_height' => 1080,
+                ]
+            );
+        }
+
+        return redirect()->route('tenant.plan.editor', ['site_id' => $site->id])
+            ->with('success', 'Plan créé avec succès');
+    }
+
+    /**
+     * Get floors for a site (API endpoint)
+     */
+    public function getFloors(Site $site)
+    {
+        $tenant = auth()->user()->tenant;
+
+        if ($site->tenant_id !== $tenant->id) {
+            abort(403);
+        }
+
+        $floors = Floor::where('site_id', $site->id)
+            ->orderBy('floor_number')
+            ->get(['id', 'name', 'floor_number', 'total_area']);
+
+        return response()->json([
+            'floors' => $floors,
+            'count' => $floors->count(),
+        ]);
     }
 
     /**
@@ -367,10 +481,10 @@ class PlanController extends Controller
         return response()->json([
             'box' => [
                 'id' => $box->id,
-                'code' => $box->code,
-                'size_m3' => $box->size_m3,
-                'dimensions' => "{$box->width}m x {$box->depth}m x {$box->height}m",
-                'monthly_price' => $box->monthly_price,
+                'number' => $box->number,
+                'volume' => $box->volume,
+                'dimensions' => "{$box->length}m x {$box->width}m x {$box->height}m",
+                'price' => $box->current_price ?? $box->base_price,
                 'status' => $box->status,
             ],
             'contract' => $activeContract ? [
@@ -378,7 +492,7 @@ class PlanController extends Controller
                 'number' => $activeContract->contract_number,
                 'start_date' => $activeContract->start_date->format('d/m/Y'),
                 'end_date' => $activeContract->end_date?->format('d/m/Y'),
-                'monthly_rent' => $activeContract->monthly_rent,
+                'monthly_price' => $activeContract->monthly_price,
             ] : null,
             'customer' => $activeContract?->customer ? [
                 'id' => $activeContract->customer->id,

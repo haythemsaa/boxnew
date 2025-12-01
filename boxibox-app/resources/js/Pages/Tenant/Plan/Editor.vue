@@ -362,7 +362,7 @@ const linkBox = (boxId) => {
         const box = props.boxes.find(b => b.id === boxId);
         if (box) {
             element.box_id = boxId;
-            element.label = box.code;
+            element.label = box.number;
         }
     }
     saveHistory();
@@ -372,9 +372,9 @@ const linkBox = (boxId) => {
 const addBoxFromList = (box) => {
     const newElement = createElement('box', 100, 100);
     newElement.box_id = box.id;
-    newElement.label = box.code;
-    newElement.width = Math.max(60, Math.min(150, box.size_m3 * 8));
-    newElement.height = Math.max(50, Math.min(120, box.size_m3 * 6));
+    newElement.label = box.number;
+    newElement.width = Math.max(60, Math.min(150, box.volume * 8));
+    newElement.height = Math.max(50, Math.min(120, box.volume * 6));
     localElements.value.push(newElement);
     selectedElements.value = [newElement.id];
     saveHistory();
@@ -669,7 +669,7 @@ const changeSite = () => {
                             <select v-model="selectedElement.box_id" @change="linkBox(selectedElement.box_id)" class="property-input">
                                 <option :value="null">-- Aucun --</option>
                                 <option v-for="box in boxes" :key="box.id" :value="box.id">
-                                    {{ box.code }} ({{ box.size_m3 }}m³)
+                                    {{ box.number }} ({{ box.volume }}m³)
                                 </option>
                             </select>
                         </div>
@@ -739,8 +739,8 @@ const changeSite = () => {
                         >
                             <CubeIcon class="w-5 h-5 text-primary-600" />
                             <div>
-                                <div class="font-medium">{{ box.code }}</div>
-                                <div class="text-xs text-gray-500">{{ box.size_m3 }}m³ - {{ box.monthly_price }}€/mois</div>
+                                <div class="font-medium">{{ box.number }}</div>
+                                <div class="text-xs text-gray-500">{{ box.volume }}m³ - {{ box.current_price || box.base_price }}€/mois</div>
                             </div>
                             <PlusIcon class="w-4 h-4 text-gray-400" />
                         </div>

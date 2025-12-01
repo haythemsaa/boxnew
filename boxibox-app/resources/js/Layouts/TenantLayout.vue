@@ -67,6 +67,17 @@
                         </template>
                         Boxes
                     </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.plan.index')"
+                        :active="route().current('tenant.plan.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <MapIcon class="h-5 w-5" />
+                        </template>
+                        Plan
+                    </SidebarLink>
                 </div>
 
                 <!-- Clients Section -->
@@ -491,6 +502,7 @@ import {
     ExclamationCircleIcon,
     ExclamationTriangleIcon,
     InformationCircleIcon,
+    MapIcon,
 } from '@heroicons/vue/24/outline'
 
 defineProps({

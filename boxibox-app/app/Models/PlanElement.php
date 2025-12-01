@@ -105,10 +105,10 @@ class PlanElement extends Model
 
         return [
             'id' => $box->id,
-            'code' => $box->code,
-            'size' => $box->size_m3 . 'm³',
-            'dimensions' => $box->width . 'm x ' . $box->depth . 'm x ' . $box->height . 'm',
-            'price' => number_format($box->monthly_price, 2) . '€/mois',
+            'number' => $box->number,
+            'size' => $box->volume . 'm³',
+            'dimensions' => $box->length . 'm x ' . $box->width . 'm x ' . $box->height . 'm',
+            'price' => number_format($box->current_price ?? $box->base_price, 2) . '€/mois',
             'status' => $activeContract ? 'occupied' : 'available',
             'contract' => $activeContract ? [
                 'id' => $activeContract->id,

@@ -110,6 +110,39 @@ class ContractController extends Controller
     }
 
     /**
+     * Show the wizard form for creating a new contract.
+     */
+    public function createWizard(Request $request): Response
+    {
+        $this->authorize('create_contracts');
+
+        $tenantId = $request->user()->tenant_id;
+
+        $sites = Site::where('tenant_id', $tenantId)
+            ->select('id', 'name', 'code', 'city')
+            ->orderBy('name')
+            ->get();
+
+        $customers = Customer::where('tenant_id', $tenantId)
+            ->select('id', 'first_name', 'last_name', 'company_name', 'type', 'email', 'phone', 'total_contracts', 'outstanding_balance')
+            ->orderBy('first_name')
+            ->get();
+
+        $boxes = Box::where('tenant_id', $tenantId)
+            ->where('status', 'available')
+            ->with(['site:id,name', 'building:id,name', 'floor:id,name,floor_number'])
+            ->select('id', 'number', 'site_id', 'building_id', 'floor_id', 'base_price', 'volume', 'length', 'width', 'height')
+            ->orderBy('number')
+            ->get();
+
+        return Inertia::render('Tenant/Contracts/CreateWizard', [
+            'sites' => $sites,
+            'customers' => $customers,
+            'boxes' => $boxes,
+        ]);
+    }
+
+    /**
      * Store a newly created contract in storage.
      */
     public function store(StoreContractRequest $request): RedirectResponse

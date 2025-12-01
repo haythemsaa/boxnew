@@ -305,7 +305,7 @@ onUnmounted(() => {
                 <div class="modal-content" @click.stop>
                     <div class="modal-header">
                         <h3 class="text-lg font-semibold">
-                            Box {{ boxDetails?.box?.code || selectedElement?.label }}
+                            Box {{ boxDetails?.box?.number || selectedElement?.label }}
                         </h3>
                         <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
                             <XMarkIcon class="w-6 h-6" />
@@ -327,11 +327,11 @@ onUnmounted(() => {
                             <div class="info-grid">
                                 <div>
                                     <span class="info-label">Code</span>
-                                    <span class="info-value">{{ boxDetails.box.code }}</span>
+                                    <span class="info-value">{{ boxDetails.box.number }}</span>
                                 </div>
                                 <div>
                                     <span class="info-label">Taille</span>
-                                    <span class="info-value">{{ boxDetails.box.size_m3 }} m³</span>
+                                    <span class="info-value">{{ boxDetails.box.volume }} m³</span>
                                 </div>
                                 <div>
                                     <span class="info-label">Dimensions</span>
@@ -339,7 +339,7 @@ onUnmounted(() => {
                                 </div>
                                 <div>
                                     <span class="info-label">Prix mensuel</span>
-                                    <span class="info-value">{{ boxDetails.box.monthly_price }} €</span>
+                                    <span class="info-value">{{ boxDetails.box.price }} €</span>
                                 </div>
                                 <div>
                                     <span class="info-label">Statut</span>
@@ -395,7 +395,7 @@ onUnmounted(() => {
                                 </div>
                                 <div>
                                     <span class="info-label">Loyer</span>
-                                    <span class="info-value">{{ boxDetails.contract.monthly_rent }} €/mois</span>
+                                    <span class="info-value">{{ boxDetails.contract.monthly_price }} €/mois</span>
                                 </div>
                             </div>
                             <Link
