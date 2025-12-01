@@ -28,6 +28,7 @@ use App\Http\Controllers\Tenant\BulkInvoiceController;
 use App\Http\Controllers\Signature\PublicSignatureController;
 use App\Http\Controllers\BoxCalculatorController;
 use App\Http\Controllers\Mobile\MobileController;
+use App\Http\Controllers\Tenant\PlanController;
 use Inertia\Inertia;
 
 /*
@@ -322,6 +323,16 @@ Route::middleware('auth')->group(function () {
             Route::post('/billing', 'updateBilling')->name('update-billing');
             Route::post('/notifications', 'updateNotifications')->name('update-notifications');
             Route::post('/sepa', 'updateSepa')->name('update-sepa');
+        });
+
+        // Plan Routes (Visual Box Layout)
+        Route::prefix('plan')->name('plan.')->group(function () {
+            Route::get('/', [PlanController::class, 'index'])->name('index');
+            Route::get('/editor', [PlanController::class, 'editor'])->name('editor');
+            Route::post('/sites/{site}/elements', [PlanController::class, 'saveElements'])->name('save-elements');
+            Route::post('/sites/{site}/configuration', [PlanController::class, 'saveConfiguration'])->name('save-configuration');
+            Route::post('/sites/{site}/auto-generate', [PlanController::class, 'autoGenerate'])->name('auto-generate');
+            Route::get('/boxes/{box}/details', [PlanController::class, 'getBoxDetails'])->name('box-details');
         });
     });
 
