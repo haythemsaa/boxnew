@@ -42,6 +42,12 @@ class RolesPermissionsSeeder extends Seeder
             'edit_customers',
             'delete_customers',
 
+            // Lead Management
+            'view_leads',
+            'create_leads',
+            'edit_leads',
+            'delete_leads',
+
             // Contract Management
             'view_contracts',
             'create_contracts',
@@ -108,6 +114,7 @@ class RolesPermissionsSeeder extends Seeder
             'view_sites', 'create_sites', 'edit_sites', 'delete_sites',
             'view_boxes', 'create_boxes', 'edit_boxes', 'delete_boxes',
             'view_customers', 'create_customers', 'edit_customers', 'delete_customers',
+            'view_leads', 'create_leads', 'edit_leads', 'delete_leads',
             'view_contracts', 'create_contracts', 'edit_contracts', 'delete_contracts', 'sign_contracts',
             'view_invoices', 'create_invoices', 'edit_invoices', 'delete_invoices', 'send_invoices',
             'view_payments', 'create_payments', 'process_payments', 'refund_payments',
@@ -123,6 +130,7 @@ class RolesPermissionsSeeder extends Seeder
         $tenantStaff->givePermissionTo([
             'view_sites', 'view_boxes', 'edit_boxes',
             'view_customers', 'create_customers', 'edit_customers',
+            'view_leads', 'create_leads', 'edit_leads',
             'view_contracts', 'create_contracts', 'edit_contracts',
             'view_invoices', 'create_invoices',
             'view_payments', 'create_payments',

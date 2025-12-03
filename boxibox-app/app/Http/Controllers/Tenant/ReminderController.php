@@ -61,6 +61,27 @@ class ReminderController extends Controller
     }
 
     /**
+     * Show the specified reminder or resource.
+     */
+    public function show($reminder)
+    {
+        // If reminder is a string like 'overdue-invoices', show overdue invoices
+        if ($reminder === 'overdue-invoices') {
+            return $this->overdueInvoices();
+        }
+
+        // Otherwise treat it as a reminder ID
+        $tenantId = auth()->user()->tenant_id;
+        $paymentReminder = PaymentReminder::where('tenant_id', $tenantId)
+            ->with(['invoice.customer'])
+            ->findOrFail($reminder);
+
+        return Inertia::render('Tenant/Reminders/Show', [
+            'reminder' => $paymentReminder,
+        ]);
+    }
+
+    /**
      * Show the form for creating a new reminder.
      */
     public function create()
@@ -133,7 +154,7 @@ class ReminderController extends Controller
      */
     public function send(PaymentReminder $reminder)
     {
-        $this->authorize('update', $reminder);
+        $this->authorize('send_notifications');
 
         if ($reminder->status !== 'pending') {
             return redirect()->back()
@@ -185,7 +206,7 @@ class ReminderController extends Controller
      */
     public function destroy(PaymentReminder $reminder)
     {
-        $this->authorize('delete', $reminder);
+        $this->authorize('send_notifications');
 
         $reminder->delete();
 

@@ -69,7 +69,7 @@
                     </SidebarLink>
 
                     <SidebarLink
-                        :href="route('tenant.plan.index')"
+                        :href="route('tenant.plan.interactive')"
                         :active="route().current('tenant.plan.*')"
                         :collapsed="sidebarCollapsed"
                     >

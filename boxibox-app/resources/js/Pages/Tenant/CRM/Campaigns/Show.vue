@@ -1,6 +1,11 @@
 <script setup>
 import { Link, router } from '@inertiajs/vue3'
 import TenantLayout from '@/Layouts/TenantLayout.vue'
+import {
+    ArrowLeftIcon,
+    EnvelopeIcon,
+    UsersIcon,
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     campaign: Object,
@@ -78,50 +83,60 @@ const deleteCampaign = () => {
 
 <template>
     <TenantLayout :title="`Campagne - ${campaign.name}`">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Header -->
-            <div class="mb-8">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-4">
-                        <Link
-                            :href="route('tenant.crm.campaigns.index')"
-                            class="text-gray-400 hover:text-gray-600"
-                        >
-                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                        </Link>
-                        <div>
-                            <div class="flex items-center space-x-3">
-                                <h1 class="text-3xl font-bold text-gray-900">{{ campaign.name }}</h1>
-                                <span :class="getStatusColor(campaign.status)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium">
-                                    {{ getStatusLabel(campaign.status) }}
-                                </span>
+        <!-- Gradient Header -->
+        <div class="relative overflow-hidden bg-gradient-to-r from-cyan-600 via-teal-600 to-cyan-700 -mt-6 pt-10 pb-32 px-4 sm:px-6 lg:px-8">
+            <!-- Decorative circles -->
+            <div class="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-48 blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-96 h-96 bg-white/10 rounded-full -ml-48 mb-0 blur-3xl"></div>
+
+            <div class="max-w-5xl mx-auto relative z-10">
+                <Link
+                    :href="route('tenant.crm.campaigns.index')"
+                    class="inline-flex items-center text-cyan-100 hover:text-white mb-4 transition-colors"
+                >
+                    <ArrowLeftIcon class="h-4 w-4 mr-2" />
+                    Retour aux campagnes
+                </Link>
+
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="flex items-center space-x-3">
+                            <div>
+                                <div class="flex items-center space-x-3">
+                                    <h1 class="text-4xl font-bold text-white">{{ campaign.name }}</h1>
+                                    <span :class="getStatusColor(campaign.status)" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold">
+                                        {{ getStatusLabel(campaign.status) }}
+                                    </span>
+                                </div>
+                                <p class="mt-2 text-cyan-100 flex items-center space-x-1">
+                                    <UsersIcon class="h-4 w-4" />
+                                    <span>{{ getSegmentLabel(campaign.segment) }}</span>
+                                </p>
                             </div>
-                            <p class="mt-1 text-gray-500">Segment : {{ getSegmentLabel(campaign.segment) }}</p>
                         </div>
                     </div>
                     <div class="flex items-center space-x-3">
                         <button
                             v-if="campaign.status === 'draft'"
                             @click="sendCampaign"
-                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700"
+                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-xl shadow-lg text-sm font-medium text-white bg-green-500 hover:bg-green-600 transition-colors"
                         >
-                            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                            </svg>
+                            <EnvelopeIcon class="h-4 w-4 mr-2" />
                             Envoyer maintenant
                         </button>
                         <button
                             v-if="campaign.status !== 'sending'"
                             @click="deleteCampaign"
-                            class="inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50"
+                            class="inline-flex items-center px-4 py-2 border border-white/30 rounded-xl shadow-lg text-sm font-medium text-white bg-white/10 hover:bg-white/20 backdrop-blur-sm transition-colors"
                         >
                             Supprimer
                         </button>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Main Content -->

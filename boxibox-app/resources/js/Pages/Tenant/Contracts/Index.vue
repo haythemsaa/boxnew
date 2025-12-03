@@ -1,3 +1,460 @@
+<template>
+    <TenantLayout title="Contrats">
+        <!-- Message de succès -->
+        <transition
+            enter-active-class="transition ease-out duration-300"
+            enter-from-class="opacity-0 translate-y-2"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition ease-in duration-200"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 translate-y-2"
+        >
+            <div v-if="$page.props.flash?.success" class="mb-6 p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-3">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <p class="text-sm font-medium text-emerald-800">{{ $page.props.flash.success }}</p>
+            </div>
+        </transition>
+
+        <!-- En-tête moderne -->
+        <div class="relative mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
+                        Gestion des Contrats
+                    </h1>
+                    <p class="mt-1 text-gray-500">Gérez vos contrats de location de boxes</p>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <a
+                        :href="route('tenant.contracts.export', { status: status })"
+                        class="inline-flex items-center px-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-sm"
+                    >
+                        <svg class="h-4 w-4 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Exporter
+                    </a>
+                    <Link
+                        :href="route('tenant.contracts.create-wizard')"
+                        class="inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-emerald-500/25 transition-all duration-200 hover:shadow-xl"
+                    >
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                        </svg>
+                        Assistant
+                    </Link>
+                    <Link
+                        :href="route('tenant.contracts.create')"
+                        class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 hover:from-primary-700 hover:to-primary-800 text-white rounded-xl text-sm font-semibold shadow-lg shadow-primary-500/25 transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5"
+                    >
+                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                        </svg>
+                        Nouveau Contrat
+                    </Link>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cartes statistiques modernes -->
+        <div class="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+            <!-- Total -->
+            <div class="group bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-300">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Total</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats.total }}</p>
+                    </div>
+                    <div class="p-3 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl shadow-lg shadow-violet-500/25 group-hover:scale-110 transition-transform duration-300">
+                        <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actifs -->
+            <div class="group bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-300">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Actifs</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats.active }}</p>
+                    </div>
+                    <div class="p-3 bg-gradient-to-br from-emerald-500 to-green-600 rounded-xl shadow-lg shadow-emerald-500/25 group-hover:scale-110 transition-transform duration-300">
+                        <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- En attente -->
+            <div class="group bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-300">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">En attente</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats.pending }}</p>
+                    </div>
+                    <div class="p-3 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg shadow-amber-500/25 group-hover:scale-110 transition-transform duration-300">
+                        <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Expirés -->
+            <div class="group bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-300">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">Expirés</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ stats.expired }}</p>
+                    </div>
+                    <div class="p-3 bg-gradient-to-br from-red-500 to-rose-600 rounded-xl shadow-lg shadow-red-500/25 group-hover:scale-110 transition-transform duration-300">
+                        <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Revenus mensuels -->
+            <div class="group bg-white rounded-2xl p-5 shadow-sm border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all duration-300 col-span-2 lg:col-span-1">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs font-medium text-gray-500 uppercase tracking-wider">CA Mensuel</p>
+                        <p class="text-2xl font-bold text-gray-900 mt-1">{{ formatCurrency(stats.total_revenue) }}</p>
+                    </div>
+                    <div class="p-3 bg-gradient-to-br from-indigo-500 to-violet-600 rounded-xl shadow-lg shadow-indigo-500/25 group-hover:scale-110 transition-transform duration-300">
+                        <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Barre de filtres moderne -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+            <div class="flex flex-col lg:flex-row gap-4">
+                <!-- Recherche -->
+                <div class="flex-1 relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                    </div>
+                    <input
+                        v-model="search"
+                        type="text"
+                        placeholder="Rechercher par n° contrat, client, box..."
+                        class="w-full pl-11 pr-4 py-3 bg-gray-50 border-0 rounded-xl text-sm placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200"
+                    />
+                </div>
+
+                <!-- Filtres -->
+                <div class="flex flex-wrap gap-3">
+                    <select
+                        v-model="status"
+                        class="px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm text-gray-700 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200 min-w-[160px]"
+                    >
+                        <option value="">Tous les statuts</option>
+                        <option value="draft">Brouillon</option>
+                        <option value="pending_signature">En attente signature</option>
+                        <option value="active">Actif</option>
+                        <option value="expired">Expiré</option>
+                        <option value="terminated">Résilié</option>
+                        <option value="cancelled">Annulé</option>
+                    </select>
+                    <select
+                        v-model="type"
+                        class="px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm text-gray-700 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200 min-w-[140px]"
+                    >
+                        <option value="">Tous les types</option>
+                        <option value="standard">Standard</option>
+                        <option value="short_term">Court terme</option>
+                        <option value="long_term">Long terme</option>
+                    </select>
+                    <select
+                        v-model="siteId"
+                        class="px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm text-gray-700 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200 min-w-[140px]"
+                    >
+                        <option value="">Tous les sites</option>
+                        <option v-for="site in sites" :key="site.id" :value="site.id">
+                            {{ site.name }}
+                        </option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tableau moderne -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="min-w-full">
+                    <thead>
+                        <tr class="bg-gray-50/50">
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Contrat
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Client
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Box / Site
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Statut
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Dates
+                            </th>
+                            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Loyer
+                            </th>
+                            <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                Actions
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100">
+                        <!-- État vide -->
+                        <tr v-if="contracts.data.length === 0">
+                            <td colspan="7" class="px-6 py-16 text-center">
+                                <div class="flex flex-col items-center">
+                                    <div class="p-4 bg-gray-100 rounded-full mb-4">
+                                        <svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <h3 class="text-lg font-semibold text-gray-900 mb-1">Aucun contrat trouvé</h3>
+                                    <p class="text-sm text-gray-500 mb-6 max-w-sm">
+                                        {{ search || status || type || siteId ? 'Essayez de modifier vos filtres' : 'Commencez par créer votre premier contrat' }}
+                                    </p>
+                                    <Link
+                                        v-if="!search && !status && !type && !siteId"
+                                        :href="route('tenant.contracts.create')"
+                                        class="inline-flex items-center px-5 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-xl text-sm font-semibold shadow-lg shadow-primary-500/25 hover:shadow-xl transition-all duration-200"
+                                    >
+                                        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                                        </svg>
+                                        Créer un contrat
+                                    </Link>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Lignes de données -->
+                        <tr
+                            v-else
+                            v-for="contract in contracts.data"
+                            :key="contract.id"
+                            class="hover:bg-gray-50/50 transition-colors duration-150"
+                        >
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center">
+                                        <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-gray-900">{{ contract.contract_number }}</p>
+                                        <span
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
+                                            :class="getTypeClasses(contract.type)"
+                                        >
+                                            {{ getTypeLabel(contract.type) }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center gap-3">
+                                    <div
+                                        class="flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center text-white font-semibold text-xs"
+                                        :class="contract.customer?.type === 'company' ? 'bg-gradient-to-br from-amber-500 to-orange-600' : 'bg-gradient-to-br from-blue-500 to-cyan-600'"
+                                    >
+                                        {{ getCustomerInitials(contract.customer) }}
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">{{ getCustomerName(contract.customer) }}</p>
+                                        <p v-if="contract.customer?.email" class="text-xs text-gray-500">{{ contract.customer.email }}</p>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                        </svg>
+                                        <span class="text-sm font-medium text-gray-900">{{ contract.box?.code || '-' }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <svg class="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        </svg>
+                                        <span class="text-xs text-gray-500">{{ contract.site?.name || '-' }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span
+                                    class="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium"
+                                    :class="getStatusClasses(contract.status)"
+                                >
+                                    <span
+                                        class="w-1.5 h-1.5 rounded-full mr-1.5"
+                                        :class="getStatusDotClass(contract.status)"
+                                    ></span>
+                                    {{ getStatusLabel(contract.status) }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="space-y-1 text-sm">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-gray-500">Début:</span>
+                                        <span class="font-medium text-gray-900">{{ formatDate(contract.start_date) }}</span>
+                                    </div>
+                                    <div v-if="contract.end_date" class="flex items-center gap-2">
+                                        <span class="text-gray-500">Fin:</span>
+                                        <span class="font-medium text-gray-900">{{ formatDate(contract.end_date) }}</span>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <p class="text-sm font-bold text-gray-900">{{ formatCurrency(contract.monthly_price) }}</p>
+                                <p class="text-xs text-gray-500">/mois</p>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex items-center justify-end gap-1">
+                                    <Link
+                                        :href="route('tenant.contracts.show', contract.id)"
+                                        class="p-2 text-gray-500 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
+                                        title="Voir"
+                                    >
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    </Link>
+                                    <Link
+                                        :href="route('tenant.contracts.edit', contract.id)"
+                                        class="p-2 text-gray-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+                                        title="Modifier"
+                                    >
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                        </svg>
+                                    </Link>
+                                    <button
+                                        @click="confirmDelete(contract)"
+                                        class="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                        title="Supprimer"
+                                    >
+                                        <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination moderne -->
+            <div v-if="contracts.data.length > 0 && contracts.links.length > 3" class="px-6 py-4 border-t border-gray-100 bg-gray-50/30">
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p class="text-sm text-gray-600">
+                        Affichage de <span class="font-semibold text-gray-900">{{ contracts.from }}</span>
+                        à <span class="font-semibold text-gray-900">{{ contracts.to }}</span>
+                        sur <span class="font-semibold text-gray-900">{{ contracts.total }}</span> résultats
+                    </p>
+                    <div class="flex items-center gap-2">
+                        <template v-for="(link, index) in contracts.links" :key="index">
+                            <Link
+                                v-if="link.url"
+                                :href="link.url"
+                                :class="[
+                                    'px-3.5 py-2 text-sm font-medium rounded-lg transition-all duration-200',
+                                    link.active
+                                        ? 'bg-primary-600 text-white shadow-sm'
+                                        : 'bg-white text-gray-700 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+                                ]"
+                                :preserve-scroll="true"
+                                v-html="link.label"
+                            />
+                            <span
+                                v-else
+                                class="px-3.5 py-2 text-sm font-medium rounded-lg bg-gray-100 text-gray-400 cursor-not-allowed"
+                                v-html="link.label"
+                            />
+                        </template>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal de suppression moderne -->
+        <transition
+            enter-active-class="transition ease-out duration-200"
+            enter-from-class="opacity-0"
+            enter-to-class="opacity-100"
+            leave-active-class="transition ease-in duration-150"
+            leave-from-class="opacity-100"
+            leave-to-class="opacity-0"
+        >
+            <div v-if="showDeleteModal" class="fixed inset-0 z-50 overflow-y-auto">
+                <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:p-0">
+                    <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showDeleteModal = false"></div>
+
+                    <div class="relative bg-white rounded-2xl text-left overflow-hidden shadow-2xl transform sm:my-8 sm:max-w-lg sm:w-full">
+                        <div class="p-6">
+                            <div class="flex items-start gap-4">
+                                <div class="flex-shrink-0 p-3 bg-red-100 rounded-full">
+                                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-lg font-semibold text-gray-900">Supprimer le contrat</h3>
+                                    <p class="mt-2 text-sm text-gray-500">
+                                        Êtes-vous sûr de vouloir supprimer le contrat
+                                        <strong class="text-gray-900">{{ contractToDelete?.contract_number }}</strong> ?
+                                        Cette action est irréversible.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-gray-50 px-6 py-4 flex flex-row-reverse gap-3">
+                            <button
+                                @click="deleteContract"
+                                class="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-colors"
+                            >
+                                Supprimer
+                            </button>
+                            <button
+                                @click="showDeleteModal = false"
+                                class="px-4 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-xl hover:bg-gray-50 transition-colors"
+                            >
+                                Annuler
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </transition>
+    </TenantLayout>
+</template>
+
 <script setup>
 import { ref, watch } from 'vue'
 import { router, Link } from '@inertiajs/vue3'
@@ -61,37 +518,70 @@ const deleteContract = () => {
     }
 }
 
-const getStatusColor = (status) => {
-    const colors = {
-        draft: 'bg-gray-100 text-gray-800',
-        pending_signature: 'bg-yellow-100 text-yellow-800',
-        active: 'bg-green-100 text-green-800',
-        expired: 'bg-red-100 text-red-800',
-        terminated: 'bg-red-100 text-red-800',
-        cancelled: 'bg-gray-100 text-gray-800',
+const getStatusClasses = (status) => {
+    const classes = {
+        draft: 'bg-gray-100 text-gray-700',
+        pending_signature: 'bg-amber-50 text-amber-700',
+        active: 'bg-emerald-50 text-emerald-700',
+        expired: 'bg-red-50 text-red-700',
+        terminated: 'bg-red-50 text-red-700',
+        cancelled: 'bg-gray-100 text-gray-600',
     }
-    return colors[status] || 'bg-gray-100 text-gray-800'
+    return classes[status] || 'bg-gray-100 text-gray-600'
 }
 
-const getTypeColor = (type) => {
-    const colors = {
-        standard: 'bg-blue-100 text-blue-800',
-        short_term: 'bg-purple-100 text-purple-800',
-        long_term: 'bg-indigo-100 text-indigo-800',
+const getStatusDotClass = (status) => {
+    const classes = {
+        draft: 'bg-gray-400',
+        pending_signature: 'bg-amber-500',
+        active: 'bg-emerald-500',
+        expired: 'bg-red-500',
+        terminated: 'bg-red-500',
+        cancelled: 'bg-gray-400',
     }
-    return colors[type] || 'bg-gray-100 text-gray-800'
+    return classes[status] || 'bg-gray-400'
+}
+
+const getStatusLabel = (status) => {
+    const labels = {
+        draft: 'Brouillon',
+        pending_signature: 'En attente',
+        active: 'Actif',
+        expired: 'Expiré',
+        terminated: 'Résilié',
+        cancelled: 'Annulé',
+    }
+    return labels[status] || status
+}
+
+const getTypeClasses = (type) => {
+    const classes = {
+        standard: 'bg-blue-100 text-blue-700',
+        short_term: 'bg-purple-100 text-purple-700',
+        long_term: 'bg-indigo-100 text-indigo-700',
+    }
+    return classes[type] || 'bg-gray-100 text-gray-700'
+}
+
+const getTypeLabel = (type) => {
+    const labels = {
+        standard: 'Standard',
+        short_term: 'Court terme',
+        long_term: 'Long terme',
+    }
+    return labels[type] || type
 }
 
 const formatDate = (date) => {
     if (!date) return '-'
-    return new Date(date).toLocaleDateString('en-GB')
+    return new Date(date).toLocaleDateString('fr-FR')
 }
 
 const formatCurrency = (amount) => {
     return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
         currency: 'EUR',
-    }).format(amount)
+    }).format(amount || 0)
 }
 
 const getCustomerName = (customer) => {
@@ -100,522 +590,12 @@ const getCustomerName = (customer) => {
         ? customer.company_name
         : `${customer.first_name} ${customer.last_name}`
 }
+
+const getCustomerInitials = (customer) => {
+    if (!customer) return '?'
+    if (customer.type === 'company') {
+        return customer.company_name?.substring(0, 2).toUpperCase() || 'EN'
+    }
+    return `${customer.first_name?.charAt(0) || ''}${customer.last_name?.charAt(0) || ''}`.toUpperCase()
+}
 </script>
-
-<template>
-    <TenantLayout title="Contracts">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Header -->
-            <div class="sm:flex sm:items-center sm:justify-between mb-8">
-                <div>
-                    <h1 class="text-3xl font-bold text-gray-900">Contracts</h1>
-                    <p class="mt-2 text-sm text-gray-700">Manage all your storage contracts</p>
-                </div>
-                <div class="mt-4 sm:mt-0 flex gap-3">
-                    <a
-                        :href="route('tenant.contracts.export', { status: status })"
-                        class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                        <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Export Excel
-                    </a>
-                    <Link
-                        :href="route('tenant.contracts.create-wizard')"
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                        <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M12 4v16m8-8H4"
-                            />
-                        </svg>
-                        Créer (Wizard)
-                    </Link>
-                    <Link
-                        :href="route('tenant.contracts.create')"
-                        class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
-                    >
-                        <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M12 4v16m8-8H4"
-                            />
-                        </svg>
-                        New Contract
-                    </Link>
-                </div>
-            </div>
-
-            <!-- Statistics -->
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5 mb-8">
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg
-                                    class="h-6 w-6 text-gray-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                                    />
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Contracts</dt>
-                                    <dd class="text-lg font-semibold text-gray-900">{{ stats.total }}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg
-                                    class="h-6 w-6 text-green-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                                    />
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Active</dt>
-                                    <dd class="text-lg font-semibold text-gray-900">{{ stats.active }}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg
-                                    class="h-6 w-6 text-yellow-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-                                    />
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Pending Signature</dt>
-                                    <dd class="text-lg font-semibold text-gray-900">{{ stats.pending }}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg
-                                    class="h-6 w-6 text-red-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M6 18L18 6M6 6l12 12"
-                                    />
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Expired</dt>
-                                    <dd class="text-lg font-semibold text-gray-900">{{ stats.expired }}</dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg
-                                    class="h-6 w-6 text-primary-400"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                                    />
-                                </svg>
-                            </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Monthly Revenue</dt>
-                                    <dd class="text-lg font-semibold text-gray-900">
-                                        {{ formatCurrency(stats.total_revenue) }}
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Filters -->
-            <div class="bg-white shadow rounded-lg p-6 mb-6">
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div>
-                        <label for="search" class="block text-sm font-medium text-gray-700 mb-1"
-                            >Search</label
-                        >
-                        <input
-                            id="search"
-                            v-model="search"
-                            type="text"
-                            placeholder="Contract number, customer, box..."
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                        />
-                    </div>
-
-                    <div>
-                        <label for="status" class="block text-sm font-medium text-gray-700 mb-1"
-                            >Status</label
-                        >
-                        <select
-                            id="status"
-                            v-model="status"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                        >
-                            <option value="">All Statuses</option>
-                            <option value="draft">Draft</option>
-                            <option value="pending_signature">Pending Signature</option>
-                            <option value="active">Active</option>
-                            <option value="expired">Expired</option>
-                            <option value="terminated">Terminated</option>
-                            <option value="cancelled">Cancelled</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                        <select
-                            id="type"
-                            v-model="type"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                        >
-                            <option value="">All Types</option>
-                            <option value="standard">Standard</option>
-                            <option value="short_term">Short Term</option>
-                            <option value="long_term">Long Term</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label for="site_id" class="block text-sm font-medium text-gray-700 mb-1"
-                            >Site</label
-                        >
-                        <select
-                            id="site_id"
-                            v-model="siteId"
-                            class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                        >
-                            <option value="">All Sites</option>
-                            <option v-for="site in sites" :key="site.id" :value="site.id">
-                                {{ site.name }}
-                            </option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Table -->
-            <div class="bg-white shadow rounded-lg overflow-hidden">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th
-                                scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                            >
-                                Contract Number
-                            </th>
-                            <th
-                                scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                            >
-                                Customer
-                            </th>
-                            <th
-                                scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                            >
-                                Box
-                            </th>
-                            <th
-                                scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                            >
-                                Site
-                            </th>
-                            <th
-                                scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                            >
-                                Status
-                            </th>
-                            <th
-                                scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                            >
-                                Type
-                            </th>
-                            <th
-                                scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                            >
-                                Start Date
-                            </th>
-                            <th
-                                scope="col"
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                            >
-                                Monthly Price
-                            </th>
-                            <th scope="col" class="relative px-6 py-3">
-                                <span class="sr-only">Actions</span>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <tr v-if="contracts.data.length === 0">
-                            <td colspan="9" class="px-6 py-4 text-center text-sm text-gray-500">
-                                No contracts found
-                            </td>
-                        </tr>
-                        <tr
-                            v-else
-                            v-for="contract in contracts.data"
-                            :key="contract.id"
-                            class="hover:bg-gray-50"
-                        >
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">
-                                    {{ contract.contract_number }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">
-                                    {{ getCustomerName(contract.customer) }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ contract.box?.code || '-' }}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">{{ contract.site?.name || '-' }}</div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    :class="getStatusColor(contract.status)"
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                >
-                                    {{ contract.status.replace('_', ' ') }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    :class="getTypeColor(contract.type)"
-                                    class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium"
-                                >
-                                    {{ contract.type.replace('_', ' ') }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ formatDate(contract.start_date) }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                {{ formatCurrency(contract.monthly_price) }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <Link
-                                    :href="route('tenant.contracts.edit', contract.id)"
-                                    class="text-primary-600 hover:text-primary-900 mr-4"
-                                >
-                                    Edit
-                                </Link>
-                                <button
-                                    @click="confirmDelete(contract)"
-                                    class="text-red-600 hover:text-red-900"
-                                >
-                                    Delete
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-
-                <!-- Pagination -->
-                <div
-                    v-if="contracts.links.length > 3"
-                    class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6"
-                >
-                    <div class="flex-1 flex justify-between sm:hidden">
-                        <Link
-                            v-if="contracts.prev_page_url"
-                            :href="contracts.prev_page_url"
-                            class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        >
-                            Previous
-                        </Link>
-                        <Link
-                            v-if="contracts.next_page_url"
-                            :href="contracts.next_page_url"
-                            class="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
-                        >
-                            Next
-                        </Link>
-                    </div>
-                    <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                        <div>
-                            <p class="text-sm text-gray-700">
-                                Showing
-                                <span class="font-medium">{{ contracts.from }}</span>
-                                to
-                                <span class="font-medium">{{ contracts.to }}</span>
-                                of
-                                <span class="font-medium">{{ contracts.total }}</span>
-                                results
-                            </p>
-                        </div>
-                        <div>
-                            <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                                <Link
-                                    v-for="(link, index) in contracts.links"
-                                    :key="index"
-                                    :href="link.url"
-                                    :class="[
-                                        link.active
-                                            ? 'z-10 bg-primary-50 border-primary-500 text-primary-600'
-                                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50',
-                                        'relative inline-flex items-center px-4 py-2 border text-sm font-medium',
-                                    ]"
-                                    v-html="link.label"
-                                />
-                            </nav>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Delete Confirmation Modal -->
-        <div
-            v-if="showDeleteModal"
-            class="fixed z-10 inset-0 overflow-y-auto"
-            aria-labelledby="modal-title"
-            role="dialog"
-            aria-modal="true"
-        >
-            <div
-                class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0"
-            >
-                <div
-                    class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-                    aria-hidden="true"
-                    @click="showDeleteModal = false"
-                ></div>
-
-                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true"
-                    >&#8203;</span
-                >
-
-                <div
-                    class="relative inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6"
-                >
-                    <div class="sm:flex sm:items-start">
-                        <div
-                            class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10"
-                        >
-                            <svg
-                                class="h-6 w-6 text-red-600"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    stroke-width="2"
-                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                                />
-                            </svg>
-                        </div>
-                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                            <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">
-                                Delete Contract
-                            </h3>
-                            <div class="mt-2">
-                                <p class="text-sm text-gray-500">
-                                    Are you sure you want to delete this contract? This action cannot be
-                                    undone.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
-                        <button
-                            type="button"
-                            @click="deleteContract"
-                            class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm"
-                        >
-                            Delete
-                        </button>
-                        <button
-                            type="button"
-                            @click="showDeleteModal = false"
-                            class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm"
-                        >
-                            Cancel
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </TenantLayout>
-</template>

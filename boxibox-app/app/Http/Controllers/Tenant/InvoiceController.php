@@ -165,7 +165,7 @@ class InvoiceController extends Controller
      */
     public function edit(Request $request, Invoice $invoice): Response
     {
-        $this->authorize('update_invoices');
+        $this->authorize('edit_invoices');
 
         // Ensure tenant can only edit their own invoices
         if ($invoice->tenant_id !== $request->user()->tenant_id) {
@@ -201,6 +201,8 @@ class InvoiceController extends Controller
      */
     public function update(UpdateInvoiceRequest $request, Invoice $invoice): RedirectResponse
     {
+        $this->authorize('edit_invoices');
+
         // Ensure tenant can only update their own invoices
         if ($invoice->tenant_id !== $request->user()->tenant_id) {
             abort(403);

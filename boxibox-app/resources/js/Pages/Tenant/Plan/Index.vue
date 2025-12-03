@@ -161,14 +161,18 @@ onUnmounted(() => {
 
 <template>
     <TenantLayout title="Plan des boxes">
-        <div class="plan-container">
-            <!-- Header -->
-            <div class="plan-header">
-                <div class="flex items-center gap-4">
-                    <MapIcon class="w-8 h-8 text-primary-600" />
+        <!-- Gradient Header -->
+        <div class="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 -mt-6 pt-10 pb-32 px-4 sm:px-6 lg:px-8">
+            <!-- Decorative circles -->
+            <div class="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-48 blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-96 h-96 bg-white/10 rounded-full -ml-48 mb-0 blur-3xl"></div>
+
+            <div class="max-w-7xl mx-auto relative z-10 flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <MapIcon class="w-10 h-10 text-white" />
                     <div>
-                        <h1 class="text-2xl font-bold text-gray-900">Plan des boxes</h1>
-                        <p class="text-sm text-gray-500">État des boxes en temps réel</p>
+                        <h1 class="text-4xl font-bold text-white">Plan des boxes</h1>
+                        <p class="mt-2 text-indigo-100">État des boxes en temps réel</p>
                     </div>
                 </div>
 
@@ -177,7 +181,7 @@ onUnmounted(() => {
                     <select
                         v-model="selectedSite"
                         @change="changeSite"
-                        class="rounded-lg border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500"
+                        class="rounded-xl border-0 shadow-lg text-sm font-medium px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                     >
                         <option v-for="site in sites" :key="site.id" :value="site.id">
                             {{ site.name }}
@@ -187,13 +191,16 @@ onUnmounted(() => {
                     <!-- Edit button -->
                     <Link
                         :href="route('tenant.plan.editor', { site_id: currentSite?.id })"
-                        class="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition"
+                        class="inline-flex items-center px-4 py-2 bg-white/20 text-white rounded-xl hover:bg-white/30 backdrop-blur-sm transition-colors shadow-lg border border-white/30 font-medium text-sm"
                     >
-                        <PencilSquareIcon class="w-5 h-5 mr-2" />
+                        <PencilSquareIcon class="w-4 h-4 mr-2" />
                         Éditer le plan
                     </Link>
                 </div>
             </div>
+        </div>
+
+        <div class="plan-container">
 
             <!-- Statistics bar -->
             <div v-if="statistics" class="stats-bar">

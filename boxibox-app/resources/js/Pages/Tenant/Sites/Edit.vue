@@ -1,290 +1,483 @@
 <template>
-    <AuthenticatedLayout title="Edit Site">
-        <div class="max-w-3xl mx-auto">
-            <!-- Header -->
-            <div class="mb-6">
-                <Link
-                    :href="route('tenant.sites.index')"
-                    class="text-sm text-gray-600 hover:text-gray-900 mb-4 inline-flex items-center"
-                >
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Back to Sites
-                </Link>
-                <h2 class="text-2xl font-bold text-gray-900">Edit Site</h2>
-                <p class="mt-1 text-sm text-gray-600">Update site information</p>
-            </div>
-
-            <!-- Form Card -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <form @submit.prevent="submit">
-                    <!-- Site Information -->
-                    <div class="space-y-6">
-                        <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Site Information</h3>
-
-                        <!-- Name -->
+    <TenantLayout :title="`Modifier ${site.name}`">
+        <div class="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 py-8">
+            <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+                <!-- Header -->
+                <div class="mb-8">
+                    <Link
+                        :href="route('tenant.sites.show', site.id)"
+                        class="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800 transition-colors mb-4"
+                    >
+                        <ArrowLeftIcon class="w-5 h-5 mr-2" />
+                        Retour au site
+                    </Link>
+                    <div class="flex items-center space-x-4">
+                        <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                            <MapPinIcon class="w-7 h-7 text-white" />
+                        </div>
                         <div>
-                            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">
-                                Site Name <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="name"
-                                v-model="form.name"
-                                type="text"
-                                required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                :class="{ 'border-red-500': form.errors.name }"
-                                placeholder="e.g., Paris Centre"
-                            />
-                            <p v-if="form.errors.name" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.name }}
-                            </p>
+                            <h1 class="text-3xl font-bold text-gray-900">Modifier le site</h1>
+                            <p class="text-gray-500 mt-1">{{ site.name }} - {{ site.code }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress Steps -->
+                <div class="mb-8">
+                    <div class="flex items-center justify-between">
+                        <div v-for="step in steps" :key="step.number" class="flex items-center" :class="step.number < steps.length ? 'flex-1' : ''">
+                            <div class="flex flex-col items-center">
+                                <div :class="[
+                                    'w-12 h-12 rounded-xl flex items-center justify-center font-bold text-lg transition-all duration-300',
+                                    currentStep === step.number
+                                        ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/25'
+                                        : currentStep > step.number
+                                            ? 'bg-emerald-500 text-white'
+                                            : 'bg-gray-100 text-gray-400'
+                                ]">
+                                    <CheckIcon v-if="currentStep > step.number" class="w-6 h-6" />
+                                    <component v-else :is="step.icon" class="w-6 h-6" />
+                                </div>
+                                <span :class="[
+                                    'mt-2 text-sm font-medium transition-colors',
+                                    currentStep >= step.number ? 'text-indigo-600' : 'text-gray-400'
+                                ]">{{ step.title }}</span>
+                            </div>
+                            <div v-if="step.number < steps.length" :class="[
+                                'flex-1 h-1 mx-4 rounded-full transition-colors',
+                                currentStep > step.number ? 'bg-emerald-500' : 'bg-gray-200'
+                            ]"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Card -->
+                <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
+                    <form @submit.prevent="submit">
+                        <!-- Step 1: Informations du Site -->
+                        <div v-show="currentStep === 1" class="p-8">
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
+                                    <BuildingOfficeIcon class="w-5 h-5 text-indigo-600" />
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-gray-900">Informations du Site</h3>
+                                    <p class="text-sm text-gray-500">Identifiez votre site de stockage</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-6">
+                                <!-- Nom du site -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Nom du site <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model="form.name"
+                                        type="text"
+                                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                                        :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500/10': form.errors.name }"
+                                        placeholder="ex: Paris Centre"
+                                    />
+                                    <p v-if="form.errors.name" class="mt-2 text-sm text-red-600">{{ form.errors.name }}</p>
+                                </div>
+
+                                <!-- Code du site -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Code du site <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model="form.code"
+                                        type="text"
+                                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all uppercase"
+                                        :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500/10': form.errors.code }"
+                                        placeholder="ex: PAR-001"
+                                    />
+                                    <p class="mt-1 text-xs text-gray-500">Identifiant unique pour ce site (sera affiché en majuscules)</p>
+                                    <p v-if="form.errors.code" class="mt-2 text-sm text-red-600">{{ form.errors.code }}</p>
+                                </div>
+
+                                <!-- Description -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Description
+                                    </label>
+                                    <textarea
+                                        v-model="form.description"
+                                        rows="3"
+                                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all resize-none"
+                                        placeholder="Description du site (optionnel)"
+                                    ></textarea>
+                                </div>
+
+                                <!-- Statut -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-3">
+                                        Statut <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="grid grid-cols-3 gap-4">
+                                        <label
+                                            v-for="status in statuses"
+                                            :key="status.value"
+                                            class="relative cursor-pointer"
+                                        >
+                                            <input
+                                                type="radio"
+                                                v-model="form.status"
+                                                :value="status.value"
+                                                class="peer sr-only"
+                                            />
+                                            <div :class="[
+                                                'p-4 rounded-xl border-2 transition-all text-center',
+                                                'peer-checked:border-indigo-500 peer-checked:bg-indigo-50',
+                                                'hover:border-indigo-300 hover:bg-indigo-50/50',
+                                                form.status !== status.value ? 'border-gray-200' : ''
+                                            ]">
+                                                <div :class="[
+                                                    'w-10 h-10 rounded-full mx-auto mb-2 flex items-center justify-center',
+                                                    status.bgColor
+                                                ]">
+                                                    <component :is="status.icon" class="w-5 h-5" :class="status.iconColor" />
+                                                </div>
+                                                <span class="font-medium text-gray-900 text-sm">{{ status.label }}</span>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Code -->
-                        <div>
-                            <label for="code" class="block text-sm font-medium text-gray-700 mb-1">
-                                Site Code <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="code"
-                                v-model="form.code"
-                                type="text"
-                                required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                :class="{ 'border-red-500': form.errors.code }"
-                                placeholder="e.g., PAR-001"
-                            />
-                            <p v-if="form.errors.code" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.code }}
-                            </p>
-                            <p class="mt-1 text-xs text-gray-500">Unique identifier for this site</p>
+                        <!-- Step 2: Adresse -->
+                        <div v-show="currentStep === 2" class="p-8">
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                                    <MapPinIcon class="w-5 h-5 text-purple-600" />
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-gray-900">Adresse du Site</h3>
+                                    <p class="text-sm text-gray-500">Localisation géographique du site</p>
+                                </div>
+                            </div>
+
+                            <div class="space-y-6">
+                                <!-- Adresse -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Adresse <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model="form.address"
+                                        type="text"
+                                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
+                                        :class="{ 'border-red-300': form.errors.address }"
+                                        placeholder="ex: 123 Rue de Rivoli"
+                                    />
+                                    <p v-if="form.errors.address" class="mt-2 text-sm text-red-600">{{ form.errors.address }}</p>
+                                </div>
+
+                                <!-- Ville & Code Postal -->
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            Ville <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.city"
+                                            type="text"
+                                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
+                                            :class="{ 'border-red-300': form.errors.city }"
+                                            placeholder="ex: Paris"
+                                        />
+                                        <p v-if="form.errors.city" class="mt-2 text-sm text-red-600">{{ form.errors.city }}</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            Code Postal <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            v-model="form.postal_code"
+                                            type="text"
+                                            class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
+                                            :class="{ 'border-red-300': form.errors.postal_code }"
+                                            placeholder="ex: 75001"
+                                        />
+                                        <p v-if="form.errors.postal_code" class="mt-2 text-sm text-red-600">{{ form.errors.postal_code }}</p>
+                                    </div>
+                                </div>
+
+                                <!-- Pays -->
+                                <div>
+                                    <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Pays <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.country"
+                                        class="w-full px-4 py-3 rounded-xl border-2 border-gray-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-500/10 transition-all"
+                                    >
+                                        <option value="">Sélectionner un pays</option>
+                                        <option value="France">France</option>
+                                        <option value="Belgique">Belgique</option>
+                                        <option value="Suisse">Suisse</option>
+                                        <option value="Luxembourg">Luxembourg</option>
+                                        <option value="Canada">Canada</option>
+                                        <option value="Maroc">Maroc</option>
+                                        <option value="Tunisie">Tunisie</option>
+                                        <option value="Algérie">Algérie</option>
+                                    </select>
+                                </div>
+
+                                <!-- Coordonnées GPS -->
+                                <div class="bg-gray-50 rounded-xl p-4">
+                                    <div class="flex items-center space-x-2 mb-3">
+                                        <GlobeAltIcon class="w-5 h-5 text-gray-500" />
+                                        <span class="text-sm font-semibold text-gray-700">Coordonnées GPS (optionnel)</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-xs text-gray-500 mb-1">Latitude</label>
+                                            <input
+                                                v-model="form.latitude"
+                                                type="number"
+                                                step="any"
+                                                class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10 transition-all text-sm"
+                                                placeholder="ex: 48.8566"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-500 mb-1">Longitude</label>
+                                            <input
+                                                v-model="form.longitude"
+                                                type="number"
+                                                step="any"
+                                                class="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-500/10 transition-all text-sm"
+                                                placeholder="ex: 2.3522"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Description -->
-                        <div>
-                            <label for="description" class="block text-sm font-medium text-gray-700 mb-1">
-                                Description
-                            </label>
-                            <textarea
-                                id="description"
-                                v-model="form.description"
-                                rows="3"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                :class="{ 'border-red-500': form.errors.description }"
-                                placeholder="Brief description of this site"
-                            ></textarea>
-                            <p v-if="form.errors.description" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.description }}
-                            </p>
+                        <!-- Step 3: Contact & Récapitulatif -->
+                        <div v-show="currentStep === 3" class="p-8">
+                            <div class="flex items-center space-x-3 mb-6">
+                                <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                                    <CheckCircleIcon class="w-5 h-5 text-emerald-600" />
+                                </div>
+                                <div>
+                                    <h3 class="text-xl font-semibold text-gray-900">Contact & Récapitulatif</h3>
+                                    <p class="text-sm text-gray-500">Coordonnées et vérification finale</p>
+                                </div>
+                            </div>
+
+                            <!-- Contact -->
+                            <div class="space-y-6 mb-8">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            Téléphone
+                                        </label>
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <PhoneIcon class="w-5 h-5 text-gray-400" />
+                                            </div>
+                                            <input
+                                                v-model="form.phone"
+                                                type="text"
+                                                class="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                                                placeholder="+33 1 23 45 67 89"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-semibold text-gray-700 mb-2">
+                                            Email
+                                        </label>
+                                        <div class="relative">
+                                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                                <EnvelopeIcon class="w-5 h-5 text-gray-400" />
+                                            </div>
+                                            <input
+                                                v-model="form.email"
+                                                type="email"
+                                                class="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-gray-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 transition-all"
+                                                placeholder="site@example.com"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Récapitulatif -->
+                            <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6">
+                                <h4 class="font-semibold text-gray-900 mb-4 flex items-center">
+                                    <ClipboardDocumentListIcon class="w-5 h-5 mr-2 text-indigo-600" />
+                                    Récapitulatif des modifications
+                                </h4>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <!-- Info Site -->
+                                    <div class="bg-white rounded-lg p-4 shadow-sm">
+                                        <div class="flex items-center space-x-2 mb-3">
+                                            <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                                <BuildingOfficeIcon class="w-4 h-4 text-indigo-600" />
+                                            </div>
+                                            <span class="font-medium text-gray-700">Site</span>
+                                        </div>
+                                        <div class="space-y-1 text-sm">
+                                            <p><span class="text-gray-500">Nom:</span> <span class="font-medium">{{ form.name || '-' }}</span></p>
+                                            <p><span class="text-gray-500">Code:</span> <span class="font-mono font-medium">{{ form.code?.toUpperCase() || '-' }}</span></p>
+                                            <p>
+                                                <span class="text-gray-500">Statut:</span>
+                                                <span :class="statusColor" class="ml-1 px-2 py-0.5 rounded-full text-xs font-medium">
+                                                    {{ statusLabel }}
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Adresse -->
+                                    <div class="bg-white rounded-lg p-4 shadow-sm">
+                                        <div class="flex items-center space-x-2 mb-3">
+                                            <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                                <MapPinIcon class="w-4 h-4 text-purple-600" />
+                                            </div>
+                                            <span class="font-medium text-gray-700">Adresse</span>
+                                        </div>
+                                        <div class="space-y-1 text-sm">
+                                            <p class="font-medium">{{ form.address || '-' }}</p>
+                                            <p>{{ form.postal_code }} {{ form.city }}</p>
+                                            <p class="text-gray-500">{{ form.country || '-' }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Contact Summary -->
+                                <div v-if="form.phone || form.email" class="mt-4 bg-white rounded-lg p-4 shadow-sm">
+                                    <div class="flex items-center space-x-2 mb-3">
+                                        <div class="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center">
+                                            <EnvelopeIcon class="w-4 h-4 text-emerald-600" />
+                                        </div>
+                                        <span class="font-medium text-gray-700">Contact</span>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <p v-if="form.phone"><span class="text-gray-500">Tél:</span> {{ form.phone }}</p>
+                                        <p v-if="form.email"><span class="text-gray-500">Email:</span> {{ form.email }}</p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Status -->
-                        <div>
-                            <label for="status" class="block text-sm font-medium text-gray-700 mb-1">
-                                Status <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="status"
-                                v-model="form.status"
-                                required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                        <!-- Navigation Buttons -->
+                        <div class="px-8 py-6 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                            <button
+                                v-if="currentStep > 1"
+                                type="button"
+                                @click="prevStep"
+                                class="inline-flex items-center px-5 py-2.5 border-2 border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-100 transition-all"
                             >
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="maintenance">Maintenance</option>
-                            </select>
-                        </div>
-                    </div>
+                                <ChevronLeftIcon class="w-5 h-5 mr-2" />
+                                Précédent
+                            </button>
+                            <div v-else></div>
 
-                    <!-- Address Information -->
-                    <div class="space-y-6 mt-8">
-                        <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Address Information</h3>
-
-                        <!-- Address -->
-                        <div>
-                            <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
-                                Street Address <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="address"
-                                v-model="form.address"
-                                type="text"
-                                required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                :class="{ 'border-red-500': form.errors.address }"
-                                placeholder="e.g., 123 Rue de Rivoli"
-                            />
-                            <p v-if="form.errors.address" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.address }}
-                            </p>
-                        </div>
-
-                        <!-- City & Postal Code -->
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="city" class="block text-sm font-medium text-gray-700 mb-1">
-                                    City <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    id="city"
-                                    v-model="form.city"
-                                    type="text"
-                                    required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    :class="{ 'border-red-500': form.errors.city }"
-                                    placeholder="e.g., Paris"
-                                />
-                                <p v-if="form.errors.city" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.city }}
-                                </p>
-                            </div>
-
-                            <div>
-                                <label for="postal_code" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Postal Code <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    id="postal_code"
-                                    v-model="form.postal_code"
-                                    type="text"
-                                    required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    :class="{ 'border-red-500': form.errors.postal_code }"
-                                    placeholder="e.g., 75001"
-                                />
-                                <p v-if="form.errors.postal_code" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.postal_code }}
-                                </p>
+                            <div class="flex items-center space-x-3">
+                                <Link
+                                    :href="route('tenant.sites.show', site.id)"
+                                    class="px-5 py-2.5 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+                                >
+                                    Annuler
+                                </Link>
+                                <button
+                                    v-if="currentStep < 3"
+                                    type="button"
+                                    @click="nextStep"
+                                    :disabled="!canProceed"
+                                    class="inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-medium shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Suivant
+                                    <ChevronRightIcon class="w-5 h-5 ml-2" />
+                                </button>
+                                <button
+                                    v-else
+                                    type="submit"
+                                    :disabled="form.processing || !canProceed"
+                                    class="inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-medium shadow-lg shadow-emerald-500/25 hover:shadow-xl hover:shadow-emerald-500/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <ArrowPathIcon v-if="form.processing" class="animate-spin w-5 h-5 mr-2" />
+                                    <CheckIcon v-else class="w-5 h-5 mr-2" />
+                                    {{ form.processing ? 'Enregistrement...' : 'Enregistrer les modifications' }}
+                                </button>
                             </div>
                         </div>
-
-                        <!-- Country -->
-                        <div>
-                            <label for="country" class="block text-sm font-medium text-gray-700 mb-1">
-                                Country <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="country"
-                                v-model="form.country"
-                                type="text"
-                                required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                :class="{ 'border-red-500': form.errors.country }"
-                                placeholder="e.g., France"
-                            />
-                            <p v-if="form.errors.country" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.country }}
-                            </p>
-                        </div>
-
-                        <!-- Coordinates -->
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="latitude" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Latitude
-                                </label>
-                                <input
-                                    id="latitude"
-                                    v-model="form.latitude"
-                                    type="number"
-                                    step="any"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="e.g., 48.8566"
-                                />
-                            </div>
-
-                            <div>
-                                <label for="longitude" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Longitude
-                                </label>
-                                <input
-                                    id="longitude"
-                                    v-model="form.longitude"
-                                    type="number"
-                                    step="any"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="e.g., 2.3522"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Contact Information -->
-                    <div class="space-y-6 mt-8">
-                        <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Contact Information</h3>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Phone
-                                </label>
-                                <input
-                                    id="phone"
-                                    v-model="form.phone"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="e.g., +33 1 23 45 67 89"
-                                />
-                            </div>
-
-                            <div>
-                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Email
-                                </label>
-                                <input
-                                    id="email"
-                                    v-model="form.email"
-                                    type="email"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="e.g., paris@example.com"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Actions -->
-                    <div class="mt-8 flex items-center justify-end space-x-3 pt-6 border-t">
-                        <Link
-                            :href="route('tenant.sites.index')"
-                            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                            Cancel
-                        </Link>
-                        <button
-                            type="submit"
-                            :disabled="form.processing"
-                            class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <span v-if="!form.processing">Update Site</span>
-                            <span v-else class="flex items-center">
-                                <svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Updating...
-                            </span>
-                        </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </TenantLayout>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
 import { useForm, Link } from '@inertiajs/vue3'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import TenantLayout from '@/Layouts/TenantLayout.vue'
+import {
+    ArrowLeftIcon,
+    MapPinIcon,
+    BuildingOfficeIcon,
+    CheckIcon,
+    CheckCircleIcon,
+    PhoneIcon,
+    EnvelopeIcon,
+    GlobeAltIcon,
+    ClipboardDocumentListIcon,
+    ChevronLeftIcon,
+    ChevronRightIcon,
+    ArrowPathIcon,
+    NoSymbolIcon,
+    WrenchScrewdriverIcon,
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     site: Object,
 })
 
+const currentStep = ref(1)
+
+const steps = [
+    { number: 1, title: 'Informations', icon: BuildingOfficeIcon },
+    { number: 2, title: 'Adresse', icon: MapPinIcon },
+    { number: 3, title: 'Finalisation', icon: CheckCircleIcon }
+]
+
+const statuses = [
+    {
+        value: 'active',
+        label: 'Actif',
+        icon: CheckCircleIcon,
+        bgColor: 'bg-emerald-100',
+        iconColor: 'text-emerald-600'
+    },
+    {
+        value: 'inactive',
+        label: 'Inactif',
+        icon: NoSymbolIcon,
+        bgColor: 'bg-gray-100',
+        iconColor: 'text-gray-600'
+    },
+    {
+        value: 'maintenance',
+        label: 'Maintenance',
+        icon: WrenchScrewdriverIcon,
+        bgColor: 'bg-amber-100',
+        iconColor: 'text-amber-600'
+    }
+]
+
 const form = useForm({
     name: props.site.name,
     code: props.site.code,
-    description: props.site.description,
+    description: props.site.description || '',
     status: props.site.status,
     address: props.site.address,
     city: props.site.city,
@@ -292,9 +485,45 @@ const form = useForm({
     country: props.site.country,
     latitude: props.site.latitude,
     longitude: props.site.longitude,
-    phone: props.site.phone,
-    email: props.site.email,
+    phone: props.site.phone || '',
+    email: props.site.email || '',
 })
+
+const canProceed = computed(() => {
+    if (currentStep.value === 1) {
+        return form.name && form.code && form.status
+    }
+    if (currentStep.value === 2) {
+        return form.address && form.city && form.postal_code && form.country
+    }
+    return true
+})
+
+const statusLabel = computed(() => {
+    const status = statuses.find(s => s.value === form.status)
+    return status ? status.label : form.status
+})
+
+const statusColor = computed(() => {
+    switch (form.status) {
+        case 'active': return 'bg-emerald-100 text-emerald-700'
+        case 'inactive': return 'bg-gray-100 text-gray-700'
+        case 'maintenance': return 'bg-amber-100 text-amber-700'
+        default: return 'bg-gray-100 text-gray-700'
+    }
+})
+
+const nextStep = () => {
+    if (currentStep.value < 3 && canProceed.value) {
+        currentStep.value++
+    }
+}
+
+const prevStep = () => {
+    if (currentStep.value > 1) {
+        currentStep.value--
+    }
+}
 
 const submit = () => {
     form.put(route('tenant.sites.update', props.site.id))

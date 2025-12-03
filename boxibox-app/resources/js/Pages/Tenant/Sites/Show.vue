@@ -1,15 +1,56 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import TenantLayout from '@/Layouts/TenantLayout.vue'
+import {
+    ArrowLeftIcon,
+    MapPinIcon,
+    CubeIcon,
+    PhoneIcon,
+    EnvelopeIcon,
+    PencilSquareIcon,
+    MapIcon,
+    BuildingOfficeIcon,
+    ChartBarIcon,
+    ClockIcon,
+    ShieldCheckIcon,
+    VideoCameraIcon,
+    SunIcon,
+    TruckIcon,
+    CheckCircleIcon,
+    XCircleIcon,
+    PlusIcon,
+    CurrencyEuroIcon,
+    CalendarDaysIcon,
+    ArrowTrendingUpIcon,
+} from '@heroicons/vue/24/outline'
+import { CubeIcon as CubeIconSolid } from '@heroicons/vue/24/solid'
 
 const props = defineProps({
     site: Object,
     stats: Object,
 })
 
+const statusConfig = {
+    active: { label: 'Actif', color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+    inactive: { label: 'Inactif', color: 'bg-gray-100 text-gray-600 border-gray-200' },
+    maintenance: { label: 'Maintenance', color: 'bg-amber-100 text-amber-700 border-amber-200' },
+}
+
+const boxStatusConfig = {
+    available: { label: 'Disponible', color: 'bg-emerald-100 text-emerald-700' },
+    occupied: { label: 'Occupé', color: 'bg-blue-100 text-blue-700' },
+    reserved: { label: 'Réservé', color: 'bg-amber-100 text-amber-700' },
+    maintenance: { label: 'Maintenance', color: 'bg-orange-100 text-orange-700' },
+    unavailable: { label: 'Indisponible', color: 'bg-gray-100 text-gray-600' },
+}
+
 const formatDate = (date) => {
     if (!date) return '-'
-    return new Date(date).toLocaleDateString('fr-FR')
+    return new Date(date).toLocaleDateString('fr-FR', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+    })
 }
 
 const formatCurrency = (amount) => {
@@ -19,362 +60,428 @@ const formatCurrency = (amount) => {
     }).format(amount || 0)
 }
 
-const getBoxStatusColor = (status) => {
-    const colors = {
-        available: 'bg-green-100 text-green-800',
-        occupied: 'bg-blue-100 text-blue-800',
-        reserved: 'bg-yellow-100 text-yellow-800',
-        maintenance: 'bg-orange-100 text-orange-800',
-        unavailable: 'bg-gray-100 text-gray-800',
-    }
-    return colors[status] || 'bg-gray-100 text-gray-800'
-}
-
 const occupancyRate = ((props.stats?.occupied_boxes || 0) / (props.stats?.total_boxes || 1) * 100).toFixed(1)
+
+const features = [
+    { key: 'has_security', label: 'Sécurité 24/7', icon: ShieldCheckIcon },
+    { key: 'has_cctv', label: 'Vidéosurveillance', icon: VideoCameraIcon },
+    { key: 'has_climate_control', label: 'Climatisation', icon: SunIcon },
+    { key: 'has_loading_dock', label: 'Quai de chargement', icon: TruckIcon },
+]
 </script>
 
 <template>
     <TenantLayout :title="site.name">
-        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Header -->
-            <div class="mb-8">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center space-x-4">
-                        <Link
-                            :href="route('tenant.sites.index')"
-                            class="text-gray-400 hover:text-gray-600"
-                        >
-                            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                        </Link>
+        <!-- Gradient Header -->
+        <div class="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 -mt-6 pt-10 pb-32 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-7xl mx-auto">
+                <!-- Back Button -->
+                <Link
+                    :href="route('tenant.sites.index')"
+                    class="inline-flex items-center text-indigo-100 hover:text-white transition-colors mb-6"
+                >
+                    <ArrowLeftIcon class="w-5 h-5 mr-2" />
+                    Retour aux sites
+                </Link>
+
+                <!-- Header Content -->
+                <div class="flex flex-col lg:flex-row lg:items-start lg:justify-between">
+                    <div class="flex items-start space-x-5">
+                        <div class="w-20 h-20 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl">
+                            <MapPinIcon class="w-10 h-10 text-white" />
+                        </div>
                         <div>
-                            <h1 class="text-3xl font-bold text-gray-900">{{ site.name }}</h1>
-                            <p class="mt-1 text-gray-500">{{ site.code }}</p>
+                            <div class="flex items-center space-x-3 mb-2">
+                                <h1 class="text-3xl font-bold text-white">{{ site.name }}</h1>
+                                <span :class="[
+                                    'px-3 py-1 rounded-full text-xs font-semibold border',
+                                    statusConfig[site.status]?.color || 'bg-gray-100 text-gray-600'
+                                ]">
+                                    {{ statusConfig[site.status]?.label || site.status }}
+                                </span>
+                            </div>
+                            <p class="text-indigo-100 font-mono text-lg">{{ site.code }}</p>
+                            <p v-if="site.description" class="text-indigo-200 mt-2 max-w-xl">{{ site.description }}</p>
                         </div>
                     </div>
-                    <div class="flex items-center space-x-3">
+                    <div class="mt-6 lg:mt-0 flex flex-wrap gap-3">
                         <Link
                             :href="route('tenant.boxes.plan', site.id)"
-                            class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+                            class="inline-flex items-center px-4 py-2.5 bg-white/20 backdrop-blur-sm text-white rounded-xl font-medium hover:bg-white/30 transition-all border border-white/20"
                         >
-                            <svg class="h-5 w-5 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                            </svg>
-                            View Plan
+                            <MapIcon class="w-5 h-5 mr-2" />
+                            Voir le plan
                         </Link>
                         <Link
                             :href="route('tenant.sites.edit', site.id)"
-                            class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700"
+                            class="inline-flex items-center px-4 py-2.5 bg-white text-indigo-600 rounded-xl font-medium hover:bg-indigo-50 transition-all shadow-lg"
                         >
-                            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                            Edit
+                            <PencilSquareIcon class="w-5 h-5 mr-2" />
+                            Modifier
                         </Link>
                     </div>
                 </div>
-            </div>
 
-            <!-- Statistics Cards -->
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                </svg>
+                <!-- Stats Cards -->
+                <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-indigo-200 text-sm">Total boxes</p>
+                                <p class="text-2xl font-bold text-white">{{ stats?.total_boxes || 0 }}</p>
                             </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Total Boxes</dt>
-                                    <dd class="text-lg font-semibold text-gray-900">{{ stats?.total_boxes || 0 }}</dd>
-                                </dl>
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <CubeIcon class="w-6 h-6 text-white" />
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-indigo-200 text-sm">Disponibles</p>
+                                <p class="text-2xl font-bold text-emerald-300">{{ stats?.available_boxes || 0 }}</p>
                             </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Available</dt>
-                                    <dd class="text-lg font-semibold text-green-600">{{ stats?.available_boxes || 0 }}</dd>
-                                </dl>
+                            <div class="w-12 h-12 bg-emerald-500/30 rounded-xl flex items-center justify-center">
+                                <CheckCircleIcon class="w-6 h-6 text-emerald-300" />
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-indigo-200 text-sm">Occupés</p>
+                                <p class="text-2xl font-bold text-blue-300">{{ stats?.occupied_boxes || 0 }}</p>
                             </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Occupied</dt>
-                                    <dd class="text-lg font-semibold text-blue-600">{{ stats?.occupied_boxes || 0 }}</dd>
-                                </dl>
+                            <div class="w-12 h-12 bg-blue-500/30 rounded-xl flex items-center justify-center">
+                                <CubeIconSolid class="w-6 h-6 text-blue-300" />
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="bg-white overflow-hidden shadow rounded-lg">
-                    <div class="p-5">
-                        <div class="flex items-center">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-primary-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                </svg>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-indigo-200 text-sm">Taux d'occupation</p>
+                                <p class="text-2xl font-bold text-white">{{ occupancyRate }}%</p>
                             </div>
-                            <div class="ml-5 w-0 flex-1">
-                                <dl>
-                                    <dt class="text-sm font-medium text-gray-500 truncate">Occupancy Rate</dt>
-                                    <dd class="text-lg font-semibold text-gray-900">{{ occupancyRate }}%</dd>
-                                </dl>
+                            <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                                <ChartBarIcon class="w-6 h-6 text-white" />
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
 
+        <!-- Main Content -->
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 pb-12">
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Main Content -->
+                <!-- Left Column -->
                 <div class="lg:col-span-2 space-y-6">
                     <!-- Site Details -->
-                    <div class="bg-white shadow rounded-lg overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h2 class="text-lg font-medium text-gray-900">Site Details</h2>
+                    <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-100 flex items-center">
+                            <BuildingOfficeIcon class="w-5 h-5 text-indigo-600 mr-2" />
+                            <h2 class="text-lg font-semibold text-gray-900">Détails du site</h2>
                         </div>
-                        <div class="px-6 py-4">
-                            <dl class="grid grid-cols-2 gap-4">
+                        <div class="p-6">
+                            <dl class="grid grid-cols-2 gap-6">
                                 <div>
-                                    <dt class="text-sm font-medium text-gray-500">Code</dt>
-                                    <dd class="mt-1 text-sm text-gray-900 font-mono">{{ site.code }}</dd>
+                                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                                        <span class="w-2 h-2 bg-indigo-500 rounded-full mr-2"></span>
+                                        Code
+                                    </dt>
+                                    <dd class="mt-1 text-gray-900 font-mono font-semibold">{{ site.code }}</dd>
                                 </div>
                                 <div>
-                                    <dt class="text-sm font-medium text-gray-500">Total Area</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ site.total_area || '-' }} m²</dd>
+                                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                                        <span class="w-2 h-2 bg-purple-500 rounded-full mr-2"></span>
+                                        Surface totale
+                                    </dt>
+                                    <dd class="mt-1 text-gray-900 font-semibold">{{ site.total_area || '-' }} m²</dd>
                                 </div>
                                 <div class="col-span-2">
-                                    <dt class="text-sm font-medium text-gray-500">Address</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">
-                                        {{ site.address }}<br>
-                                        {{ site.postal_code }} {{ site.city }}<br>
-                                        {{ site.country }}
+                                    <dt class="text-sm font-medium text-gray-500 flex items-center mb-2">
+                                        <MapPinIcon class="w-4 h-4 text-gray-400 mr-2" />
+                                        Adresse
+                                    </dt>
+                                    <dd class="text-gray-900 bg-gray-50 rounded-xl p-4">
+                                        <p class="font-medium">{{ site.address }}</p>
+                                        <p class="text-gray-600">{{ site.postal_code }} {{ site.city }}</p>
+                                        <p class="text-gray-500">{{ site.country }}</p>
                                     </dd>
                                 </div>
                                 <div>
-                                    <dt class="text-sm font-medium text-gray-500">Phone</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ site.phone || '-' }}</dd>
+                                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                                        <PhoneIcon class="w-4 h-4 text-gray-400 mr-2" />
+                                        Téléphone
+                                    </dt>
+                                    <dd class="mt-1 text-gray-900">{{ site.phone || '-' }}</dd>
                                 </div>
                                 <div>
-                                    <dt class="text-sm font-medium text-gray-500">Email</dt>
-                                    <dd class="mt-1 text-sm text-gray-900">{{ site.email || '-' }}</dd>
+                                    <dt class="text-sm font-medium text-gray-500 flex items-center">
+                                        <EnvelopeIcon class="w-4 h-4 text-gray-400 mr-2" />
+                                        Email
+                                    </dt>
+                                    <dd class="mt-1 text-gray-900">{{ site.email || '-' }}</dd>
                                 </div>
                             </dl>
                         </div>
                     </div>
 
                     <!-- Opening Hours -->
-                    <div v-if="site.opening_hours" class="bg-white shadow rounded-lg overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h2 class="text-lg font-medium text-gray-900">Opening Hours</h2>
+                    <div v-if="site.opening_hours" class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-100 flex items-center">
+                            <ClockIcon class="w-5 h-5 text-indigo-600 mr-2" />
+                            <h2 class="text-lg font-semibold text-gray-900">Horaires d'ouverture</h2>
                         </div>
-                        <div class="px-6 py-4">
-                            <dl class="space-y-2">
-                                <div class="flex justify-between text-sm">
-                                    <dt class="text-gray-500">Monday - Friday</dt>
-                                    <dd class="text-gray-900">{{ site.opening_hours?.weekdays || '07:00 - 21:00' }}</dd>
+                        <div class="p-6">
+                            <dl class="space-y-3">
+                                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                    <dt class="text-gray-600">Lundi - Vendredi</dt>
+                                    <dd class="font-semibold text-gray-900">{{ site.opening_hours?.weekdays || '07:00 - 21:00' }}</dd>
                                 </div>
-                                <div class="flex justify-between text-sm">
-                                    <dt class="text-gray-500">Saturday</dt>
-                                    <dd class="text-gray-900">{{ site.opening_hours?.saturday || '08:00 - 18:00' }}</dd>
+                                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                    <dt class="text-gray-600">Samedi</dt>
+                                    <dd class="font-semibold text-gray-900">{{ site.opening_hours?.saturday || '08:00 - 18:00' }}</dd>
                                 </div>
-                                <div class="flex justify-between text-sm">
-                                    <dt class="text-gray-500">Sunday</dt>
-                                    <dd class="text-gray-900">{{ site.opening_hours?.sunday || 'Closed' }}</dd>
+                                <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                    <dt class="text-gray-600">Dimanche</dt>
+                                    <dd class="font-semibold text-gray-900">{{ site.opening_hours?.sunday || 'Fermé' }}</dd>
                                 </div>
                             </dl>
                         </div>
                     </div>
 
                     <!-- Boxes List -->
-                    <div class="bg-white shadow rounded-lg overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-                            <h2 class="text-lg font-medium text-gray-900">Boxes</h2>
+                    <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                            <div class="flex items-center">
+                                <CubeIcon class="w-5 h-5 text-indigo-600 mr-2" />
+                                <h2 class="text-lg font-semibold text-gray-900">Boxes</h2>
+                                <span class="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs font-medium rounded-full">
+                                    {{ site.boxes?.length || 0 }}
+                                </span>
+                            </div>
                             <Link
                                 :href="route('tenant.boxes.create', { site_id: site.id })"
-                                class="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                                class="inline-flex items-center px-3 py-1.5 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
                             >
-                                Add Box
+                                <PlusIcon class="w-4 h-4 mr-1" />
+                                Ajouter
                             </Link>
                         </div>
                         <div v-if="site.boxes && site.boxes.length > 0">
-                            <table class="min-w-full divide-y divide-gray-200">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Size</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price</th>
-                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="bg-white divide-y divide-gray-200">
-                                    <tr v-for="box in site.boxes.slice(0, 10)" :key="box.id" class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <Link :href="route('tenant.boxes.show', box.id)" class="text-primary-600 hover:text-primary-900 font-medium">
-                                                {{ box.code }}
-                                            </Link>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ box.size }} m²</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ formatCurrency(box.monthly_price) }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
-                                            <span :class="getBoxStatusColor(box.status)" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize">
-                                                {{ box.status }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                            <div v-if="site.boxes.length > 10" class="px-6 py-4 border-t border-gray-200 text-center">
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Code</th>
+                                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Surface</th>
+                                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Prix/mois</th>
+                                            <th class="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Statut</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="bg-white divide-y divide-gray-100">
+                                        <tr v-for="box in site.boxes.slice(0, 10)" :key="box.id" class="hover:bg-gray-50 transition-colors">
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <Link :href="route('tenant.boxes.show', box.id)" class="text-indigo-600 hover:text-indigo-800 font-semibold">
+                                                    {{ box.code }}
+                                                </Link>
+                                            </td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{{ box.size }} m²</td>
+                                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ formatCurrency(box.monthly_price) }}</td>
+                                            <td class="px-6 py-4 whitespace-nowrap">
+                                                <span :class="[
+                                                    'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium',
+                                                    boxStatusConfig[box.status]?.color || 'bg-gray-100 text-gray-600'
+                                                ]">
+                                                    {{ boxStatusConfig[box.status]?.label || box.status }}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div v-if="site.boxes.length > 10" class="px-6 py-4 border-t border-gray-100 text-center bg-gray-50">
                                 <Link
                                     :href="route('tenant.boxes.index', { site_id: site.id })"
-                                    class="text-primary-600 hover:text-primary-700 text-sm font-medium"
+                                    class="text-indigo-600 hover:text-indigo-800 font-medium"
                                 >
-                                    View all {{ site.boxes.length }} boxes
+                                    Voir les {{ site.boxes.length }} boxes →
                                 </Link>
                             </div>
                         </div>
-                        <div v-else class="px-6 py-8 text-center text-gray-500">
-                            No boxes found for this site.
-                            <Link :href="route('tenant.boxes.create', { site_id: site.id })" class="text-primary-600 hover:text-primary-700 ml-1">
-                                Add the first box
+                        <div v-else class="px-6 py-12 text-center">
+                            <CubeIcon class="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                            <p class="text-gray-500 mb-4">Aucun box pour ce site.</p>
+                            <Link
+                                :href="route('tenant.boxes.create', { site_id: site.id })"
+                                class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+                            >
+                                <PlusIcon class="w-4 h-4 mr-2" />
+                                Ajouter le premier box
                             </Link>
                         </div>
                     </div>
 
                     <!-- Notes -->
-                    <div v-if="site.notes" class="bg-white shadow rounded-lg overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h2 class="text-lg font-medium text-gray-900">Notes</h2>
+                    <div v-if="site.notes" class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-100 flex items-center">
+                            <svg class="w-5 h-5 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                            <h2 class="text-lg font-semibold text-gray-900">Notes</h2>
                         </div>
-                        <div class="px-6 py-4">
-                            <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ site.notes }}</p>
+                        <div class="p-6">
+                            <p class="text-gray-700 whitespace-pre-wrap">{{ site.notes }}</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- Sidebar -->
+                <!-- Right Column (Sidebar) -->
                 <div class="space-y-6">
-                    <!-- Revenue -->
-                    <div class="bg-gradient-to-br from-green-500 to-green-600 shadow-lg rounded-lg overflow-hidden">
-                        <div class="px-6 py-6 text-center">
-                            <p class="text-green-100 text-sm font-medium uppercase tracking-wide">Monthly Revenue</p>
+                    <!-- Revenue Card -->
+                    <div class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-xl overflow-hidden">
+                        <div class="px-6 py-8 text-center">
+                            <div class="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center mx-auto mb-4">
+                                <CurrencyEuroIcon class="w-7 h-7 text-white" />
+                            </div>
+                            <p class="text-emerald-100 text-sm font-medium uppercase tracking-wide">Revenu mensuel</p>
                             <p class="mt-2 text-3xl font-bold text-white">{{ formatCurrency(stats?.monthly_revenue || 0) }}</p>
                         </div>
                     </div>
 
                     <!-- Occupancy Chart -->
-                    <div class="bg-white shadow rounded-lg overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h2 class="text-lg font-medium text-gray-900">Occupancy</h2>
+                    <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-100 flex items-center">
+                            <ArrowTrendingUpIcon class="w-5 h-5 text-indigo-600 mr-2" />
+                            <h2 class="text-lg font-semibold text-gray-900">Occupation</h2>
                         </div>
-                        <div class="px-6 py-4">
-                            <div class="relative pt-1">
-                                <div class="flex mb-2 items-center justify-between">
-                                    <div>
-                                        <span class="text-xs font-semibold inline-block py-1 px-2 uppercase rounded-full text-primary-600 bg-primary-200">
-                                            {{ occupancyRate }}%
-                                        </span>
-                                    </div>
-                                    <div class="text-right">
-                                        <span class="text-xs font-semibold inline-block text-primary-600">
-                                            {{ stats?.occupied_boxes || 0 }}/{{ stats?.total_boxes || 0 }}
-                                        </span>
-                                    </div>
+                        <div class="p-6">
+                            <!-- Progress Bar -->
+                            <div class="mb-4">
+                                <div class="flex justify-between mb-2">
+                                    <span class="text-sm font-medium text-gray-700">Taux d'occupation</span>
+                                    <span class="text-sm font-bold text-indigo-600">{{ occupancyRate }}%</span>
                                 </div>
-                                <div class="overflow-hidden h-2 text-xs flex rounded bg-primary-200">
-                                    <div :style="{ width: occupancyRate + '%' }" class="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary-500"></div>
+                                <div class="h-3 bg-gray-200 rounded-full overflow-hidden">
+                                    <div
+                                        :style="{ width: occupancyRate + '%' }"
+                                        class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                                    ></div>
                                 </div>
+                                <p class="text-xs text-gray-500 mt-1 text-right">
+                                    {{ stats?.occupied_boxes || 0 }} / {{ stats?.total_boxes || 0 }} boxes
+                                </p>
                             </div>
-                            <div class="mt-4 grid grid-cols-2 gap-4 text-center">
-                                <div>
-                                    <p class="text-2xl font-bold text-green-600">{{ stats?.available_boxes || 0 }}</p>
-                                    <p class="text-xs text-gray-500">Available</p>
+
+                            <!-- Stats Grid -->
+                            <div class="grid grid-cols-2 gap-4 mt-6">
+                                <div class="bg-emerald-50 rounded-xl p-4 text-center">
+                                    <p class="text-2xl font-bold text-emerald-600">{{ stats?.available_boxes || 0 }}</p>
+                                    <p class="text-xs text-emerald-700 font-medium">Disponibles</p>
                                 </div>
-                                <div>
+                                <div class="bg-blue-50 rounded-xl p-4 text-center">
                                     <p class="text-2xl font-bold text-blue-600">{{ stats?.occupied_boxes || 0 }}</p>
-                                    <p class="text-xs text-gray-500">Occupied</p>
+                                    <p class="text-xs text-blue-700 font-medium">Occupés</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
                     <!-- Features -->
-                    <div class="bg-white shadow rounded-lg overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h2 class="text-lg font-medium text-gray-900">Features</h2>
+                    <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-100 flex items-center">
+                            <ShieldCheckIcon class="w-5 h-5 text-indigo-600 mr-2" />
+                            <h2 class="text-lg font-semibold text-gray-900">Équipements</h2>
                         </div>
-                        <div class="px-6 py-4">
-                            <ul class="space-y-2">
-                                <li class="flex items-center text-sm">
-                                    <svg :class="site.has_security ? 'text-green-500' : 'text-gray-300'" class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                    24/7 Security
-                                </li>
-                                <li class="flex items-center text-sm">
-                                    <svg :class="site.has_cctv ? 'text-green-500' : 'text-gray-300'" class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                    CCTV Monitoring
-                                </li>
-                                <li class="flex items-center text-sm">
-                                    <svg :class="site.has_climate_control ? 'text-green-500' : 'text-gray-300'" class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                    Climate Control
-                                </li>
-                                <li class="flex items-center text-sm">
-                                    <svg :class="site.has_loading_dock ? 'text-green-500' : 'text-gray-300'" class="h-5 w-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                    </svg>
-                                    Loading Dock
+                        <div class="p-6">
+                            <ul class="space-y-3">
+                                <li v-for="feature in features" :key="feature.key" class="flex items-center">
+                                    <div :class="[
+                                        'w-8 h-8 rounded-lg flex items-center justify-center mr-3',
+                                        site[feature.key] ? 'bg-emerald-100' : 'bg-gray-100'
+                                    ]">
+                                        <component
+                                            :is="site[feature.key] ? CheckCircleIcon : XCircleIcon"
+                                            :class="[
+                                                'w-5 h-5',
+                                                site[feature.key] ? 'text-emerald-600' : 'text-gray-400'
+                                            ]"
+                                        />
+                                    </div>
+                                    <span :class="site[feature.key] ? 'text-gray-900' : 'text-gray-400'">
+                                        {{ feature.label }}
+                                    </span>
                                 </li>
                             </ul>
                         </div>
                     </div>
 
                     <!-- Timeline -->
-                    <div class="bg-white shadow rounded-lg overflow-hidden">
-                        <div class="px-6 py-4 border-b border-gray-200">
-                            <h2 class="text-lg font-medium text-gray-900">Timeline</h2>
+                    <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-100 flex items-center">
+                            <CalendarDaysIcon class="w-5 h-5 text-indigo-600 mr-2" />
+                            <h2 class="text-lg font-semibold text-gray-900">Chronologie</h2>
                         </div>
-                        <div class="px-6 py-4">
-                            <dl class="space-y-2 text-sm">
-                                <div>
-                                    <dt class="text-gray-500">Created</dt>
-                                    <dd class="text-gray-900">{{ formatDate(site.created_at) }}</dd>
+                        <div class="p-6">
+                            <div class="space-y-4">
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                                        <PlusIcon class="w-4 h-4 text-indigo-600" />
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Création</p>
+                                        <p class="text-sm text-gray-500">{{ formatDate(site.created_at) }}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <dt class="text-gray-500">Last Updated</dt>
-                                    <dd class="text-gray-900">{{ formatDate(site.updated_at) }}</dd>
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0">
+                                        <PencilSquareIcon class="w-4 h-4 text-purple-600" />
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium text-gray-900">Dernière modification</p>
+                                        <p class="text-sm text-gray-500">{{ formatDate(site.updated_at) }}</p>
+                                    </div>
                                 </div>
-                            </dl>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-100">
+                            <h2 class="text-lg font-semibold text-gray-900">Actions rapides</h2>
+                        </div>
+                        <div class="p-4 space-y-2">
+                            <Link
+                                :href="route('tenant.boxes.create', { site_id: site.id })"
+                                class="flex items-center w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
+                            >
+                                <PlusIcon class="w-5 h-5 text-gray-400 mr-3" />
+                                <span>Ajouter un box</span>
+                            </Link>
+                            <Link
+                                :href="route('tenant.boxes.plan', site.id)"
+                                class="flex items-center w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
+                            >
+                                <MapIcon class="w-5 h-5 text-gray-400 mr-3" />
+                                <span>Voir le plan interactif</span>
+                            </Link>
+                            <Link
+                                :href="route('tenant.boxes.index', { site_id: site.id })"
+                                class="flex items-center w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
+                            >
+                                <CubeIcon class="w-5 h-5 text-gray-400 mr-3" />
+                                <span>Voir tous les boxes</span>
+                            </Link>
+                            <Link
+                                :href="route('tenant.sites.edit', site.id)"
+                                class="flex items-center w-full px-4 py-3 text-left text-gray-700 hover:bg-gray-50 rounded-xl transition-colors"
+                            >
+                                <PencilSquareIcon class="w-5 h-5 text-gray-400 mr-3" />
+                                <span>Modifier le site</span>
+                            </Link>
                         </div>
                     </div>
                 </div>

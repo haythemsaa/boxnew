@@ -1,30 +1,6 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { router, Link } from '@inertiajs/vue3';
-import TenantLayout from '@/Layouts/TenantLayout.vue';
-import {
-    CubeIcon,
-    Square2StackIcon,
-    ArrowsPointingOutIcon,
-    TrashIcon,
-    DocumentDuplicateIcon,
-    LockClosedIcon,
-    LockOpenIcon,
-    EyeIcon,
-    EyeSlashIcon,
-    ArrowUturnLeftIcon,
-    ArrowUturnRightIcon,
-    CheckIcon,
-    XMarkIcon,
-    Cog6ToothIcon,
-    PlusIcon,
-    MagnifyingGlassMinusIcon,
-    MagnifyingGlassPlusIcon,
-    Bars3Icon,
-    ArrowDownTrayIcon,
-    ArrowUpTrayIcon,
-    SparklesIcon,
-} from '@heroicons/vue/24/outline';
 
 const props = defineProps({
     sites: Array,
@@ -33,268 +9,231 @@ const props = defineProps({
     configuration: Object,
     boxes: Array,
     unplacedBoxes: Array,
-    floors: Array,
 });
 
 // State
 const selectedSite = ref(props.currentSite?.id);
-const localElements = ref([...props.elements].map(el => ({ ...el, id: el.id || generateId() })));
+const localElements = ref([...(props.elements || [])].map(el => ({ ...el, id: el.id || generateId() })));
 const selectedElements = ref([]);
-const tool = ref('select'); // select, box, wall, door, separator, lift, label, zone
+const tool = ref('select');
 const zoom = ref(1);
 const panX = ref(0);
 const panY = ref(0);
 const isDragging = ref(false);
-const isResizing = ref(false);
 const isDrawing = ref(false);
 const dragStart = ref({ x: 0, y: 0 });
-const resizeHandle = ref(null);
 const drawStart = ref({ x: 0, y: 0 });
 const history = ref([]);
 const historyIndex = ref(-1);
-const showSettings = ref(false);
-const showBoxList = ref(false);
 const isSaving = ref(false);
 
-// Configuration
-const config = ref({
-    canvas_width: props.configuration?.canvas_width || 1920,
-    canvas_height: props.configuration?.canvas_height || 1080,
-    show_grid: props.configuration?.show_grid ?? true,
-    grid_size: props.configuration?.grid_size || 20,
-    snap_to_grid: props.configuration?.snap_to_grid ?? true,
-    default_box_available_color: props.configuration?.default_box_available_color || '#22c55e',
-    default_box_occupied_color: props.configuration?.default_box_occupied_color || '#3b82f6',
-    default_wall_color: props.configuration?.default_wall_color || '#1e3a5f',
-    default_door_color: props.configuration?.default_door_color || '#ffffff',
+// UI
+const showMenu = ref(false);
+const showQuickCreate = ref(false);
+const showAutoNumber = ref(false);
+const showBoxList = ref(false);
+
+// SVG viewBox dimensions
+const svgWidth = 950;
+const svgHeight = 580;
+
+// Status colors - Exact Buxida colors
+const statusColors = {
+    available: '#4CAF50',
+    occupied: '#2196F3',
+    reserved: '#FF9800',
+    ending: '#FFEB3B',
+    litigation: '#9C27B0',
+    maintenance: '#f44336',
+    unavailable: '#9E9E9E',
+};
+
+// Quick create settings
+const quickCreate = ref({
+    columns: 4,
+    rows: 10,
+    boxWidth: 35,
+    boxHeight: 30,
+    gapX: 2,
+    gapY: 2,
+    startX: 100,
+    startY: 100,
+    prefix: 'A',
+    startNumber: 1,
+    volume: 6,
 });
 
-const canvasRef = ref(null);
+// Auto numbering
+const autoNumber = ref({
+    mode: 'column',
+    prefix: '',
+    start: 1,
+    padding: 2,
+});
 
-// Generate unique ID
+// Refs
+const svgRef = ref(null);
+
 function generateId() {
     return 'el_' + Math.random().toString(36).substr(2, 9);
 }
 
-// Tools configuration
-const tools = [
-    { id: 'select', icon: Bars3Icon, label: 'Sélection', shortcut: 'V' },
-    { id: 'box', icon: CubeIcon, label: 'Box', shortcut: 'B' },
-    { id: 'wall', icon: Square2StackIcon, label: 'Mur', shortcut: 'W' },
-    { id: 'door', icon: Square2StackIcon, label: 'Porte', shortcut: 'D' },
-    { id: 'separator', icon: Square2StackIcon, label: 'Séparateur', shortcut: 'S' },
-    { id: 'lift', icon: ArrowsPointingOutIcon, label: 'Ascenseur', shortcut: 'L' },
-    { id: 'label', icon: DocumentDuplicateIcon, label: 'Étiquette', shortcut: 'T' },
-];
+// Get SVG coordinates from mouse event
+function getSvgPoint(e) {
+    if (!svgRef.value) return { x: 0, y: 0 };
+    const svg = svgRef.value;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return { x: Math.round(svgP.x), y: Math.round(svgP.y) };
+}
 
 // Snap to grid
-const snapToGrid = (value) => {
-    if (!config.value.snap_to_grid) return value;
-    return Math.round(value / config.value.grid_size) * config.value.grid_size;
-};
+function snap(val, size = 5) {
+    return Math.round(val / size) * size;
+}
 
-// Get mouse position on canvas
-const getCanvasPosition = (e) => {
-    const rect = canvasRef.value.getBoundingClientRect();
-    return {
-        x: (e.clientX - rect.left - panX.value) / zoom.value,
-        y: (e.clientY - rect.top - panY.value) / zoom.value,
-    };
-};
-
-// Save to history
-const saveHistory = () => {
+// Save history
+function saveHistory() {
     history.value = history.value.slice(0, historyIndex.value + 1);
     history.value.push(JSON.stringify(localElements.value));
-    historyIndex.value = history.value.length - 1;
-};
+    historyIndex.value++;
+    if (history.value.length > 50) {
+        history.value.shift();
+        historyIndex.value--;
+    }
+}
 
-// Undo
-const undo = () => {
+function undo() {
     if (historyIndex.value > 0) {
         historyIndex.value--;
         localElements.value = JSON.parse(history.value[historyIndex.value]);
         selectedElements.value = [];
     }
-};
+}
 
-// Redo
-const redo = () => {
+function redo() {
     if (historyIndex.value < history.value.length - 1) {
         historyIndex.value++;
         localElements.value = JSON.parse(history.value[historyIndex.value]);
         selectedElements.value = [];
     }
+}
+
+// Element defaults
+const elementDefaults = {
+    box: { w: 35, h: 30, fill: '#4CAF50', z: 100 },
+    wall: { w: 100, h: 5, fill: '#1e3a5f', z: 50 },
+    corridor: { w: 40, h: 150, fill: '#f5f5f5', z: 5 },
+    door: { w: 30, h: 5, fill: '#ffffff', z: 55 },
+    separator: { w: 80, h: 3, fill: '#94a3b8', z: 40 },
+    zone: { w: 100, h: 80, fill: '#e3f2fd', z: 1 },
+    label: { w: 50, h: 20, fill: 'transparent', z: 200 },
+    lift: { w: 50, h: 40, fill: '#ffffff', z: 30 },
 };
 
-// Create new element
-const createElement = (type, x, y, width = 100, height = 80) => {
-    const defaults = {
-        box: { fill_color: config.value.default_box_available_color, stroke_color: '#1e3a5f', width: 80, height: 60 },
-        wall: { fill_color: config.value.default_wall_color, stroke_color: '#000000', width: 200, height: 10 },
-        door: { fill_color: config.value.default_door_color, stroke_color: '#666666', width: 60, height: 10 },
-        separator: { fill_color: '#94a3b8', stroke_color: '#64748b', width: 150, height: 5 },
-        lift: { fill_color: '#e5e7eb', stroke_color: '#9ca3af', width: 80, height: 80 },
-        label: { fill_color: 'transparent', stroke_color: 'transparent', width: 100, height: 30 },
-    };
-
-    const def = defaults[type] || defaults.box;
-
+// Create element
+function createElement(type, x, y, w, h) {
+    const def = elementDefaults[type] || elementDefaults.box;
     return {
         id: generateId(),
-        element_type: type,
-        box_id: null,
-        x: snapToGrid(x),
-        y: snapToGrid(y),
-        width: width || def.width,
-        height: height || def.height,
-        rotation: 0,
-        z_index: localElements.value.length,
-        fill_color: def.fill_color,
-        stroke_color: def.stroke_color,
-        stroke_width: 2,
-        opacity: 1,
-        label: type === 'lift' ? 'LIFT' : '',
-        is_locked: false,
-        is_visible: true,
+        type: type,
+        x: snap(x),
+        y: snap(y),
+        w: w || def.w,
+        h: h || def.h,
+        fill: def.fill,
+        z: def.z,
+        name: type === 'lift' ? 'LIFT' : '',
+        vol: type === 'box' ? 6 : 0,
+        status: 'available',
+        locked: false,
+        visible: true,
     };
-};
+}
 
-// Mouse down on canvas
-const onCanvasMouseDown = (e) => {
-    if (e.target !== canvasRef.value && !e.target.classList.contains('canvas-background')) {
-        return;
-    }
+// SVG click handler
+function onSvgMouseDown(e) {
+    if (e.target.closest('.element-group')) return;
 
-    const pos = getCanvasPosition(e);
+    const pt = getSvgPoint(e);
 
     if (tool.value === 'select') {
-        // Start panning
         isDragging.value = true;
-        dragStart.value = { x: e.clientX - panX.value, y: e.clientY - panY.value };
+        dragStart.value = { x: e.clientX, y: e.clientY, px: panX.value, py: panY.value };
         selectedElements.value = [];
     } else {
-        // Start drawing new element
         isDrawing.value = true;
-        drawStart.value = pos;
+        drawStart.value = pt;
     }
-};
+}
 
-// Mouse move on canvas
-const onCanvasMouseMove = (e) => {
-    if (isDragging.value) {
-        panX.value = e.clientX - dragStart.value.x;
-        panY.value = e.clientY - dragStart.value.y;
-    } else if (isDrawing.value) {
-        // Preview drawing
-    } else if (isResizing.value && selectedElements.value.length === 1) {
-        const pos = getCanvasPosition(e);
-        const element = localElements.value.find(el => el.id === selectedElements.value[0]);
-        if (element && !element.is_locked) {
-            const handle = resizeHandle.value;
-            if (handle.includes('e')) {
-                element.width = Math.max(20, snapToGrid(pos.x - element.x));
-            }
-            if (handle.includes('w')) {
-                const newX = snapToGrid(pos.x);
-                element.width = Math.max(20, element.width + (element.x - newX));
-                element.x = newX;
-            }
-            if (handle.includes('s')) {
-                element.height = Math.max(20, snapToGrid(pos.y - element.y));
-            }
-            if (handle.includes('n')) {
-                const newY = snapToGrid(pos.y);
-                element.height = Math.max(20, element.height + (element.y - newY));
-                element.y = newY;
-            }
-        }
+function onSvgMouseMove(e) {
+    if (isDragging.value && tool.value === 'select') {
+        const dx = e.clientX - dragStart.value.x;
+        const dy = e.clientY - dragStart.value.y;
+        panX.value = dragStart.value.px + dx;
+        panY.value = dragStart.value.py + dy;
     }
-};
+}
 
-// Mouse up on canvas
-const onCanvasMouseUp = (e) => {
+function onSvgMouseUp(e) {
     if (isDrawing.value && tool.value !== 'select') {
-        const pos = getCanvasPosition(e);
-        const width = Math.abs(pos.x - drawStart.value.x);
-        const height = Math.abs(pos.y - drawStart.value.y);
-        const x = Math.min(pos.x, drawStart.value.x);
-        const y = Math.min(pos.y, drawStart.value.y);
+        const pt = getSvgPoint(e);
+        const x = Math.min(pt.x, drawStart.value.x);
+        const y = Math.min(pt.y, drawStart.value.y);
+        const w = Math.abs(pt.x - drawStart.value.x);
+        const h = Math.abs(pt.y - drawStart.value.y);
 
-        if (width > 10 || height > 10) {
-            const newElement = createElement(tool.value, x, y, width, height);
-            localElements.value.push(newElement);
-            selectedElements.value = [newElement.id];
-            saveHistory();
-        } else {
-            // Single click - create with default size
-            const newElement = createElement(tool.value, drawStart.value.x, drawStart.value.y);
-            localElements.value.push(newElement);
-            selectedElements.value = [newElement.id];
-            saveHistory();
-        }
-    }
-
-    if (isResizing.value) {
+        const el = createElement(tool.value, x, y, w > 10 ? w : null, h > 10 ? h : null);
+        localElements.value.push(el);
+        selectedElements.value = [el.id];
         saveHistory();
     }
 
     isDragging.value = false;
     isDrawing.value = false;
-    isResizing.value = false;
-    resizeHandle.value = null;
-};
+}
 
 // Select element
-const selectElement = (e, element) => {
+function selectElement(e, el) {
     e.stopPropagation();
-
     if (e.shiftKey) {
-        // Multi-select
-        const index = selectedElements.value.indexOf(element.id);
-        if (index > -1) {
-            selectedElements.value.splice(index, 1);
-        } else {
-            selectedElements.value.push(element.id);
-        }
+        const idx = selectedElements.value.indexOf(el.id);
+        if (idx > -1) selectedElements.value.splice(idx, 1);
+        else selectedElements.value.push(el.id);
     } else {
-        selectedElements.value = [element.id];
+        selectedElements.value = [el.id];
     }
-};
+}
 
-// Start dragging element
-const startElementDrag = (e, element) => {
-    if (element.is_locked || tool.value !== 'select') return;
-
+// Drag element
+function startDrag(e, el) {
+    if (el.locked || tool.value !== 'select') return;
     e.stopPropagation();
-    isDragging.value = true;
 
-    const pos = getCanvasPosition(e);
-    dragStart.value = {
-        x: pos.x - element.x,
-        y: pos.y - element.y,
-        elements: selectedElements.value.map(id => {
-            const el = localElements.value.find(e => e.id === id);
-            return { id, x: el.x, y: el.y };
-        }),
-    };
+    const startPt = getSvgPoint(e);
+    const startPositions = selectedElements.value.map(id => {
+        const elem = localElements.value.find(x => x.id === id);
+        return { id, x: elem.x, y: elem.y };
+    });
 
     const onMove = (moveE) => {
-        const movePos = getCanvasPosition(moveE);
-        const dx = movePos.x - pos.x;
-        const dy = movePos.y - pos.y;
+        const movePt = getSvgPoint(moveE);
+        const dx = movePt.x - startPt.x;
+        const dy = movePt.y - startPt.y;
 
-        dragStart.value.elements.forEach(({ id, x, y }) => {
-            const el = localElements.value.find(e => e.id === id);
-            if (el && !el.is_locked) {
-                el.x = snapToGrid(x + dx);
-                el.y = snapToGrid(y + dy);
+        startPositions.forEach(({ id, x, y }) => {
+            const elem = localElements.value.find(x => x.id === id);
+            if (elem && !elem.locked) {
+                elem.x = snap(x + dx);
+                elem.y = snap(y + dy);
             }
         });
     };
 
     const onUp = () => {
-        isDragging.value = false;
         saveHistory();
         window.removeEventListener('mousemove', onMove);
         window.removeEventListener('mouseup', onUp);
@@ -302,886 +241,902 @@ const startElementDrag = (e, element) => {
 
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-};
+}
 
-// Start resizing element
-const startResize = (e, handle) => {
-    e.stopPropagation();
-    isResizing.value = true;
-    resizeHandle.value = handle;
-};
-
-// Delete selected elements
-const deleteSelected = () => {
+// Delete selected
+function deleteSelected() {
     if (selectedElements.value.length === 0) return;
-
-    localElements.value = localElements.value.filter(
-        el => !selectedElements.value.includes(el.id)
-    );
+    localElements.value = localElements.value.filter(el => !selectedElements.value.includes(el.id));
     selectedElements.value = [];
     saveHistory();
-};
+}
 
-// Duplicate selected elements
-const duplicateSelected = () => {
+// Duplicate selected
+function duplicateSelected() {
     if (selectedElements.value.length === 0) return;
-
-    const newElements = [];
+    const newEls = [];
     selectedElements.value.forEach(id => {
-        const original = localElements.value.find(el => el.id === id);
-        if (original) {
-            const copy = {
-                ...original,
-                id: generateId(),
-                x: original.x + 20,
-                y: original.y + 20,
-            };
-            newElements.push(copy);
+        const orig = localElements.value.find(el => el.id === id);
+        if (orig) {
+            newEls.push({ ...orig, id: generateId(), x: orig.x + 10, y: orig.y + 10 });
         }
     });
-
-    localElements.value.push(...newElements);
-    selectedElements.value = newElements.map(el => el.id);
+    localElements.value.push(...newEls);
+    selectedElements.value = newEls.map(el => el.id);
     saveHistory();
-};
+}
 
-// Toggle lock
-const toggleLock = () => {
-    selectedElements.value.forEach(id => {
-        const el = localElements.value.find(e => e.id === id);
-        if (el) el.is_locked = !el.is_locked;
-    });
-};
+// Quick create boxes grid
+function createBoxGrid() {
+    const { columns, rows, boxWidth, boxHeight, gapX, gapY, startX, startY, prefix, startNumber, volume } = quickCreate.value;
 
-// Link box to element
-const linkBox = (boxId) => {
-    if (selectedElements.value.length !== 1) return;
-
-    const element = localElements.value.find(el => el.id === selectedElements.value[0]);
-    if (element && element.element_type === 'box') {
-        const box = props.boxes.find(b => b.id === boxId);
-        if (box) {
-            element.box_id = boxId;
-            element.label = box.number;
+    let num = startNumber;
+    for (let col = 0; col < columns; col++) {
+        const letter = String.fromCharCode(prefix.charCodeAt(0) + col);
+        for (let row = 0; row < rows; row++) {
+            const x = startX + col * (boxWidth + gapX);
+            const y = startY + row * (boxHeight + gapY);
+            const el = createElement('box', x, y, boxWidth, boxHeight);
+            el.name = `${letter}${String(num).padStart(2, '0')}`;
+            el.vol = volume;
+            localElements.value.push(el);
+            num++;
         }
     }
     saveHistory();
-};
+    showQuickCreate.value = false;
+}
+
+// Auto number boxes
+function applyAutoNumber() {
+    const { mode, prefix, start, padding } = autoNumber.value;
+
+    const boxes = localElements.value.filter(el => el.type === 'box');
+    boxes.sort((a, b) => {
+        if (mode === 'column') return (a.x - b.x) || (a.y - b.y);
+        if (mode === 'row') return (a.y - b.y) || (a.x - b.x);
+        return 0;
+    });
+
+    boxes.forEach((box, i) => {
+        const num = start + i;
+        box.name = prefix + String(num).padStart(padding, '0');
+    });
+
+    saveHistory();
+    showAutoNumber.value = false;
+}
+
+// Generate Buxida-style plan
+function generateBuxidaPlan() {
+    if (!confirm('Générer un plan style Buxida ? Cela va ajouter des éléments.')) return;
+
+    const cols = ['M', 'K', 'J', 'I', 'H', 'G', 'F', 'E', 'D', 'C'];
+    const boxW = 35, boxH = 30, gap = 2;
+    let currentX = 60;
+
+    cols.forEach((colName, colIdx) => {
+        for (let i = 0; i < 12; i++) {
+            const y = 95 + i * (boxH + gap);
+            const box = createElement('box', currentX, y, boxW, boxH);
+            box.name = `${colName}${String(i + 1).padStart(2, '0')}`;
+            box.vol = 6;
+            box.status = Math.random() > 0.3 ? 'occupied' : 'available';
+            box.fill = statusColors[box.status];
+            localElements.value.push(box);
+        }
+
+        currentX += boxW + gap;
+
+        if ((colIdx + 1) % 4 === 0 && colIdx < cols.length - 1) {
+            const corridor = createElement('corridor', currentX, 95, 30, 12 * (boxH + gap) - gap);
+            localElements.value.push(corridor);
+            currentX += 35;
+        }
+    });
+
+    const lift = createElement('lift', 105, 460, 55, 40);
+    lift.name = 'LIFT';
+    lift.status = 'unavailable';
+    localElements.value.push(lift);
+
+    saveHistory();
+}
 
 // Add box from list
-const addBoxFromList = (box) => {
-    const newElement = createElement('box', 100, 100);
-    newElement.box_id = box.id;
-    newElement.label = box.number;
-    newElement.width = Math.max(60, Math.min(150, box.volume * 8));
-    newElement.height = Math.max(50, Math.min(120, box.volume * 6));
-    localElements.value.push(newElement);
-    selectedElements.value = [newElement.id];
+function addBoxFromList(box) {
+    const el = createElement('box', 100 + Math.random() * 50, 100 + Math.random() * 50);
+    el.boxId = box.id;
+    el.name = box.number || box.name;
+    el.vol = box.volume || 6;
+    localElements.value.push(el);
+    selectedElements.value = [el.id];
     saveHistory();
-};
+}
 
-// Auto generate plan
-const autoGenerate = () => {
-    if (confirm('Cela va remplacer le plan actuel. Continuer ?')) {
-        router.post(route('tenant.plan.auto-generate', props.currentSite.id), {}, {
-            onSuccess: () => {
-                window.location.reload();
-            },
-        });
-    }
-};
+// Zoom
+function zoomIn() { zoom.value = Math.min(zoom.value * 1.2, 3); }
+function zoomOut() { zoom.value = Math.max(zoom.value / 1.2, 0.3); }
+function resetView() { zoom.value = 1; panX.value = 0; panY.value = 0; }
 
-// Save plan
-const savePlan = () => {
-    isSaving.value = true;
-
-    router.post(route('tenant.plan.save-elements', props.currentSite.id), {
-        elements: localElements.value,
-    }, {
-        onSuccess: () => {
-            isSaving.value = false;
-        },
-        onError: () => {
-            isSaving.value = false;
-        },
-    });
-};
-
-// Save configuration
-const saveConfiguration = () => {
-    router.post(route('tenant.plan.save-configuration', props.currentSite.id), config.value, {
-        onSuccess: () => {
-            showSettings.value = false;
-        },
-    });
-};
-
-// Zoom controls
-const zoomIn = () => zoom.value = Math.min(zoom.value * 1.2, 3);
-const zoomOut = () => zoom.value = Math.max(zoom.value / 1.2, 0.3);
-const resetView = () => { zoom.value = 1; panX.value = 0; panY.value = 0; };
-
-// Mouse wheel zoom
-const onWheel = (e) => {
+function onWheel(e) {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     zoom.value = Math.min(Math.max(zoom.value * delta, 0.3), 3);
-};
+}
+
+// Save
+function savePlan() {
+    isSaving.value = true;
+    router.post(route('tenant.plan.save-elements', props.currentSite.id), {
+        elements: localElements.value,
+    }, {
+        onSuccess: () => { isSaving.value = false; },
+        onError: () => { isSaving.value = false; },
+    });
+}
+
+// Export SVG
+function exportSVG() {
+    const svg = svgRef.value.outerHTML;
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `plan-${props.currentSite?.name || 'site'}.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
 
 // Keyboard shortcuts
-const onKeyDown = (e) => {
+function onKeyDown(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
 
-    if (e.key === 'Delete' || e.key === 'Backspace') {
-        deleteSelected();
-    } else if (e.key === 'd' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        duplicateSelected();
-    } else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        if (e.shiftKey) {
-            redo();
-        } else {
-            undo();
-        }
-    } else if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
-        e.preventDefault();
-        savePlan();
-    } else if (e.key === 'v') {
-        tool.value = 'select';
-    } else if (e.key === 'b') {
-        tool.value = 'box';
-    } else if (e.key === 'w') {
-        tool.value = 'wall';
+    if (e.key === 'Delete' || e.key === 'Backspace') deleteSelected();
+    else if (e.key === 'd' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); duplicateSelected(); }
+    else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
+    else if (e.key === 's' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); savePlan(); }
+    else if (e.key === 'Escape') { selectedElements.value = []; tool.value = 'select'; }
+    else if (e.key === 'v') tool.value = 'select';
+    else if (e.key === 'b') tool.value = 'box';
+    else if (e.key === 'w') tool.value = 'wall';
+    else if (e.key === 'c') tool.value = 'corridor';
+}
+
+// Computed
+const sortedElements = computed(() => [...localElements.value].sort((a, b) => (a.z || 0) - (b.z || 0)));
+const selectedElement = computed(() => selectedElements.value.length === 1 ? localElements.value.find(el => el.id === selectedElements.value[0]) : null);
+const isSelected = (el) => selectedElements.value.includes(el.id);
+
+const stats = computed(() => {
+    const boxes = localElements.value.filter(el => el.type === 'box');
+    return {
+        total: boxes.length,
+        available: boxes.filter(b => b.status === 'available' || b.fill === '#4CAF50').length,
+        occupied: boxes.filter(b => b.status === 'occupied' || b.fill === '#2196F3').length,
+    };
+});
+
+const tools = [
+    { id: 'select', label: 'Sélection', key: 'V' },
+    { id: 'box', label: 'Box', key: 'B' },
+    { id: 'wall', label: 'Mur', key: 'W' },
+    { id: 'corridor', label: 'Couloir', key: 'C' },
+    { id: 'door', label: 'Porte', key: 'D' },
+    { id: 'separator', label: 'Séparateur', key: 'S' },
+    { id: 'zone', label: 'Zone', key: 'Z' },
+    { id: 'label', label: 'Texte', key: 'T' },
+    { id: 'lift', label: 'Ascenseur', key: 'L' },
+];
+
+function changeSite() {
+    router.get(route('tenant.plan.editor'), { site_id: selectedSite.value });
+}
+
+function getTextColor(el) {
+    return el.status === 'ending' || el.fill === '#FFEB3B' ? '#333' : '#fff';
+}
+
+function getElementFill(el) {
+    if (el.type === 'box') {
+        return el.fill || statusColors[el.status] || statusColors.available;
     }
-};
+    return el.fill || '#ccc';
+}
 
-// Get element style
-const getElementStyle = (element) => ({
-    left: `${element.x}px`,
-    top: `${element.y}px`,
-    width: `${element.width}px`,
-    height: `${element.height}px`,
-    transform: `rotate(${element.rotation}deg)`,
-    backgroundColor: element.fill_color || '#cccccc',
-    borderColor: element.stroke_color || '#1e3a5f',
-    borderWidth: `${element.stroke_width || 1}px`,
-    opacity: element.opacity,
-    zIndex: element.z_index,
-});
-
-// Transform style
-const transformStyle = computed(() => ({
-    transform: `translate(${panX.value}px, ${panY.value}px) scale(${zoom.value})`,
-    transformOrigin: '0 0',
-}));
-
-// Selected element for editing
-const selectedElement = computed(() => {
-    if (selectedElements.value.length !== 1) return null;
-    return localElements.value.find(el => el.id === selectedElements.value[0]);
-});
-
-// Is element selected
-const isSelected = (element) => selectedElements.value.includes(element.id);
-
-// Initialize history
 onMounted(() => {
     saveHistory();
     window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('mouseup', onCanvasMouseUp);
-    window.addEventListener('mousemove', onCanvasMouseMove);
 });
 
 onUnmounted(() => {
     window.removeEventListener('keydown', onKeyDown);
-    window.removeEventListener('mouseup', onCanvasMouseUp);
-    window.removeEventListener('mousemove', onCanvasMouseMove);
 });
-
-// Change site
-const changeSite = () => {
-    router.get(route('tenant.plan.editor'), { site_id: selectedSite.value });
-};
 </script>
 
 <template>
-    <TenantLayout title="Éditeur de plan">
-        <div class="editor-container">
-            <!-- Toolbar -->
-            <div class="editor-toolbar">
-                <div class="toolbar-section">
-                    <!-- Site selector -->
-                    <select
-                        v-model="selectedSite"
-                        @change="changeSite"
-                        class="toolbar-select"
-                    >
-                        <option v-for="site in sites" :key="site.id" :value="site.id">
-                            {{ site.name }}
-                        </option>
-                    </select>
-                </div>
+    <div class="editor-fullscreen">
+        <!-- Sidebar Menu -->
+        <div class="sidebar" :class="{ open: showMenu }">
+            <div class="sidebar-header">
+                <span class="logo">BoxiBox</span>
+                <button @click="showMenu = false" class="close-menu">&times;</button>
+            </div>
+            <nav class="sidebar-nav">
+                <Link :href="route('tenant.dashboard')" class="nav-item">
+                    <i class="fas fa-home"></i><span>Dashboard</span>
+                </Link>
+                <Link :href="route('tenant.boxes.index')" class="nav-item">
+                    <i class="fas fa-box"></i><span>Boxes</span>
+                </Link>
+                <Link :href="route('tenant.contracts.index')" class="nav-item">
+                    <i class="fas fa-file-contract"></i><span>Contrats</span>
+                </Link>
+                <Link :href="route('tenant.customers.index')" class="nav-item">
+                    <i class="fas fa-users"></i><span>Clients</span>
+                </Link>
+                <Link :href="route('tenant.plan.interactive')" class="nav-item active">
+                    <i class="fas fa-map"></i><span>Plan Interactif</span>
+                </Link>
+            </nav>
+        </div>
+        <div v-if="showMenu" class="overlay" @click="showMenu = false"></div>
 
-                <div class="toolbar-section">
-                    <!-- Tools -->
+        <!-- Header -->
+        <div class="editor-header">
+            <div class="header-left">
+                <button @click="showMenu = true" class="menu-btn">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1>Éditeur de Plan</h1>
+                <select v-model="selectedSite" @change="changeSite" class="site-select">
+                    <option v-for="site in sites" :key="site.id" :value="site.id">{{ site.name }}</option>
+                </select>
+            </div>
+
+            <div class="header-center">
+                <div class="tools-bar">
                     <button
                         v-for="t in tools"
                         :key="t.id"
                         @click="tool = t.id"
-                        :class="['toolbar-btn', { active: tool === t.id }]"
-                        :title="`${t.label} (${t.shortcut})`"
+                        :class="['tool-btn', { active: tool === t.id }]"
+                        :title="`${t.label} (${t.key})`"
                     >
-                        <component :is="t.icon" class="w-5 h-5" />
-                    </button>
-                </div>
-
-                <div class="toolbar-divider"></div>
-
-                <div class="toolbar-section">
-                    <!-- Actions -->
-                    <button @click="undo" :disabled="historyIndex <= 0" class="toolbar-btn" title="Annuler (Ctrl+Z)">
-                        <ArrowUturnLeftIcon class="w-5 h-5" />
-                    </button>
-                    <button @click="redo" :disabled="historyIndex >= history.length - 1" class="toolbar-btn" title="Rétablir (Ctrl+Shift+Z)">
-                        <ArrowUturnRightIcon class="w-5 h-5" />
-                    </button>
-                </div>
-
-                <div class="toolbar-divider"></div>
-
-                <div class="toolbar-section">
-                    <button @click="deleteSelected" :disabled="selectedElements.length === 0" class="toolbar-btn" title="Supprimer">
-                        <TrashIcon class="w-5 h-5" />
-                    </button>
-                    <button @click="duplicateSelected" :disabled="selectedElements.length === 0" class="toolbar-btn" title="Dupliquer (Ctrl+D)">
-                        <DocumentDuplicateIcon class="w-5 h-5" />
-                    </button>
-                    <button @click="toggleLock" :disabled="selectedElements.length === 0" class="toolbar-btn" title="Verrouiller/Déverrouiller">
-                        <LockClosedIcon v-if="selectedElement?.is_locked" class="w-5 h-5" />
-                        <LockOpenIcon v-else class="w-5 h-5" />
-                    </button>
-                </div>
-
-                <div class="toolbar-divider"></div>
-
-                <div class="toolbar-section">
-                    <!-- Zoom -->
-                    <button @click="zoomOut" class="toolbar-btn">
-                        <MagnifyingGlassMinusIcon class="w-5 h-5" />
-                    </button>
-                    <span class="text-sm font-medium w-12 text-center">{{ Math.round(zoom * 100) }}%</span>
-                    <button @click="zoomIn" class="toolbar-btn">
-                        <MagnifyingGlassPlusIcon class="w-5 h-5" />
-                    </button>
-                    <button @click="resetView" class="toolbar-btn">
-                        <ArrowsPointingOutIcon class="w-5 h-5" />
-                    </button>
-                </div>
-
-                <div class="flex-1"></div>
-
-                <div class="toolbar-section">
-                    <button @click="autoGenerate" class="toolbar-btn" title="Génération automatique">
-                        <SparklesIcon class="w-5 h-5" />
-                    </button>
-                    <button @click="showBoxList = !showBoxList" class="toolbar-btn" title="Liste des boxes">
-                        <CubeIcon class="w-5 h-5" />
-                    </button>
-                    <button @click="showSettings = true" class="toolbar-btn" title="Paramètres">
-                        <Cog6ToothIcon class="w-5 h-5" />
-                    </button>
-                </div>
-
-                <div class="toolbar-divider"></div>
-
-                <div class="toolbar-section">
-                    <Link :href="route('tenant.plan.index', { site_id: currentSite?.id })" class="toolbar-btn">
-                        <EyeIcon class="w-5 h-5" />
-                        <span class="ml-1">Aperçu</span>
-                    </Link>
-                    <button @click="savePlan" :disabled="isSaving" class="toolbar-btn-primary">
-                        <CheckIcon class="w-5 h-5" />
-                        <span class="ml-1">{{ isSaving ? 'Sauvegarde...' : 'Sauvegarder' }}</span>
+                        {{ t.label }}
                     </button>
                 </div>
             </div>
 
-            <div class="editor-content">
-                <!-- Left panel - Properties -->
-                <div class="editor-panel-left">
-                    <div v-if="selectedElement" class="properties-panel">
-                        <h3 class="panel-title">Propriétés</h3>
-
-                        <div class="property-group">
-                            <label class="property-label">Type</label>
-                            <div class="property-value">{{ selectedElement.element_type }}</div>
-                        </div>
-
-                        <div class="property-group">
-                            <label class="property-label">Position X</label>
-                            <input type="number" v-model.number="selectedElement.x" class="property-input" />
-                        </div>
-
-                        <div class="property-group">
-                            <label class="property-label">Position Y</label>
-                            <input type="number" v-model.number="selectedElement.y" class="property-input" />
-                        </div>
-
-                        <div class="property-group">
-                            <label class="property-label">Largeur</label>
-                            <input type="number" v-model.number="selectedElement.width" class="property-input" />
-                        </div>
-
-                        <div class="property-group">
-                            <label class="property-label">Hauteur</label>
-                            <input type="number" v-model.number="selectedElement.height" class="property-input" />
-                        </div>
-
-                        <div class="property-group">
-                            <label class="property-label">Rotation</label>
-                            <input type="number" v-model.number="selectedElement.rotation" class="property-input" step="15" />
-                        </div>
-
-                        <div class="property-group">
-                            <label class="property-label">Étiquette</label>
-                            <input type="text" v-model="selectedElement.label" class="property-input" />
-                        </div>
-
-                        <div class="property-group">
-                            <label class="property-label">Couleur fond</label>
-                            <input type="color" v-model="selectedElement.fill_color" class="property-input-color" />
-                        </div>
-
-                        <div class="property-group">
-                            <label class="property-label">Couleur bordure</label>
-                            <input type="color" v-model="selectedElement.stroke_color" class="property-input-color" />
-                        </div>
-
-                        <div class="property-group">
-                            <label class="property-label">Épaisseur bordure</label>
-                            <input type="number" v-model.number="selectedElement.stroke_width" class="property-input" min="0" max="10" />
-                        </div>
-
-                        <!-- Box linking -->
-                        <div v-if="selectedElement.element_type === 'box'" class="property-group">
-                            <label class="property-label">Lier à un box</label>
-                            <select v-model="selectedElement.box_id" @change="linkBox(selectedElement.box_id)" class="property-input">
-                                <option :value="null">-- Aucun --</option>
-                                <option v-for="box in boxes" :key="box.id" :value="box.id">
-                                    {{ box.number }} ({{ box.volume }}m³)
-                                </option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div v-else class="empty-panel">
-                        <p class="text-gray-500 text-sm">Sélectionnez un élément pour voir ses propriétés</p>
-                    </div>
+            <div class="header-right">
+                <div class="stats">
+                    <span class="stat"><span class="dot available"></span>{{ stats.available }} Libre</span>
+                    <span class="stat"><span class="dot occupied"></span>{{ stats.occupied }} Occupé</span>
+                    <span class="stat-total">Total: {{ stats.total }}</span>
                 </div>
 
-                <!-- Canvas -->
-                <div
-                    class="editor-canvas-container"
-                    @mousedown="onCanvasMouseDown"
-                    @wheel="onWheel"
-                    ref="canvasRef"
+                <div class="actions">
+                    <button @click="undo" :disabled="historyIndex <= 0" class="action-btn" title="Annuler">↩</button>
+                    <button @click="redo" :disabled="historyIndex >= history.length - 1" class="action-btn" title="Rétablir">↪</button>
+                    <button @click="deleteSelected" :disabled="selectedElements.length === 0" class="action-btn" title="Supprimer">🗑</button>
+                    <button @click="duplicateSelected" :disabled="selectedElements.length === 0" class="action-btn" title="Dupliquer">📋</button>
+                </div>
+
+                <div class="zoom-controls">
+                    <button @click="zoomOut" class="zoom-btn">−</button>
+                    <span class="zoom-level">{{ Math.round(zoom * 100) }}%</span>
+                    <button @click="zoomIn" class="zoom-btn">+</button>
+                    <button @click="resetView" class="zoom-btn" title="Reset">⟲</button>
+                </div>
+
+                <button @click="showQuickCreate = true" class="header-btn">Création Rapide</button>
+                <button @click="showAutoNumber = true" class="header-btn">Numéroter</button>
+                <button @click="generateBuxidaPlan" class="header-btn">Générer Plan</button>
+                <button @click="showBoxList = !showBoxList" :class="['header-btn', { active: showBoxList }]">Boxes</button>
+                <button @click="exportSVG" class="header-btn">Export</button>
+                <Link :href="route('tenant.plan.interactive')" class="header-btn">Aperçu</Link>
+                <button @click="savePlan" :disabled="isSaving" class="save-btn">
+                    {{ isSaving ? 'Sauvegarde...' : '💾 Sauvegarder' }}
+                </button>
+            </div>
+        </div>
+
+        <!-- Legend -->
+        <div class="legend-bar">
+            <div class="legend-status">
+                <div class="status-item"><div class="status-box libre"></div><span>Libre</span></div>
+                <div class="status-item"><div class="status-box occupe"></div><span>Occupé</span></div>
+                <div class="status-item"><div class="status-box reserve"></div><span>Réservé</span></div>
+                <div class="status-item"><div class="status-box dedite"></div><span>Fin contrat</span></div>
+                <div class="status-item"><div class="status-box litige"></div><span>Litige</span></div>
+                <div class="status-item"><div class="status-box maintenance"></div><span>Maintenance</span></div>
+            </div>
+        </div>
+
+        <!-- Main content -->
+        <div class="editor-body">
+            <!-- Properties panel -->
+            <aside v-if="selectedElement" class="properties-panel">
+                <h3>Propriétés</h3>
+                <div class="prop-group">
+                    <label>Type</label>
+                    <div class="prop-value">{{ selectedElement.type }}</div>
+                </div>
+                <div class="prop-row">
+                    <div class="prop-group">
+                        <label>X</label>
+                        <input type="number" v-model.number="selectedElement.x" />
+                    </div>
+                    <div class="prop-group">
+                        <label>Y</label>
+                        <input type="number" v-model.number="selectedElement.y" />
+                    </div>
+                </div>
+                <div class="prop-row">
+                    <div class="prop-group">
+                        <label>Largeur</label>
+                        <input type="number" v-model.number="selectedElement.w" />
+                    </div>
+                    <div class="prop-group">
+                        <label>Hauteur</label>
+                        <input type="number" v-model.number="selectedElement.h" />
+                    </div>
+                </div>
+                <div class="prop-group" v-if="selectedElement.type === 'box'">
+                    <label>Nom</label>
+                    <input type="text" v-model="selectedElement.name" />
+                </div>
+                <div class="prop-group" v-if="selectedElement.type === 'box'">
+                    <label>Volume (m³)</label>
+                    <input type="number" v-model.number="selectedElement.vol" />
+                </div>
+                <div class="prop-group" v-if="selectedElement.type === 'box'">
+                    <label>Statut</label>
+                    <select v-model="selectedElement.status" @change="selectedElement.fill = statusColors[selectedElement.status]">
+                        <option value="available">Libre</option>
+                        <option value="occupied">Occupé</option>
+                        <option value="reserved">Réservé</option>
+                        <option value="ending">Fin contrat</option>
+                        <option value="litigation">Litige</option>
+                        <option value="maintenance">Maintenance</option>
+                    </select>
+                </div>
+                <div class="prop-group">
+                    <label>Couleur</label>
+                    <input type="color" v-model="selectedElement.fill" />
+                </div>
+            </aside>
+
+            <!-- SVG Canvas -->
+            <div class="canvas-wrapper" @wheel="onWheel">
+                <svg
+                    ref="svgRef"
+                    :viewBox="`0 0 ${svgWidth} ${svgHeight}`"
+                    preserveAspectRatio="xMidYMid meet"
+                    class="plan-svg"
+                    :style="{ transform: `translate(${panX}px, ${panY}px) scale(${zoom})` }"
+                    @mousedown="onSvgMouseDown"
+                    @mousemove="onSvgMouseMove"
+                    @mouseup="onSvgMouseUp"
                 >
-                    <div
-                        class="editor-canvas canvas-background"
-                        :style="{
-                            width: `${config.canvas_width}px`,
-                            height: `${config.canvas_height}px`,
-                            ...transformStyle,
-                            backgroundSize: config.show_grid ? `${config.grid_size}px ${config.grid_size}px` : 'none',
-                        }"
-                    >
-                        <!-- Elements -->
-                        <div
-                            v-for="element in localElements"
-                            :key="element.id"
-                            :class="['editor-element', `element-${element.element_type}`, { selected: isSelected(element), locked: element.is_locked }]"
-                            :style="getElementStyle(element)"
-                            @mousedown="(e) => { selectElement(e, element); startElementDrag(e, element); }"
-                        >
-                            <div class="element-label">{{ element.label }}</div>
+                    <!-- Background -->
+                    <rect x="0" y="0" :width="svgWidth" :height="svgHeight" fill="#fff"/>
 
-                            <!-- Resize handles (only for selected) -->
-                            <template v-if="isSelected(element) && !element.is_locked">
-                                <div class="resize-handle nw" @mousedown.stop="startResize($event, 'nw')"></div>
-                                <div class="resize-handle n" @mousedown.stop="startResize($event, 'n')"></div>
-                                <div class="resize-handle ne" @mousedown.stop="startResize($event, 'ne')"></div>
-                                <div class="resize-handle e" @mousedown.stop="startResize($event, 'e')"></div>
-                                <div class="resize-handle se" @mousedown.stop="startResize($event, 'se')"></div>
-                                <div class="resize-handle s" @mousedown.stop="startResize($event, 's')"></div>
-                                <div class="resize-handle sw" @mousedown.stop="startResize($event, 'sw')"></div>
-                                <div class="resize-handle w" @mousedown.stop="startResize($event, 'w')"></div>
-                            </template>
-                        </div>
-                    </div>
-                </div>
+                    <!-- Grid -->
+                    <defs>
+                        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+                            <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#e0e0e0" stroke-width="0.5"/>
+                        </pattern>
+                    </defs>
+                    <rect x="0" y="0" :width="svgWidth" :height="svgHeight" fill="url(#grid)"/>
 
-                <!-- Right panel - Box list -->
-                <div v-if="showBoxList" class="editor-panel-right">
-                    <div class="panel-header">
-                        <h3 class="panel-title">Boxes non placés</h3>
-                        <button @click="showBoxList = false" class="text-gray-400 hover:text-gray-600">
-                            <XMarkIcon class="w-5 h-5" />
-                        </button>
-                    </div>
+                    <!-- Border -->
+                    <rect x="50" y="85" width="870" height="480" fill="none" stroke="#333" stroke-width="2" rx="3"/>
 
-                    <div class="box-list">
-                        <div
-                            v-for="box in unplacedBoxes"
-                            :key="box.id"
-                            class="box-list-item"
-                            @click="addBoxFromList(box)"
-                        >
-                            <CubeIcon class="w-5 h-5 text-primary-600" />
-                            <div>
-                                <div class="font-medium">{{ box.number }}</div>
-                                <div class="text-xs text-gray-500">{{ box.volume }}m³ - {{ box.current_price || box.base_price }}€/mois</div>
-                            </div>
-                            <PlusIcon class="w-4 h-4 text-gray-400" />
-                        </div>
+                    <!-- Elements -->
+                    <g v-for="el in sortedElements" :key="el.id"
+                       class="element-group"
+                       :class="{ selected: isSelected(el), locked: el.locked }"
+                       @mousedown="(e) => { selectElement(e, el); startDrag(e, el); }">
 
-                        <div v-if="unplacedBoxes.length === 0" class="text-center text-gray-500 py-4">
-                            Tous les boxes sont placés
-                        </div>
-                    </div>
-                </div>
+                        <!-- Box element -->
+                        <template v-if="el.type === 'box'">
+                            <rect
+                                :x="el.x"
+                                :y="el.y"
+                                :width="el.w"
+                                :height="el.h"
+                                :fill="getElementFill(el)"
+                                stroke="#333"
+                                stroke-width="1"
+                                rx="1"
+                                class="element-rect"
+                            />
+                            <text
+                                :x="el.x + el.w/2"
+                                :y="el.y + el.h/2 - (el.h > 25 && el.vol ? 4 : 0)"
+                                :fill="getTextColor(el)"
+                                class="box-name"
+                            >
+                                {{ el.name }}
+                            </text>
+                            <text
+                                v-if="el.vol && el.h > 25"
+                                :x="el.x + el.w/2"
+                                :y="el.y + el.h/2 + 8"
+                                :fill="getTextColor(el)"
+                                class="box-vol"
+                            >
+                                {{ el.vol }}m³
+                            </text>
+                        </template>
+
+                        <!-- Wall element -->
+                        <template v-else-if="el.type === 'wall'">
+                            <rect :x="el.x" :y="el.y" :width="el.w" :height="el.h" :fill="el.fill || '#1e3a5f'" stroke="#000" stroke-width="1"/>
+                        </template>
+
+                        <!-- Corridor element -->
+                        <template v-else-if="el.type === 'corridor'">
+                            <rect :x="el.x" :y="el.y" :width="el.w" :height="el.h" :fill="el.fill || '#f5f5f5'" stroke="#ddd" stroke-width="1"/>
+                        </template>
+
+                        <!-- Door element -->
+                        <template v-else-if="el.type === 'door'">
+                            <rect :x="el.x" :y="el.y" :width="el.w" :height="el.h" fill="#fff" stroke="#666" stroke-width="1"/>
+                        </template>
+
+                        <!-- Lift element -->
+                        <template v-else-if="el.type === 'lift'">
+                            <rect :x="el.x" :y="el.y" :width="el.w" :height="el.h" fill="#fff" stroke="#333" stroke-width="1" rx="1"/>
+                            <text :x="el.x + el.w/2" :y="el.y + el.h/2" fill="#333" class="box-name">{{ el.name || 'LIFT' }}</text>
+                        </template>
+
+                        <!-- Zone element -->
+                        <template v-else-if="el.type === 'zone'">
+                            <rect :x="el.x" :y="el.y" :width="el.w" :height="el.h" :fill="el.fill || '#e3f2fd'" stroke="#90caf9" stroke-width="1" stroke-dasharray="5,5" rx="5"/>
+                        </template>
+
+                        <!-- Label element -->
+                        <template v-else-if="el.type === 'label'">
+                            <text :x="el.x" :y="el.y + 15" fill="#333" font-size="14" font-weight="bold">{{ el.name }}</text>
+                        </template>
+
+                        <!-- Separator element -->
+                        <template v-else-if="el.type === 'separator'">
+                            <rect :x="el.x" :y="el.y" :width="el.w" :height="el.h" :fill="el.fill || '#94a3b8'"/>
+                        </template>
+
+                        <!-- Generic element -->
+                        <template v-else>
+                            <rect :x="el.x" :y="el.y" :width="el.w" :height="el.h" :fill="el.fill || '#ccc'" stroke="#999" stroke-width="1"/>
+                        </template>
+
+                        <!-- Selection indicator -->
+                        <rect v-if="isSelected(el)" :x="el.x - 2" :y="el.y - 2" :width="el.w + 4" :height="el.h + 4" fill="none" stroke="#3b82f6" stroke-width="2" stroke-dasharray="4,2"/>
+                    </g>
+                </svg>
             </div>
 
-            <!-- Settings modal -->
-            <div v-if="showSettings" class="modal-overlay" @click="showSettings = false">
-                <div class="modal-content" @click.stop>
-                    <div class="modal-header">
-                        <h3 class="text-lg font-semibold">Paramètres du plan</h3>
-                        <button @click="showSettings = false" class="text-gray-400 hover:text-gray-600">
-                            <XMarkIcon class="w-6 h-6" />
-                        </button>
+            <!-- Box list panel -->
+            <aside v-if="showBoxList" class="box-list-panel">
+                <div class="panel-header">
+                    <h3>Boxes disponibles</h3>
+                    <button @click="showBoxList = false">✕</button>
+                </div>
+                <div class="box-list">
+                    <div v-for="box in unplacedBoxes" :key="box.id" class="box-item" @click="addBoxFromList(box)">
+                        <span class="box-name-list">{{ box.number || box.name }}</span>
+                        <span class="box-info">{{ box.volume }}m³</span>
                     </div>
+                    <div v-if="!unplacedBoxes?.length" class="empty-msg">Tous les boxes sont placés</div>
+                </div>
+            </aside>
+        </div>
 
-                    <div class="modal-body">
-                        <div class="settings-group">
-                            <h4 class="settings-title">Dimensions du canvas</h4>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="settings-label">Largeur (px)</label>
-                                    <input type="number" v-model.number="config.canvas_width" class="settings-input" />
-                                </div>
-                                <div>
-                                    <label class="settings-label">Hauteur (px)</label>
-                                    <input type="number" v-model.number="config.canvas_height" class="settings-input" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="settings-group">
-                            <h4 class="settings-title">Grille</h4>
-                            <div class="space-y-3">
-                                <label class="flex items-center gap-2">
-                                    <input type="checkbox" v-model="config.show_grid" class="rounded" />
-                                    Afficher la grille
-                                </label>
-                                <label class="flex items-center gap-2">
-                                    <input type="checkbox" v-model="config.snap_to_grid" class="rounded" />
-                                    Magnétisme à la grille
-                                </label>
-                                <div>
-                                    <label class="settings-label">Taille de la grille (px)</label>
-                                    <input type="number" v-model.number="config.grid_size" class="settings-input" />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="settings-group">
-                            <h4 class="settings-title">Couleurs par défaut</h4>
-                            <div class="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label class="settings-label">Box disponible</label>
-                                    <input type="color" v-model="config.default_box_available_color" class="settings-input-color" />
-                                </div>
-                                <div>
-                                    <label class="settings-label">Box occupé</label>
-                                    <input type="color" v-model="config.default_box_occupied_color" class="settings-input-color" />
-                                </div>
-                                <div>
-                                    <label class="settings-label">Mur</label>
-                                    <input type="color" v-model="config.default_wall_color" class="settings-input-color" />
-                                </div>
-                                <div>
-                                    <label class="settings-label">Porte</label>
-                                    <input type="color" v-model="config.default_door_color" class="settings-input-color" />
-                                </div>
-                            </div>
-                        </div>
+        <!-- Quick Create Modal -->
+        <div v-if="showQuickCreate" class="modal-overlay" @click.self="showQuickCreate = false">
+            <div class="modal">
+                <div class="modal-header">
+                    <h2>Création rapide de boxes</h2>
+                    <button @click="showQuickCreate = false">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group"><label>Colonnes</label><input type="number" v-model.number="quickCreate.columns" min="1" max="20" /></div>
+                        <div class="form-group"><label>Rangées</label><input type="number" v-model.number="quickCreate.rows" min="1" max="30" /></div>
                     </div>
-
-                    <div class="modal-footer">
-                        <button @click="showSettings = false" class="btn-secondary">Annuler</button>
-                        <button @click="saveConfiguration" class="btn-primary">Sauvegarder</button>
+                    <div class="form-row">
+                        <div class="form-group"><label>Largeur box</label><input type="number" v-model.number="quickCreate.boxWidth" min="20" /></div>
+                        <div class="form-group"><label>Hauteur box</label><input type="number" v-model.number="quickCreate.boxHeight" min="15" /></div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Espace X</label><input type="number" v-model.number="quickCreate.gapX" min="0" /></div>
+                        <div class="form-group"><label>Espace Y</label><input type="number" v-model.number="quickCreate.gapY" min="0" /></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Position X</label><input type="number" v-model.number="quickCreate.startX" /></div>
+                        <div class="form-group"><label>Position Y</label><input type="number" v-model.number="quickCreate.startY" /></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Préfixe</label><input type="text" v-model="quickCreate.prefix" maxlength="1" /></div>
+                        <div class="form-group"><label>N° départ</label><input type="number" v-model.number="quickCreate.startNumber" min="1" /></div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group"><label>Volume (m³)</label><input type="number" v-model.number="quickCreate.volume" min="1" /></div>
+                    </div>
+                    <p class="preview-text">{{ quickCreate.columns * quickCreate.rows }} boxes seront créés</p>
+                </div>
+                <div class="modal-footer">
+                    <button @click="showQuickCreate = false" class="btn-cancel">Annuler</button>
+                    <button @click="createBoxGrid" class="btn-primary">Créer</button>
                 </div>
             </div>
         </div>
-    </TenantLayout>
+
+        <!-- Auto Number Modal -->
+        <div v-if="showAutoNumber" class="modal-overlay" @click.self="showAutoNumber = false">
+            <div class="modal">
+                <div class="modal-header">
+                    <h2>Numérotation automatique</h2>
+                    <button @click="showAutoNumber = false">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Mode</label>
+                        <select v-model="autoNumber.mode">
+                            <option value="column">Par colonne</option>
+                            <option value="row">Par rangée</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Préfixe</label><input type="text" v-model="autoNumber.prefix" placeholder="Ex: BOX-" /></div>
+                    <div class="form-row">
+                        <div class="form-group"><label>N° départ</label><input type="number" v-model.number="autoNumber.start" min="1" /></div>
+                        <div class="form-group"><label>Zéros</label><input type="number" v-model.number="autoNumber.padding" min="1" max="5" /></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button @click="showAutoNumber = false" class="btn-cancel">Annuler</button>
+                    <button @click="applyAutoNumber" class="btn-primary">Appliquer</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
 
 <style scoped>
-.editor-container {
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
+* { box-sizing: border-box; }
+
+.editor-fullscreen {
+    position: fixed;
+    inset: 0;
     display: flex;
     flex-direction: column;
-    height: calc(100vh - 4rem);
+    background: #f5f5f5;
+    font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    z-index: 9999;
 }
 
-.editor-toolbar {
+/* Sidebar */
+.sidebar {
+    position: fixed;
+    top: 0; left: -280px;
+    width: 280px; height: 100%;
+    background: #2c3e50;
+    z-index: 10001;
+    transition: left 0.3s ease;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+}
+.sidebar.open { left: 0; }
+.sidebar-header {
+    padding: 20px;
+    background: #1a252f;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.sidebar-header .logo { color: #3498db; font-size: 24px; font-weight: 700; }
+.close-menu { background: none; border: none; color: #fff; font-size: 28px; cursor: pointer; }
+.sidebar-nav { padding: 20px 0; }
+.nav-item {
+    display: flex; align-items: center; gap: 15px;
+    padding: 15px 25px; color: #ecf0f1;
+    text-decoration: none; transition: background 0.2s;
+}
+.nav-item:hover, .nav-item.active { background: #34495e; }
+.nav-item i { width: 20px; text-align: center; }
+.overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5); z-index: 10000;
+}
+
+/* Header */
+.editor-header {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: white;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.toolbar-section {
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.toolbar-divider {
-    width: 1px;
-    height: 1.5rem;
-    background: #d1d5db;
-    margin: 0 0.5rem;
-}
-
-.toolbar-btn {
-    padding: 0.5rem;
-    border-radius: 0.5rem;
-    color: #4b5563;
-    cursor: pointer;
-    transition: all 0.15s;
-    display: flex;
-    align-items: center;
-    border: none;
-    background: transparent;
-}
-
-.toolbar-btn:hover {
-    background: #f3f4f6;
-    color: #111827;
-}
-
-.toolbar-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.toolbar-btn.active {
-    background: #dbeafe;
-    color: #1d4ed8;
-}
-
-.toolbar-btn-primary {
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    background: #2563eb;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
     color: white;
-    cursor: pointer;
-    transition: background 0.15s;
+    gap: 16px;
+    flex-shrink: 0;
+}
+.header-left, .header-center, .header-right {
     display: flex;
     align-items: center;
-    border: none;
+    gap: 12px;
 }
-
-.toolbar-btn-primary:hover {
-    background: #1d4ed8;
+.menu-btn {
+    background: rgba(255,255,255,0.1);
+    border: none; color: white;
+    padding: 8px 12px; border-radius: 6px;
+    cursor: pointer; font-size: 16px;
 }
-
-.toolbar-btn-primary:disabled {
-    opacity: 0.5;
+.menu-btn:hover { background: rgba(255,255,255,0.2); }
+.editor-header h1 { font-size: 18px; font-weight: 600; margin: 0; }
+.site-select {
+    padding: 6px 12px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.1);
+    color: white; font-size: 14px;
 }
+.site-select option { color: #333; }
 
-.toolbar-select {
-    border-radius: 0.5rem;
-    border: 1px solid #d1d5db;
-    font-size: 0.875rem;
-    padding: 0.5rem;
+/* Tools */
+.tools-bar {
+    display: flex; gap: 4px;
+    background: rgba(0,0,0,0.2);
+    padding: 4px; border-radius: 8px;
 }
+.tool-btn {
+    padding: 6px 10px; border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.7);
+    font-size: 11px; border-radius: 4px;
+    cursor: pointer; transition: all 0.15s;
+}
+.tool-btn:hover { background: rgba(255,255,255,0.1); color: white; }
+.tool-btn.active { background: #4CAF50; color: white; }
 
-.editor-content {
+/* Stats */
+.stats { display: flex; gap: 12px; font-size: 12px; }
+.stat { display: flex; align-items: center; gap: 4px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot.available { background: #4CAF50; }
+.dot.occupied { background: #2196F3; }
+.stat-total { color: rgba(255,255,255,0.7); }
+
+/* Actions */
+.actions { display: flex; gap: 4px; }
+.action-btn {
+    padding: 6px 10px; border: none;
+    background: rgba(255,255,255,0.1);
+    color: white; border-radius: 4px;
+    cursor: pointer; font-size: 14px;
+}
+.action-btn:hover:not(:disabled) { background: rgba(255,255,255,0.2); }
+.action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Zoom */
+.zoom-controls {
+    display: flex; align-items: center; gap: 4px;
+    background: rgba(0,0,0,0.2);
+    padding: 4px 8px; border-radius: 6px;
+}
+.zoom-btn {
+    width: 26px; height: 26px; border: none;
+    background: rgba(255,255,255,0.1);
+    color: white; border-radius: 4px;
+    cursor: pointer; font-size: 14px;
+}
+.zoom-btn:hover { background: rgba(255,255,255,0.2); }
+.zoom-level { width: 45px; text-align: center; font-size: 11px; }
+
+/* Header buttons */
+.header-btn {
+    padding: 6px 10px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.1);
+    color: white; border-radius: 6px;
+    cursor: pointer; font-size: 12px;
+    text-decoration: none;
+    transition: all 0.15s;
+}
+.header-btn:hover, .header-btn.active { background: rgba(255,255,255,0.2); }
+.save-btn {
+    padding: 6px 14px; border: none;
+    background: #4CAF50; color: white;
+    border-radius: 6px; cursor: pointer;
+    font-size: 13px; font-weight: 500;
+}
+.save-btn:hover:not(:disabled) { background: #43A047; }
+.save-btn:disabled { opacity: 0.7; }
+
+/* Legend */
+.legend-bar {
     display: flex;
+    justify-content: center;
+    padding: 8px 20px;
+    background: #fff;
+    border-bottom: 1px solid #ddd;
+}
+.legend-status {
+    display: flex; gap: 20px; align-items: center;
+}
+.status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.status-box {
+    width: 20px; height: 14px;
+    border-radius: 2px; border: 1px solid #333;
+}
+.status-box.libre { background: #4CAF50; }
+.status-box.occupe { background: #2196F3; }
+.status-box.reserve { background: #FF9800; }
+.status-box.dedite { background: #FFEB3B; }
+.status-box.litige { background: #9C27B0; }
+.status-box.maintenance { background: #f44336; }
+
+/* Body */
+.editor-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Properties panel */
+.properties-panel {
+    width: 200px;
+    background: #fff;
+    border-right: 1px solid #ddd;
+    padding: 16px;
+    overflow-y: auto;
+    flex-shrink: 0;
+}
+.properties-panel h3 { margin: 0 0 16px; font-size: 14px; color: #1e3a5f; }
+.prop-group { margin-bottom: 12px; }
+.prop-group label {
+    display: block; font-size: 11px;
+    color: #666; margin-bottom: 4px;
+    text-transform: uppercase;
+}
+.prop-group input, .prop-group select {
+    width: 100%; padding: 6px 8px;
+    border: 1px solid #ddd; border-radius: 4px;
+    font-size: 13px;
+}
+.prop-group input[type="color"] { height: 32px; padding: 2px; }
+.prop-value { font-size: 13px; font-weight: 500; color: #333; text-transform: capitalize; }
+.prop-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+/* Canvas */
+.canvas-wrapper {
     flex: 1;
     overflow: hidden;
+    background: #e0e0e0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: crosshair;
+}
+.plan-svg {
+    width: 100%;
+    max-width: 1200px;
+    height: auto;
+    background: #fff;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    transform-origin: center center;
 }
 
-.editor-panel-left {
-    width: 16rem;
+/* SVG Elements */
+.element-group { cursor: move; }
+.element-group:hover .element-rect { filter: brightness(1.1); }
+.element-group.selected .element-rect { filter: brightness(1.15); }
+.element-group.locked { cursor: not-allowed; opacity: 0.7; }
+
+.box-name {
+    font-size: 8px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+}
+.box-vol {
+    font-size: 6px;
+    text-anchor: middle;
+    dominant-baseline: middle;
+    pointer-events: none;
+}
+
+/* Box list panel */
+.box-list-panel {
+    width: 220px;
+    background: #fff;
+    border-left: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
     flex-shrink: 0;
-    background: white;
-    border-right: 1px solid #e5e7eb;
-    overflow-y: auto;
 }
-
-.editor-panel-right {
-    width: 18rem;
-    flex-shrink: 0;
-    background: white;
-    border-left: 1px solid #e5e7eb;
-    overflow-y: auto;
-}
-
 .panel-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.75rem;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 12px 16px;
+    border-bottom: 1px solid #ddd;
+    background: #f8f8f8;
 }
-
-.panel-title {
-    font-weight: 600;
-    color: #1f2937;
-}
-
-.properties-panel {
-    padding: 1rem;
-}
-
-.properties-panel > * + * {
-    margin-top: 0.75rem;
-}
-
-.property-group {
-    margin-bottom: 0.75rem;
-}
-
-.property-group > * + * {
-    margin-top: 0.25rem;
-}
-
-.property-label {
-    display: block;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #6b7280;
-}
-
-.property-value {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #111827;
-    text-transform: capitalize;
-}
-
-.property-input {
-    width: 100%;
-    border-radius: 0.375rem;
-    border: 1px solid #d1d5db;
-    font-size: 0.875rem;
-    padding: 0.5rem;
-}
-
-.property-input-color {
-    width: 100%;
-    height: 2rem;
-    border-radius: 0.375rem;
-    border: 1px solid #d1d5db;
-    cursor: pointer;
-}
-
-.empty-panel {
-    padding: 1rem;
-    text-align: center;
-}
-
-.box-list {
-    padding: 0.5rem;
-}
-
-.box-list-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.5rem;
-    border-radius: 0.5rem;
+.panel-header h3 { margin: 0; font-size: 13px; color: #333; }
+.panel-header button { background: none; border: none; font-size: 18px; cursor: pointer; color: #666; }
+.box-list { flex: 1; overflow-y: auto; padding: 8px; }
+.box-item {
+    padding: 10px 12px;
+    border-radius: 6px;
     cursor: pointer;
     transition: background 0.15s;
+    margin-bottom: 4px;
+    border: 1px solid #eee;
 }
+.box-item:hover { background: #f0f0f0; }
+.box-name-list { display: block; font-weight: 600; color: #333; font-size: 13px; }
+.box-info { font-size: 11px; color: #666; }
+.empty-msg { padding: 20px; text-align: center; color: #999; font-size: 12px; }
 
-.box-list-item:hover {
-    background: #f9fafb;
-}
-
-.editor-canvas-container {
-    flex: 1;
-    overflow: hidden;
-    background: #e5e7eb;
-    cursor: crosshair;
-    position: relative;
-}
-
-.editor-canvas {
-    position: relative;
-    background: white;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    background-image:
-        linear-gradient(rgba(0, 0, 0, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 0, 0, 0.05) 1px, transparent 1px);
-}
-
-.editor-element {
-    position: absolute;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: move;
-    border-style: solid;
-}
-
-.editor-element.selected {
-    outline: 2px solid #3b82f6;
-    outline-offset: 2px;
-}
-
-.editor-element.locked {
-    cursor: not-allowed;
-    opacity: 0.75;
-}
-
-.element-label {
-    font-size: 0.75rem;
-    font-weight: 700;
-    text-align: center;
-    line-height: 1.25;
-    pointer-events: none;
-    text-shadow: 0 1px 2px rgba(255,255,255,0.8);
-}
-
-/* Resize handles */
-.resize-handle {
-    position: absolute;
-    width: 0.75rem;
-    height: 0.75rem;
-    background: white;
-    border: 2px solid #3b82f6;
-    border-radius: 2px;
-}
-
-.resize-handle.nw { top: -0.375rem; left: -0.375rem; cursor: nw-resize; }
-.resize-handle.n { top: -0.375rem; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-.resize-handle.ne { top: -0.375rem; right: -0.375rem; cursor: ne-resize; }
-.resize-handle.e { top: 50%; right: -0.375rem; transform: translateY(-50%); cursor: e-resize; }
-.resize-handle.se { bottom: -0.375rem; right: -0.375rem; cursor: se-resize; }
-.resize-handle.s { bottom: -0.375rem; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-.resize-handle.sw { bottom: -0.375rem; left: -0.375rem; cursor: sw-resize; }
-.resize-handle.w { top: 50%; left: -0.375rem; transform: translateY(-50%); cursor: w-resize; }
-
-/* Modal styles */
+/* Modals */
 .modal-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 50;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 10002;
 }
-
-.modal-content {
-    background: white;
-    border-radius: 0.75rem;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    width: 100%;
-    max-width: 32rem;
+.modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%; max-width: 420px;
+    max-height: 90vh; overflow: hidden;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.3);
 }
-
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem;
-    border-bottom: 1px solid #e5e7eb;
+    padding: 16px 20px;
+    border-bottom: 1px solid #eee;
 }
-
-.modal-body {
-    padding: 1rem;
-}
-
-.modal-body > * + * {
-    margin-top: 1.5rem;
-}
-
+.modal-header h2 { margin: 0; font-size: 18px; color: #333; }
+.modal-header button { background: none; border: none; font-size: 20px; cursor: pointer; color: #666; }
+.modal-body { padding: 20px; overflow-y: auto; }
 .modal-footer {
     display: flex;
     justify-content: flex-end;
-    gap: 0.75rem;
-    padding: 1rem;
-    border-top: 1px solid #e5e7eb;
+    gap: 12px;
+    padding: 16px 20px;
+    border-top: 1px solid #eee;
 }
-
-.settings-group {
-    margin-bottom: 1rem;
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 13px; color: #555; margin-bottom: 6px; }
+.form-group input, .form-group select {
+    width: 100%; padding: 8px 12px;
+    border: 1px solid #ddd; border-radius: 6px;
+    font-size: 14px;
 }
-
-.settings-group > * + * {
-    margin-top: 0.75rem;
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.preview-text {
+    margin-top: 16px; padding: 12px;
+    background: #f5f5f5; border-radius: 6px;
+    font-size: 14px; color: #555; text-align: center;
 }
-
-.settings-title {
-    font-weight: 500;
-    color: #1f2937;
+.btn-cancel {
+    padding: 10px 20px;
+    border: 1px solid #ddd; background: #fff;
+    border-radius: 6px; cursor: pointer; font-size: 14px;
 }
-
-.settings-label {
-    display: block;
-    font-size: 0.875rem;
-    color: #4b5563;
-    margin-bottom: 0.25rem;
-}
-
-.settings-input {
-    width: 100%;
-    border-radius: 0.375rem;
-    border: 1px solid #d1d5db;
-    padding: 0.5rem;
-}
-
-.settings-input-color {
-    width: 100%;
-    height: 2.5rem;
-    border-radius: 0.375rem;
-    border: 1px solid #d1d5db;
-    cursor: pointer;
-}
-
-.btn-secondary {
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    border: 1px solid #d1d5db;
-    color: #374151;
-    background: white;
-    cursor: pointer;
-    transition: background 0.15s;
-}
-
-.btn-secondary:hover {
-    background: #f9fafb;
-}
-
+.btn-cancel:hover { background: #f8f8f8; }
 .btn-primary {
-    padding: 0.5rem 1rem;
-    border-radius: 0.5rem;
-    background: #2563eb;
-    color: white;
-    border: none;
-    cursor: pointer;
-    transition: background 0.15s;
+    padding: 10px 20px;
+    border: none; background: #2563eb;
+    color: #fff; border-radius: 6px;
+    cursor: pointer; font-size: 14px; font-weight: 500;
 }
-
-.btn-primary:hover {
-    background: #1d4ed8;
-}
+.btn-primary:hover { background: #1d4ed8; }
 </style>

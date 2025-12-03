@@ -2,12 +2,31 @@
 import { ref, computed, watch } from 'vue'
 import { useForm, Link } from '@inertiajs/vue3'
 import TenantLayout from '@/Layouts/TenantLayout.vue'
+import {
+    ArrowLeftIcon,
+    DocumentTextIcon,
+    UserIcon,
+    CalendarDaysIcon,
+    CurrencyEuroIcon,
+    PlusIcon,
+    TrashIcon,
+    CheckIcon,
+    DocumentDuplicateIcon,
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     invoice: Object,
     customers: Array,
     contracts: Array,
 })
+
+const currentStep = ref(1)
+const steps = [
+    { number: 1, title: 'Informations', icon: DocumentTextIcon },
+    { number: 2, title: 'Dates', icon: CalendarDaysIcon },
+    { number: 3, title: 'Lignes', icon: DocumentDuplicateIcon },
+    { number: 4, title: 'Totaux', icon: CurrencyEuroIcon },
+]
 
 const form = useForm({
     customer_id: props.invoice.customer_id,
@@ -73,440 +92,552 @@ const calculateTotals = () => {
 watch(() => form.tax_rate, calculateTotals)
 watch(() => form.discount_amount, calculateTotals)
 
+const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: form.currency || 'EUR',
+    }).format(amount || 0)
+}
+
+const nextStep = () => {
+    if (currentStep.value < steps.length) {
+        currentStep.value++
+    }
+}
+
+const prevStep = () => {
+    if (currentStep.value > 1) {
+        currentStep.value--
+    }
+}
+
+const typeOptions = [
+    { value: 'invoice', label: 'Facture', description: 'Facture standard' },
+    { value: 'credit_note', label: 'Avoir', description: 'Note de crédit' },
+    { value: 'proforma', label: 'Proforma', description: 'Facture provisoire' },
+]
+
+const statusOptions = [
+    { value: 'draft', label: 'Brouillon', color: 'bg-gray-100 text-gray-700' },
+    { value: 'sent', label: 'Envoyée', color: 'bg-blue-100 text-blue-700' },
+    { value: 'paid', label: 'Payée', color: 'bg-green-100 text-green-700' },
+    { value: 'partial', label: 'Partiel', color: 'bg-amber-100 text-amber-700' },
+    { value: 'overdue', label: 'En retard', color: 'bg-red-100 text-red-700' },
+    { value: 'cancelled', label: 'Annulée', color: 'bg-gray-100 text-gray-500' },
+]
+
 const submit = () => {
     form.put(route('tenant.invoices.update', props.invoice.id))
 }
 </script>
 
 <template>
-    <TenantLayout title="Edit Invoice">
-        <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Header -->
-            <div class="mb-8">
-                <Link
-                    :href="route('tenant.invoices.index')"
-                    class="text-sm text-primary-600 hover:text-primary-900 mb-4 inline-flex items-center"
-                >
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M15 19l-7-7 7-7"
-                        />
-                    </svg>
-                    Back to Invoices
-                </Link>
-                <h1 class="text-3xl font-bold text-gray-900">Edit Invoice</h1>
-                <p class="mt-2 text-sm text-gray-700">Update invoice {{ invoice.invoice_number }}</p>
-            </div>
-
-            <!-- Form (same structure as Create.vue) -->
-            <form @submit.prevent="submit" class="space-y-8">
-                <!-- Basic Information -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-6">
-                        Basic Information
-                    </h3>
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label for="customer_id" class="block text-sm font-medium text-gray-700">
-                                Customer <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="customer_id"
-                                v-model="form.customer_id"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="">Select a customer</option>
-                                <option
-                                    v-for="customer in customers"
-                                    :key="customer.id"
-                                    :value="customer.id"
-                                >
-                                    {{ getCustomerName(customer) }}
-                                </option>
-                            </select>
-                            <div v-if="form.errors.customer_id" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.customer_id }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="contract_id" class="block text-sm font-medium text-gray-700">
-                                Related Contract (Optional)
-                            </label>
-                            <select
-                                id="contract_id"
-                                v-model="form.contract_id"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="">No contract</option>
-                                <option
-                                    v-for="contract in filteredContracts"
-                                    :key="contract.id"
-                                    :value="contract.id"
-                                >
-                                    {{ contract.contract_number }}
-                                </option>
-                            </select>
-                            <div v-if="form.errors.contract_id" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.contract_id }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="invoice_number" class="block text-sm font-medium text-gray-700">
-                                Invoice Number
-                            </label>
-                            <input
-                                id="invoice_number"
-                                v-model="form.invoice_number"
-                                type="text"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.invoice_number" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.invoice_number }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="type" class="block text-sm font-medium text-gray-700">
-                                Type <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="type"
-                                v-model="form.type"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="invoice">Invoice</option>
-                                <option value="credit_note">Credit Note</option>
-                                <option value="proforma">Proforma</option>
-                            </select>
-                            <div v-if="form.errors.type" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.type }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="status" class="block text-sm font-medium text-gray-700">
-                                Status <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="status"
-                                v-model="form.status"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="draft">Draft</option>
-                                <option value="sent">Sent</option>
-                                <option value="paid">Paid</option>
-                                <option value="partial">Partial</option>
-                                <option value="overdue">Overdue</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-                            <div v-if="form.errors.status" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.status }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="currency" class="block text-sm font-medium text-gray-700">
-                                Currency <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="currency"
-                                v-model="form.currency"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="EUR">EUR (€)</option>
-                                <option value="USD">USD ($)</option>
-                                <option value="GBP">GBP (£)</option>
-                            </select>
-                            <div v-if="form.errors.currency" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.currency }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Dates -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-6">Dates</h3>
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label for="invoice_date" class="block text-sm font-medium text-gray-700">
-                                Invoice Date <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="invoice_date"
-                                v-model="form.invoice_date"
-                                type="date"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.invoice_date" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.invoice_date }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="due_date" class="block text-sm font-medium text-gray-700">
-                                Due Date <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="due_date"
-                                v-model="form.due_date"
-                                type="date"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.due_date" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.due_date }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="period_start" class="block text-sm font-medium text-gray-700">
-                                Period Start
-                            </label>
-                            <input
-                                id="period_start"
-                                v-model="form.period_start"
-                                type="date"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                        </div>
-
-                        <div>
-                            <label for="period_end" class="block text-sm font-medium text-gray-700">
-                                Period End
-                            </label>
-                            <input
-                                id="period_end"
-                                v-model="form.period_end"
-                                type="date"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                        </div>
-
-                        <div v-if="form.status === 'paid'">
-                            <label for="paid_at" class="block text-sm font-medium text-gray-700">
-                                Paid At
-                            </label>
-                            <input
-                                id="paid_at"
-                                v-model="form.paid_at"
-                                type="date"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Line Items -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <div class="flex justify-between items-center border-b pb-2 mb-6">
-                        <h3 class="text-lg font-medium text-gray-900">Line Items</h3>
-                        <button
-                            type="button"
-                            @click="addItem"
-                            class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
-                        >
-                            <svg class="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                            </svg>
-                            Add Item
-                        </button>
-                    </div>
-
-                    <div class="space-y-4">
-                        <div
-                            v-for="(item, index) in form.items"
-                            :key="index"
-                            class="grid grid-cols-12 gap-4 items-start p-4 bg-gray-50 rounded-lg"
-                        >
-                            <div class="col-span-12 sm:col-span-5">
-                                <label class="block text-xs font-medium text-gray-700 mb-1">
-                                    Description <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    v-model="item.description"
-                                    type="text"
-                                    required
-                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
-                                />
-                            </div>
-
-                            <div class="col-span-4 sm:col-span-2">
-                                <label class="block text-xs font-medium text-gray-700 mb-1">
-                                    Quantity <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    v-model.number="item.quantity"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    required
-                                    @input="calculateItemTotal(index)"
-                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
-                                />
-                            </div>
-
-                            <div class="col-span-4 sm:col-span-2">
-                                <label class="block text-xs font-medium text-gray-700 mb-1">
-                                    Unit Price <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    v-model.number="item.unit_price"
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    required
-                                    @input="calculateItemTotal(index)"
-                                    class="block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 text-sm"
-                                />
-                            </div>
-
-                            <div class="col-span-3 sm:col-span-2">
-                                <label class="block text-xs font-medium text-gray-700 mb-1">Total</label>
-                                <input
-                                    :value="item.total"
-                                    type="text"
-                                    readonly
-                                    class="block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm text-sm"
-                                />
-                            </div>
-
-                            <div class="col-span-1 flex items-end">
-                                <button
-                                    v-if="form.items.length > 1"
-                                    type="button"
-                                    @click="removeItem(index)"
-                                    class="p-2 text-red-600 hover:text-red-800"
-                                >
-                                    <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            stroke-width="2"
-                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                        />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Totals -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-6">Totals</h3>
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label for="tax_rate" class="block text-sm font-medium text-gray-700">
-                                Tax Rate (%) <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="tax_rate"
-                                v-model.number="form.tax_rate"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="100"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                        </div>
-
-                        <div>
-                            <label for="discount_amount" class="block text-sm font-medium text-gray-700">
-                                Discount Amount ({{form.currency}})
-                            </label>
-                            <input
-                                id="discount_amount"
-                                v-model.number="form.discount_amount"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                        </div>
-
-                        <div class="sm:col-span-2 bg-gray-50 p-4 rounded-lg space-y-2">
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-600">Subtotal:</span>
-                                <span class="font-medium">{{ form.subtotal }} {{ form.currency }}</span>
-                            </div>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-600">Tax ({{ form.tax_rate }}%):</span>
-                                <span class="font-medium">{{ form.tax_amount }} {{ form.currency }}</span>
-                            </div>
-                            <div v-if="form.discount_amount > 0" class="flex justify-between text-sm">
-                                <span class="text-gray-600">Discount:</span>
-                                <span class="font-medium text-red-600">-{{ form.discount_amount }} {{ form.currency }}</span>
-                            </div>
-                            <div class="flex justify-between text-lg font-bold border-t pt-2">
-                                <span>Total:</span>
-                                <span>{{ form.total }} {{ form.currency }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Additional Information -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-6">
-                        Additional Information
-                    </h3>
-                    <div class="space-y-6">
-                        <div>
-                            <label for="notes" class="block text-sm font-medium text-gray-700">
-                                Notes
-                            </label>
-                            <textarea
-                                id="notes"
-                                v-model="form.notes"
-                                rows="3"
-                                maxlength="2000"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            ></textarea>
-                        </div>
-
-                        <div>
-                            <label class="flex items-center">
-                                <input
-                                    v-model="form.is_recurring"
-                                    type="checkbox"
-                                    class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                />
-                                <span class="ml-2 text-sm text-gray-700">This is a recurring invoice</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="flex items-center justify-end space-x-4">
+    <TenantLayout title="Modifier la facture">
+        <div class="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 py-8">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <!-- Header -->
+                <div class="mb-8">
                     <Link
                         :href="route('tenant.invoices.index')"
-                        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                        class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 mb-4 transition-colors"
                     >
-                        Cancel
+                        <ArrowLeftIcon class="w-4 h-4" />
+                        Retour aux factures
                     </Link>
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                    >
-                        <span v-if="form.processing">Updating...</span>
-                        <span v-else>Update Invoice</span>
-                    </button>
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                            <DocumentTextIcon class="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                            <h1 class="text-2xl lg:text-3xl font-bold text-gray-900">Modifier la facture</h1>
+                            <p class="mt-1 text-gray-600">{{ invoice.invoice_number }}</p>
+                        </div>
+                    </div>
                 </div>
-            </form>
+
+                <!-- Progress Steps -->
+                <div class="mb-8">
+                    <div class="flex items-center justify-between">
+                        <template v-for="(step, index) in steps" :key="step.number">
+                            <div class="flex items-center">
+                                <div
+                                    :class="[
+                                        'flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300',
+                                        currentStep >= step.number
+                                            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg'
+                                            : 'bg-white text-gray-400 border-2 border-gray-200'
+                                    ]"
+                                >
+                                    <component :is="step.icon" class="w-5 h-5" />
+                                </div>
+                                <span
+                                    :class="[
+                                        'ml-3 text-sm font-medium hidden sm:block',
+                                        currentStep >= step.number ? 'text-gray-900' : 'text-gray-400'
+                                    ]"
+                                >
+                                    {{ step.title }}
+                                </span>
+                            </div>
+                            <div
+                                v-if="index < steps.length - 1"
+                                :class="[
+                                    'flex-1 h-1 mx-4 rounded-full transition-all duration-300',
+                                    currentStep > step.number ? 'bg-gradient-to-r from-blue-500 to-indigo-600' : 'bg-gray-200'
+                                ]"
+                            ></div>
+                        </template>
+                    </div>
+                </div>
+
+                <form @submit.prevent="submit">
+                    <!-- Step 1: Informations de base -->
+                    <div v-show="currentStep === 1" class="space-y-6 animate-fade-in">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                <DocumentTextIcon class="w-5 h-5 text-blue-600" />
+                                Informations générales
+                            </h3>
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Client <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.customer_id"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    >
+                                        <option value="">Sélectionner un client</option>
+                                        <option
+                                            v-for="customer in customers"
+                                            :key="customer.id"
+                                            :value="customer.id"
+                                        >
+                                            {{ getCustomerName(customer) }}
+                                        </option>
+                                    </select>
+                                    <p v-if="form.errors.customer_id" class="mt-1 text-sm text-red-600">
+                                        {{ form.errors.customer_id }}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Contrat lié (Optionnel)
+                                    </label>
+                                    <select
+                                        v-model="form.contract_id"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    >
+                                        <option value="">Aucun contrat</option>
+                                        <option
+                                            v-for="contract in filteredContracts"
+                                            :key="contract.id"
+                                            :value="contract.id"
+                                        >
+                                            {{ contract.contract_number }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        N° de facture
+                                    </label>
+                                    <input
+                                        v-model="form.invoice_number"
+                                        type="text"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Devise <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.currency"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    >
+                                        <option value="EUR">EUR (€)</option>
+                                        <option value="USD">USD ($)</option>
+                                        <option value="GBP">GBP (£)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Type de facture -->
+                            <div class="mt-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-3">
+                                    Type de document <span class="text-red-500">*</span>
+                                </label>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <label
+                                        v-for="option in typeOptions"
+                                        :key="option.value"
+                                        class="relative cursor-pointer"
+                                    >
+                                        <input
+                                            type="radio"
+                                            v-model="form.type"
+                                            :value="option.value"
+                                            class="peer sr-only"
+                                        />
+                                        <div class="p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-blue-300 peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all">
+                                            <p class="font-semibold text-gray-900">{{ option.label }}</p>
+                                            <p class="text-sm text-gray-500">{{ option.description }}</p>
+                                        </div>
+                                        <div class="absolute top-3 right-3 hidden peer-checked:block">
+                                            <CheckIcon class="w-5 h-5 text-blue-600" />
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Statut -->
+                            <div class="mt-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-3">
+                                    Statut <span class="text-red-500">*</span>
+                                </label>
+                                <div class="flex flex-wrap gap-3">
+                                    <label
+                                        v-for="option in statusOptions"
+                                        :key="option.value"
+                                        class="relative cursor-pointer"
+                                    >
+                                        <input
+                                            type="radio"
+                                            v-model="form.status"
+                                            :value="option.value"
+                                            class="peer sr-only"
+                                        />
+                                        <div :class="[
+                                            'px-4 py-2 rounded-full border-2 font-medium text-sm transition-all',
+                                            form.status === option.value
+                                                ? option.color + ' border-current'
+                                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                        ]">
+                                            {{ option.label }}
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Dates -->
+                    <div v-show="currentStep === 2" class="space-y-6 animate-fade-in">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                <CalendarDaysIcon class="w-5 h-5 text-blue-600" />
+                                Dates
+                            </h3>
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Date de facturation <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model="form.invoice_date"
+                                        name="invoice_date"
+                                        type="date"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Date d'échéance <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model="form.due_date"
+                                        name="due_date"
+                                        type="date"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Début de période
+                                    </label>
+                                    <input
+                                        v-model="form.period_start"
+                                        name="period_start"
+                                        type="date"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Fin de période
+                                    </label>
+                                    <input
+                                        v-model="form.period_end"
+                                        name="period_end"
+                                        type="date"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div v-if="form.status === 'paid'">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Date de paiement
+                                    </label>
+                                    <input
+                                        v-model="form.paid_at"
+                                        name="paid_at"
+                                        type="date"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Lignes de facturation -->
+                    <div v-show="currentStep === 3" class="space-y-6 animate-fade-in">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <div class="flex items-center justify-between mb-6">
+                                <h3 class="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                    <DocumentDuplicateIcon class="w-5 h-5 text-blue-600" />
+                                    Lignes de facturation
+                                </h3>
+                                <button
+                                    type="button"
+                                    @click="addItem"
+                                    class="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg"
+                                >
+                                    <PlusIcon class="w-4 h-4" />
+                                    Ajouter une ligne
+                                </button>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div
+                                    v-for="(item, index) in form.items"
+                                    :key="index"
+                                    class="grid grid-cols-12 gap-4 items-end p-4 bg-gray-50 rounded-xl border border-gray-100"
+                                >
+                                    <div class="col-span-12 sm:col-span-5">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">
+                                            Description <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            v-model="item.description"
+                                            type="text"
+                                            required
+                                            placeholder="Description du produit/service"
+                                            class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm transition-colors"
+                                        />
+                                    </div>
+
+                                    <div class="col-span-4 sm:col-span-2">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">
+                                            Quantité <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            v-model.number="item.quantity"
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            required
+                                            @input="calculateItemTotal(index)"
+                                            class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm transition-colors"
+                                        />
+                                    </div>
+
+                                    <div class="col-span-4 sm:col-span-2">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">
+                                            Prix unit. <span class="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            v-model.number="item.unit_price"
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            required
+                                            @input="calculateItemTotal(index)"
+                                            class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm transition-colors"
+                                        />
+                                    </div>
+
+                                    <div class="col-span-3 sm:col-span-2">
+                                        <label class="block text-xs font-medium text-gray-600 mb-1">Total</label>
+                                        <input
+                                            :value="formatCurrency(item.total)"
+                                            type="text"
+                                            readonly
+                                            class="block w-full rounded-xl border-gray-200 bg-gray-100 text-sm font-semibold text-gray-700"
+                                        />
+                                    </div>
+
+                                    <div class="col-span-1 flex justify-center">
+                                        <button
+                                            v-if="form.items.length > 1"
+                                            type="button"
+                                            @click="removeItem(index)"
+                                            class="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                                        >
+                                            <TrashIcon class="w-5 h-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Totaux et notes -->
+                    <div v-show="currentStep === 4" class="space-y-6 animate-fade-in">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                <CurrencyEuroIcon class="w-5 h-5 text-blue-600" />
+                                Totaux
+                            </h3>
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Taux de TVA (%) <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model.number="form.tax_rate"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        max="100"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Montant de la remise ({{ form.currency }})
+                                    </label>
+                                    <input
+                                        v-model.number="form.discount_amount"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    />
+                                </div>
+
+                                <!-- Récapitulatif -->
+                                <div class="sm:col-span-2">
+                                    <div class="bg-gradient-to-r from-gray-50 to-blue-50 rounded-xl p-6 border border-gray-100">
+                                        <h4 class="text-sm font-semibold text-gray-700 uppercase tracking-wider mb-4">Récapitulatif</h4>
+                                        <dl class="space-y-3">
+                                            <div class="flex justify-between text-sm">
+                                                <dt class="text-gray-600">Sous-total HT</dt>
+                                                <dd class="font-medium text-gray-900">{{ formatCurrency(form.subtotal) }}</dd>
+                                            </div>
+                                            <div class="flex justify-between text-sm">
+                                                <dt class="text-gray-600">TVA ({{ form.tax_rate }}%)</dt>
+                                                <dd class="font-medium text-gray-900">{{ formatCurrency(form.tax_amount) }}</dd>
+                                            </div>
+                                            <div v-if="form.discount_amount > 0" class="flex justify-between text-sm">
+                                                <dt class="text-gray-600">Remise</dt>
+                                                <dd class="font-medium text-red-600">-{{ formatCurrency(form.discount_amount) }}</dd>
+                                            </div>
+                                            <div class="flex justify-between text-lg font-bold border-t border-gray-200 pt-3">
+                                                <dt class="text-gray-900">Total TTC</dt>
+                                                <dd class="text-blue-600">{{ formatCurrency(form.total) }}</dd>
+                                            </div>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Notes -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                <DocumentTextIcon class="w-5 h-5 text-blue-600" />
+                                Informations complémentaires
+                            </h3>
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Notes
+                                    </label>
+                                    <textarea
+                                        v-model="form.notes"
+                                        rows="4"
+                                        maxlength="2000"
+                                        placeholder="Notes internes ou mentions à afficher sur la facture..."
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                                    ></textarea>
+                                </div>
+
+                                <label class="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                                    <input
+                                        v-model="form.is_recurring"
+                                        type="checkbox"
+                                        class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    />
+                                    <div>
+                                        <span class="text-sm font-medium text-gray-900">Facture récurrente</span>
+                                        <p class="text-xs text-gray-500">Cette facture sera générée automatiquement</p>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
+                        <div>
+                            <button
+                                v-if="currentStep > 1"
+                                type="button"
+                                @click="prevStep"
+                                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                Précédent
+                            </button>
+                            <Link
+                                v-else
+                                :href="route('tenant.invoices.index')"
+                                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors inline-block"
+                            >
+                                Annuler
+                            </Link>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button
+                                v-if="currentStep < steps.length"
+                                type="button"
+                                @click="nextStep"
+                                class="px-6 py-2.5 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-indigo-700 transition-all shadow-lg"
+                            >
+                                Suivant
+                            </button>
+                            <button
+                                v-else
+                                type="submit"
+                                :disabled="form.processing"
+                                class="px-8 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl font-medium hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <span v-if="form.processing" class="flex items-center gap-2">
+                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Mise à jour...
+                                </span>
+                                <span v-else>Mettre à jour la facture</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
     </TenantLayout>
 </template>

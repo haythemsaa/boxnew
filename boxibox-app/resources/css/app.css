@@ -561,3 +561,6 @@ body {
         display: block !important;
     }
 }
+
+/* Import modern animations and styles */
+@import './modern.css';

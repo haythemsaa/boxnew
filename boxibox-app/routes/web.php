@@ -29,6 +29,9 @@ use App\Http\Controllers\Signature\PublicSignatureController;
 use App\Http\Controllers\BoxCalculatorController;
 use App\Http\Controllers\Mobile\MobileController;
 use App\Http\Controllers\Tenant\PlanController;
+use App\Http\Controllers\Tenant\BookingManagementController;
+use App\Http\Controllers\Public\BookingController as PublicBookingController;
+use App\Http\Controllers\Api\BookingApiController;
 use Inertia\Inertia;
 
 /*
@@ -81,7 +84,7 @@ Route::get('/', function () {
 
 /*
 |--------------------------------------------------------------------------
-| Online Booking Routes (Public)
+| Online Booking Routes (Public) - Legacy
 |--------------------------------------------------------------------------
 */
 
@@ -91,6 +94,48 @@ Route::prefix('booking')->name('booking.')->group(function () {
     Route::get('/box/{box}/checkout', [BookingController::class, 'checkout'])->name('checkout');
     Route::post('/box/{box}/reserve', [BookingController::class, 'store'])->name('store');
     Route::get('/confirmation/{contract}', [BookingController::class, 'confirmation'])->name('confirmation');
+});
+
+/*
+|--------------------------------------------------------------------------
+| NEW Public Booking System Routes (EasyWeek-style)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('book')->name('public.booking.')->group(function () {
+    // Main booking page by slug
+    Route::get('/{slug}', [PublicBookingController::class, 'show'])->name('show');
+
+    // Fallback by tenant ID
+    Route::get('/tenant/{tenantId}', [PublicBookingController::class, 'showByTenant'])->name('by-tenant');
+
+    // API endpoints for booking form
+    Route::get('/api/sites/{siteId}/boxes', [PublicBookingController::class, 'getAvailableBoxes'])->name('get-boxes');
+    Route::post('/api/promo-code/validate', [PublicBookingController::class, 'validatePromoCode'])->name('validate-promo');
+    Route::post('/api/bookings', [PublicBookingController::class, 'store'])->name('store');
+
+    // Booking status page
+    Route::get('/status/{uuid}', [PublicBookingController::class, 'status'])->name('status');
+});
+
+// Widget embedding endpoint
+Route::get('/widget/booking/{widgetKey}', [PublicBookingController::class, 'widget'])->name('booking.widget');
+
+/*
+|--------------------------------------------------------------------------
+| Booking API Routes (for external integrations)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('api/v1/booking')->name('api.booking.')->group(function () {
+    Route::get('/sites', [BookingApiController::class, 'sites'])->name('sites');
+    Route::get('/sites/{siteId}/boxes', [BookingApiController::class, 'boxes'])->name('boxes');
+    Route::get('/boxes/{boxId}/availability', [BookingApiController::class, 'checkAvailability'])->name('check-availability');
+    Route::post('/bookings', [BookingApiController::class, 'createBooking'])->name('create');
+    Route::get('/bookings', [BookingApiController::class, 'listBookings'])->name('list');
+    Route::get('/bookings/{uuid}', [BookingApiController::class, 'getBooking'])->name('get');
+    Route::patch('/bookings/{uuid}/status', [BookingApiController::class, 'updateStatus'])->name('update-status');
+    Route::post('/promo-codes/validate', [BookingApiController::class, 'validatePromoCode'])->name('validate-promo');
 });
 
 /*
@@ -339,6 +384,7 @@ Route::middleware('auth')->group(function () {
         // Plan Routes (Visual Box Layout)
         Route::prefix('plan')->name('plan.')->group(function () {
             Route::get('/', [PlanController::class, 'index'])->name('index');
+            Route::get('/interactive', [PlanController::class, 'interactive'])->name('interactive');
             Route::get('/templates', [PlanController::class, 'templates'])->name('templates');
             Route::post('/create', [PlanController::class, 'create'])->name('create');
             Route::get('/editor', [PlanController::class, 'editor'])->name('editor');
@@ -347,6 +393,39 @@ Route::middleware('auth')->group(function () {
             Route::post('/sites/{site}/auto-generate', [PlanController::class, 'autoGenerate'])->name('auto-generate');
             Route::get('/boxes/{box}/details', [PlanController::class, 'getBoxDetails'])->name('box-details');
             Route::get('/floors/{site}', [PlanController::class, 'getFloors'])->name('get-floors');
+        });
+
+        // Booking Management Routes
+        Route::prefix('bookings')->name('bookings.')->controller(BookingManagementController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/{booking}', 'show')->name('show');
+            Route::post('/{booking}/confirm', 'confirm')->name('confirm');
+            Route::post('/{booking}/reject', 'reject')->name('reject');
+            Route::post('/{booking}/cancel', 'cancel')->name('cancel');
+            Route::post('/{booking}/convert', 'convertToContract')->name('convert');
+
+            // Settings
+            Route::get('/settings/index', 'settings')->name('settings');
+            Route::post('/settings/update', 'updateSettings')->name('settings.update');
+
+            // Widgets
+            Route::get('/widgets/index', 'widgets')->name('widgets');
+            Route::post('/widgets/create', 'createWidget')->name('widgets.create');
+            Route::put('/widgets/{widget}', 'updateWidget')->name('widgets.update');
+            Route::delete('/widgets/{widget}', 'deleteWidget')->name('widgets.delete');
+
+            // API Keys
+            Route::get('/api-keys/index', 'apiKeys')->name('api-keys');
+            Route::post('/api-keys/create', 'createApiKey')->name('api-keys.create');
+            Route::put('/api-keys/{apiKey}', 'updateApiKey')->name('api-keys.update');
+            Route::delete('/api-keys/{apiKey}', 'deleteApiKey')->name('api-keys.delete');
+            Route::post('/api-keys/{apiKey}/regenerate', 'regenerateApiKey')->name('api-keys.regenerate');
+
+            // Promo Codes
+            Route::get('/promo-codes/index', 'promoCodes')->name('promo-codes');
+            Route::post('/promo-codes/create', 'createPromoCode')->name('promo-codes.create');
+            Route::put('/promo-codes/{promoCode}', 'updatePromoCode')->name('promo-codes.update');
+            Route::delete('/promo-codes/{promoCode}', 'deletePromoCode')->name('promo-codes.delete');
         });
     });
 

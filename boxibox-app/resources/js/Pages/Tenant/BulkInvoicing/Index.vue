@@ -1,7 +1,12 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { router, Link, useForm } from '@inertiajs/vue3'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import TenantLayout from '@/Layouts/TenantLayout.vue'
+import {
+    DocumentTextIcon,
+    CheckCircleIcon,
+    ExclamationIcon,
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     contracts: Array,
@@ -101,22 +106,32 @@ const getCustomerName = (customer) => {
 </script>
 
 <template>
-    <AuthenticatedLayout title="Facturation en masse">
-        <!-- Success/Error Messages -->
-        <div v-if="$page.props.flash?.success" class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p class="text-sm text-green-600">{{ $page.props.flash.success }}</p>
-        </div>
-        <div v-if="$page.props.flash?.error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p class="text-sm text-red-600">{{ $page.props.flash.error }}</p>
-        </div>
+    <TenantLayout title="Facturation en masse">
+        <!-- Gradient Header -->
+        <div class="relative overflow-hidden bg-gradient-to-r from-orange-600 via-red-600 to-orange-700 -mt-6 pt-10 pb-32 px-4 sm:px-6 lg:px-8">
+            <!-- Decorative circles -->
+            <div class="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -mr-48 -mt-48 blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-96 h-96 bg-white/10 rounded-full -ml-48 mb-0 blur-3xl"></div>
 
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900">Facturation en masse</h2>
-                <p class="mt-1 text-sm text-gray-500">Générez des factures pour plusieurs contrats en une seule opération</p>
+            <div class="max-w-6xl mx-auto relative z-10">
+                <div class="flex items-center space-x-3">
+                    <DocumentTextIcon class="h-8 w-8 text-white" />
+                    <div>
+                        <h1 class="text-4xl font-bold text-white">Facturation en masse</h1>
+                        <p class="mt-2 text-orange-100">Générez des factures pour plusieurs contrats en une seule opération</p>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Success/Error Messages -->
+            <div v-if="$page.props.flash?.success" class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <p class="text-sm text-green-600">{{ $page.props.flash.success }}</p>
+            </div>
+            <div v-if="$page.props.flash?.error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <p class="text-sm text-red-600">{{ $page.props.flash.error }}</p>
+            </div>
 
         <!-- Stats -->
         <div class="grid gap-4 md:grid-cols-4 mb-6">
@@ -366,5 +381,6 @@ const getCustomerName = (customer) => {
                 </div>
             </div>
         </div>
-    </AuthenticatedLayout>
+        </div>
+    </TenantLayout>
 </template>

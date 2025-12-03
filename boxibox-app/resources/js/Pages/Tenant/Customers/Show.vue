@@ -1,277 +1,25 @@
-<template>
-    <AuthenticatedLayout :title="customerName">
-        <div class="min-h-screen bg-gray-50">
-            <!-- Header with customer info -->
-            <div class="bg-white shadow">
-                <div class="px-4 sm:px-6 lg:px-8 py-6">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-4">
-                            <Link :href="route('tenant.customers.index')" class="text-gray-400 hover:text-gray-600">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                </svg>
-                            </Link>
-                            <div>
-                                <h1 class="text-2xl font-bold text-gray-900">{{ customerName }}</h1>
-                                <p class="text-sm text-gray-500">{{ customer.email }}</p>
-                            </div>
-                        </div>
-                        <div class="flex items-center space-x-3">
-                            <Link
-                                :href="route('tenant.customers.edit', customer.id)"
-                                class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-                            >
-                                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Modifier
-                            </Link>
-                            <span :class="statusClasses[customer.status]" class="px-3 py-1 rounded-full text-sm font-medium">
-                                {{ customer.status }}
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Quick stats -->
-                    <div class="mt-6 grid grid-cols-2 md:grid-cols-5 gap-4">
-                        <div class="bg-blue-50 p-4 rounded-lg">
-                            <p class="text-xs text-blue-700">Contrats actifs</p>
-                            <p class="text-2xl font-bold text-blue-900">{{ stats.active_contracts }}</p>
-                        </div>
-                        <div class="bg-emerald-50 p-4 rounded-lg">
-                            <p class="text-xs text-emerald-700">Revenu total</p>
-                            <p class="text-2xl font-bold text-emerald-900">{{ formatCurrency(stats.total_revenue) }}</p>
-                        </div>
-                        <div class="bg-purple-50 p-4 rounded-lg">
-                            <p class="text-xs text-purple-700">Factures</p>
-                            <p class="text-2xl font-bold text-purple-900">{{ stats.total_invoices }}</p>
-                        </div>
-                        <div class="bg-orange-50 p-4 rounded-lg">
-                            <p class="text-xs text-orange-700">Solde impayé</p>
-                            <p class="text-2xl font-bold text-orange-900">{{ formatCurrency(stats.outstanding_balance) }}</p>
-                        </div>
-                        <div class="bg-indigo-50 p-4 rounded-lg">
-                            <p class="text-xs text-indigo-700">Total contrats</p>
-                            <p class="text-2xl font-bold text-indigo-900">{{ stats.total_contracts }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Tabs Navigation -->
-                <div class="border-t border-gray-200">
-                    <nav class="px-4 sm:px-6 lg:px-8 flex space-x-8" aria-label="Tabs">
-                        <button
-                            v-for="tab in tabs"
-                            :key="tab.id"
-                            @click="activeTab = tab.id"
-                            :class="[
-                                activeTab === tab.id
-                                    ? 'border-indigo-500 text-indigo-600'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300',
-                                'whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm flex items-center'
-                            ]"
-                        >
-                            <component :is="tab.icon" class="w-5 h-5 mr-2" />
-                            {{ tab.name }}
-                        </button>
-                    </nav>
-                </div>
-            </div>
-
-            <!-- Tab Content -->
-            <div class="px-4 sm:px-6 lg:px-8 py-6">
-                <!-- Coordonnées Tab -->
-                <div v-if="activeTab === 'coordonnees'" class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Coordonnées</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Type de client</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.type === 'individual' ? 'Particulier' : 'Entreprise' }}</p>
-                        </div>
-                        <div v-if="customer.type === 'company'">
-                            <label class="block text-sm font-medium text-gray-700">Nom de l'entreprise</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.company_name || '-' }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Prénom</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.first_name }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Nom</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.last_name }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Email</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.email }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Téléphone</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.phone || '-' }}</p>
-                        </div>
-                        <div class="md:col-span-2">
-                            <label class="block text-sm font-medium text-gray-700">Adresse</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.address || '-' }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Code postal</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.postal_code || '-' }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Ville</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.city || '-' }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Contrats Tab -->
-                <div v-if="activeTab === 'contrats'" class="bg-white rounded-lg shadow">
-                    <div class="p-6 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-900">Contrats</h3>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Numéro</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Box</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date début</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date fin</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prix mensuel</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="contract in customer.contracts" :key="contract.id" class="hover:bg-gray-50">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {{ contract.contract_number }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ contract.box?.name || '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ contract.start_date }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ contract.end_date || '-' }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ formatCurrency(contract.monthly_price) }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span :class="contractStatusClasses[contract.status]" class="px-2 py-1 text-xs rounded-full">
-                                            {{ contract.status }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr v-if="customer.contracts.length === 0">
-                                    <td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">
-                                        Aucun contrat
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Factures Tab -->
-                <div v-if="activeTab === 'factures'" class="bg-white rounded-lg shadow">
-                    <div class="p-6 border-b border-gray-200">
-                        <h3 class="text-lg font-semibold text-gray-900">Factures</h3>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Numéro</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Échéance</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Montant</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-200">
-                                <tr v-for="invoice in customer.invoices" :key="invoice.id" class="hover:bg-gray-50">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                        {{ invoice.invoice_number }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ invoice.invoice_date }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                        {{ invoice.due_date }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                        {{ formatCurrency(invoice.total) }}
-                                    </td>
-                                    <td class="px-6 py-4 whitespace-nowrap">
-                                        <span :class="invoiceStatusClasses[invoice.status]" class="px-2 py-1 text-xs rounded-full">
-                                            {{ invoice.status }}
-                                        </span>
-                                    </td>
-                                </tr>
-                                <tr v-if="customer.invoices.length === 0">
-                                    <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
-                                        Aucune facture
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Informations Tab -->
-                <div v-if="activeTab === 'informations'" class="bg-white rounded-lg shadow p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Informations de facturation</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div v-if="customer.type === 'company'">
-                            <label class="block text-sm font-medium text-gray-700">Numéro SIRET</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.siret || '-' }}</p>
-                        </div>
-                        <div v-if="customer.type === 'company'">
-                            <label class="block text-sm font-medium text-gray-700">N° TVA</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.vat_number || '-' }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">Mode de paiement préféré</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.preferred_payment_method || '-' }}</p>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700">IBAN</label>
-                            <p class="mt-1 text-sm text-gray-900">{{ customer.iban || '-' }}</p>
-                        </div>
-                    </div>
-
-                    <h3 class="text-lg font-semibold text-gray-900 mb-4 mt-8">Notes</h3>
-                    <p class="text-sm text-gray-600">{{ customer.notes || 'Aucune note' }}</p>
-                </div>
-
-                <!-- Fichiers Tab -->
-                <div v-if="activeTab === 'fichiers'" class="bg-white rounded-lg shadow p-6">
-                    <div class="text-center py-12">
-                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                        </svg>
-                        <h3 class="mt-2 text-sm font-medium text-gray-900">Aucun fichier</h3>
-                        <p class="mt-1 text-sm text-gray-500">Commencez par télécharger un fichier</p>
-                        <div class="mt-6">
-                            <button class="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                </svg>
-                                Télécharger un fichier
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </AuthenticatedLayout>
-</template>
-
 <script setup>
 import { ref, computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import TenantLayout from '@/Layouts/TenantLayout.vue'
+import {
+    ArrowLeftIcon,
+    UserIcon,
+    BuildingOfficeIcon,
+    EnvelopeIcon,
+    PhoneIcon,
+    MapPinIcon,
+    PencilSquareIcon,
+    DocumentTextIcon,
+    CurrencyEuroIcon,
+    DocumentDuplicateIcon,
+    FolderIcon,
+    InformationCircleIcon,
+    CalendarDaysIcon,
+    ClockIcon,
+    EyeIcon,
+    ArrowDownTrayIcon,
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     customer: Object,
@@ -281,11 +29,11 @@ const props = defineProps({
 const activeTab = ref('coordonnees')
 
 const tabs = [
-    { id: 'coordonnees', name: 'Coordonnées', icon: 'UserIcon' },
-    { id: 'contrats', name: 'Contrats', icon: 'DocumentIcon' },
-    { id: 'factures', name: 'Factures', icon: 'ReceiptIcon' },
-    { id: 'informations', name: 'Informations', icon: 'InfoIcon' },
-    { id: 'fichiers', name: 'Fichiers', icon: 'FolderIcon' },
+    { id: 'coordonnees', name: 'Coordonnées', icon: UserIcon },
+    { id: 'contrats', name: 'Contrats', icon: DocumentTextIcon },
+    { id: 'factures', name: 'Factures', icon: DocumentDuplicateIcon },
+    { id: 'informations', name: 'Informations', icon: InformationCircleIcon },
+    { id: 'fichiers', name: 'Fichiers', icon: FolderIcon },
 ]
 
 const customerName = computed(() => {
@@ -295,26 +43,28 @@ const customerName = computed(() => {
     return `${props.customer.first_name} ${props.customer.last_name}`
 })
 
-const statusClasses = {
-    active: 'bg-green-100 text-green-800',
-    inactive: 'bg-gray-100 text-gray-800',
-    prospect: 'bg-blue-100 text-blue-800',
+const statusConfig = {
+    active: { label: 'Actif', color: 'bg-green-100 text-green-700 border-green-200' },
+    inactive: { label: 'Inactif', color: 'bg-gray-100 text-gray-600 border-gray-200' },
+    prospect: { label: 'Prospect', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+    suspended: { label: 'Suspendu', color: 'bg-red-100 text-red-700 border-red-200' },
 }
 
-const contractStatusClasses = {
-    active: 'bg-green-100 text-green-800',
-    pending_signature: 'bg-yellow-100 text-yellow-800',
-    expired: 'bg-gray-100 text-gray-800',
-    terminated: 'bg-red-100 text-red-800',
-    draft: 'bg-blue-100 text-blue-800',
+const contractStatusConfig = {
+    active: { label: 'Actif', color: 'bg-green-100 text-green-700' },
+    pending_signature: { label: 'En attente de signature', color: 'bg-yellow-100 text-yellow-700' },
+    expired: { label: 'Expiré', color: 'bg-gray-100 text-gray-600' },
+    terminated: { label: 'Résilié', color: 'bg-red-100 text-red-700' },
+    draft: { label: 'Brouillon', color: 'bg-blue-100 text-blue-700' },
 }
 
-const invoiceStatusClasses = {
-    draft: 'bg-gray-100 text-gray-800',
-    sent: 'bg-blue-100 text-blue-800',
-    paid: 'bg-green-100 text-green-800',
-    overdue: 'bg-red-100 text-red-800',
-    cancelled: 'bg-gray-100 text-gray-800',
+const invoiceStatusConfig = {
+    draft: { label: 'Brouillon', color: 'bg-gray-100 text-gray-600' },
+    sent: { label: 'Envoyée', color: 'bg-blue-100 text-blue-700' },
+    paid: { label: 'Payée', color: 'bg-green-100 text-green-700' },
+    overdue: { label: 'En retard', color: 'bg-red-100 text-red-700' },
+    cancelled: { label: 'Annulée', color: 'bg-gray-100 text-gray-600' },
+    partial: { label: 'Partielle', color: 'bg-orange-100 text-orange-700' },
 }
 
 const formatCurrency = (value) => {
@@ -324,44 +74,338 @@ const formatCurrency = (value) => {
     }).format(value || 0)
 }
 
-// Simple icon components
-const UserIcon = {
-    template: `
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-    `
+const formatDate = (date) => {
+    if (!date) return '-'
+    return new Date(date).toLocaleDateString('fr-FR')
 }
 
-const DocumentIcon = {
-    template: `
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-    `
+const getStatusStyle = (status) => {
+    return statusConfig[status]?.color || 'bg-gray-100 text-gray-600'
 }
 
-const ReceiptIcon = {
-    template: `
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z" />
-        </svg>
-    `
-}
-
-const InfoIcon = {
-    template: `
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-    `
-}
-
-const FolderIcon = {
-    template: `
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-        </svg>
-    `
+const getStatusLabel = (status) => {
+    return statusConfig[status]?.label || status
 }
 </script>
+
+<template>
+    <TenantLayout :title="customerName">
+        <div class="space-y-6">
+            <!-- Header avec gradient -->
+            <div class="relative overflow-hidden bg-gradient-to-br from-blue-500 via-indigo-500 to-purple-500 rounded-2xl shadow-xl">
+                <div class="absolute inset-0 bg-black/10"></div>
+                <div class="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+                <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+
+                <div class="relative px-6 py-8 sm:px-8">
+                    <div class="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                        <div class="flex items-start gap-4">
+                            <Link :href="route('tenant.customers.index')" class="p-2 bg-white/20 rounded-lg hover:bg-white/30 transition-colors">
+                                <ArrowLeftIcon class="h-5 w-5 text-white" />
+                            </Link>
+                            <div class="flex items-center gap-4">
+                                <div class="h-16 w-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                    <component :is="customer.type === 'company' ? BuildingOfficeIcon : UserIcon" class="h-8 w-8 text-white" />
+                                </div>
+                                <div>
+                                    <h1 class="text-2xl font-bold text-white">{{ customerName }}</h1>
+                                    <p class="text-blue-100 flex items-center gap-2 mt-1">
+                                        <EnvelopeIcon class="h-4 w-4" />
+                                        {{ customer.email }}
+                                    </p>
+                                    <div class="flex items-center gap-3 mt-2">
+                                        <span
+                                            class="px-3 py-1 rounded-full text-xs font-semibold border"
+                                            :class="getStatusStyle(customer.status)"
+                                        >
+                                            {{ getStatusLabel(customer.status) }}
+                                        </span>
+                                        <span class="text-blue-200 text-sm">
+                                            {{ customer.type === 'company' ? 'Entreprise' : 'Particulier' }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <Link
+                            :href="route('tenant.customers.edit', customer.id)"
+                            class="inline-flex items-center px-5 py-2.5 bg-white text-indigo-600 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+                        >
+                            <PencilSquareIcon class="h-5 w-5 mr-2" />
+                            Modifier
+                        </Link>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="mt-8 grid grid-cols-2 md:grid-cols-5 gap-3">
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                            <p class="text-3xl font-bold text-white">{{ stats?.active_contracts || 0 }}</p>
+                            <p class="text-xs text-blue-100 font-medium mt-1">Contrats actifs</p>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                            <p class="text-2xl font-bold text-white">{{ formatCurrency(stats?.total_revenue || 0) }}</p>
+                            <p class="text-xs text-blue-100 font-medium mt-1">Revenu total</p>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                            <p class="text-3xl font-bold text-white">{{ stats?.total_invoices || 0 }}</p>
+                            <p class="text-xs text-blue-100 font-medium mt-1">Factures</p>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                            <p class="text-2xl font-bold text-white">{{ formatCurrency(stats?.outstanding_balance || 0) }}</p>
+                            <p class="text-xs text-blue-100 font-medium mt-1">Solde impayé</p>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                            <p class="text-3xl font-bold text-white">{{ stats?.total_contracts || 0 }}</p>
+                            <p class="text-xs text-blue-100 font-medium mt-1">Total contrats</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100">
+                <div class="border-b border-gray-100">
+                    <nav class="flex space-x-1 px-4" aria-label="Tabs">
+                        <button
+                            v-for="tab in tabs"
+                            :key="tab.id"
+                            @click="activeTab = tab.id"
+                            :class="[
+                                'flex items-center gap-2 px-4 py-3 border-b-2 font-medium text-sm transition-all',
+                                activeTab === tab.id
+                                    ? 'border-indigo-500 text-indigo-600'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                            ]"
+                        >
+                            <component :is="tab.icon" class="h-5 w-5" />
+                            {{ tab.name }}
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- Tab Content -->
+                <div class="p-6">
+                    <!-- Coordonnées Tab -->
+                    <div v-if="activeTab === 'coordonnees'" class="space-y-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <h4 class="font-semibold text-gray-900 flex items-center gap-2">
+                                    <UserIcon class="h-5 w-5 text-indigo-500" />
+                                    Informations personnelles
+                                </h4>
+                                <div class="bg-gray-50 rounded-xl p-4 space-y-3">
+                                    <div class="flex justify-between">
+                                        <span class="text-sm text-gray-500">Type</span>
+                                        <span class="text-sm font-medium text-gray-900">{{ customer.type === 'company' ? 'Entreprise' : 'Particulier' }}</span>
+                                    </div>
+                                    <div v-if="customer.type === 'company'" class="flex justify-between">
+                                        <span class="text-sm text-gray-500">Raison sociale</span>
+                                        <span class="text-sm font-medium text-gray-900">{{ customer.company_name || '-' }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-sm text-gray-500">Prénom</span>
+                                        <span class="text-sm font-medium text-gray-900">{{ customer.first_name || '-' }}</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-sm text-gray-500">Nom</span>
+                                        <span class="text-sm font-medium text-gray-900">{{ customer.last_name || '-' }}</span>
+                                    </div>
+                                    <div v-if="customer.birth_date" class="flex justify-between">
+                                        <span class="text-sm text-gray-500">Date de naissance</span>
+                                        <span class="text-sm font-medium text-gray-900">{{ formatDate(customer.birth_date) }}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-4">
+                                <h4 class="font-semibold text-gray-900 flex items-center gap-2">
+                                    <EnvelopeIcon class="h-5 w-5 text-indigo-500" />
+                                    Contact
+                                </h4>
+                                <div class="bg-gray-50 rounded-xl p-4 space-y-3">
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-500">Email</span>
+                                        <a :href="`mailto:${customer.email}`" class="text-sm font-medium text-indigo-600 hover:text-indigo-700">{{ customer.email }}</a>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-500">Téléphone</span>
+                                        <a v-if="customer.phone" :href="`tel:${customer.phone}`" class="text-sm font-medium text-gray-900 hover:text-indigo-600">{{ customer.phone }}</a>
+                                        <span v-else class="text-sm text-gray-400">-</span>
+                                    </div>
+                                    <div class="flex justify-between items-center">
+                                        <span class="text-sm text-gray-500">Mobile</span>
+                                        <a v-if="customer.mobile" :href="`tel:${customer.mobile}`" class="text-sm font-medium text-gray-900 hover:text-indigo-600">{{ customer.mobile }}</a>
+                                        <span v-else class="text-sm text-gray-400">-</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <h4 class="font-semibold text-gray-900 flex items-center gap-2">
+                                <MapPinIcon class="h-5 w-5 text-indigo-500" />
+                                Adresse
+                            </h4>
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <p class="text-sm text-gray-900">{{ customer.address || '-' }}</p>
+                                <p class="text-sm text-gray-600 mt-1">{{ customer.postal_code }} {{ customer.city }}</p>
+                                <p class="text-sm text-gray-500">{{ customer.country || 'France' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Contrats Tab -->
+                    <div v-if="activeTab === 'contrats'">
+                        <div v-if="customer.contracts?.length === 0" class="text-center py-12">
+                            <DocumentTextIcon class="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun contrat</h3>
+                            <p class="text-gray-500">Ce client n'a pas encore de contrat</p>
+                        </div>
+                        <div v-else class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-100">
+                                <thead>
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Numéro</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Box</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date début</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date fin</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Prix mensuel</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50">
+                                    <tr v-for="contract in customer.contracts" :key="contract.id" class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ contract.contract_number }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-600">{{ contract.box?.name || '-' }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-600">{{ formatDate(contract.start_date) }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-600">{{ formatDate(contract.end_date) }}</td>
+                                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ formatCurrency(contract.monthly_price) }}</td>
+                                        <td class="px-4 py-3">
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full" :class="contractStatusConfig[contract.status]?.color">
+                                                {{ contractStatusConfig[contract.status]?.label || contract.status }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right">
+                                            <Link :href="route('tenant.contracts.show', contract.id)" class="text-indigo-600 hover:text-indigo-700">
+                                                <EyeIcon class="h-5 w-5" />
+                                            </Link>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Factures Tab -->
+                    <div v-if="activeTab === 'factures'">
+                        <div v-if="customer.invoices?.length === 0" class="text-center py-12">
+                            <DocumentDuplicateIcon class="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune facture</h3>
+                            <p class="text-gray-500">Ce client n'a pas encore de facture</p>
+                        </div>
+                        <div v-else class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-100">
+                                <thead>
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Numéro</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Date</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Échéance</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Montant</th>
+                                        <th class="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
+                                        <th class="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-50">
+                                    <tr v-for="invoice in customer.invoices" :key="invoice.id" class="hover:bg-gray-50">
+                                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ invoice.invoice_number }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-600">{{ formatDate(invoice.invoice_date) }}</td>
+                                        <td class="px-4 py-3 text-sm text-gray-600">{{ formatDate(invoice.due_date) }}</td>
+                                        <td class="px-4 py-3 text-sm font-medium text-gray-900">{{ formatCurrency(invoice.total) }}</td>
+                                        <td class="px-4 py-3">
+                                            <span class="px-2 py-1 text-xs font-medium rounded-full" :class="invoiceStatusConfig[invoice.status]?.color">
+                                                {{ invoiceStatusConfig[invoice.status]?.label || invoice.status }}
+                                            </span>
+                                        </td>
+                                        <td class="px-4 py-3 text-right">
+                                            <div class="flex items-center justify-end gap-2">
+                                                <Link :href="route('tenant.invoices.show', invoice.id)" class="text-indigo-600 hover:text-indigo-700">
+                                                    <EyeIcon class="h-5 w-5" />
+                                                </Link>
+                                                <a :href="route('tenant.invoices.pdf', invoice.id)" target="_blank" class="text-gray-500 hover:text-gray-700">
+                                                    <ArrowDownTrayIcon class="h-5 w-5" />
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Informations Tab -->
+                    <div v-if="activeTab === 'informations'" class="space-y-6">
+                        <div v-if="customer.type === 'company'" class="space-y-4">
+                            <h4 class="font-semibold text-gray-900 flex items-center gap-2">
+                                <BuildingOfficeIcon class="h-5 w-5 text-indigo-500" />
+                                Informations entreprise
+                            </h4>
+                            <div class="bg-gray-50 rounded-xl p-4 space-y-3">
+                                <div class="flex justify-between">
+                                    <span class="text-sm text-gray-500">SIRET</span>
+                                    <span class="text-sm font-medium text-gray-900 font-mono">{{ customer.siret || '-' }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-sm text-gray-500">N° TVA</span>
+                                    <span class="text-sm font-medium text-gray-900 font-mono">{{ customer.vat_number || '-' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <h4 class="font-semibold text-gray-900 flex items-center gap-2">
+                                <CurrencyEuroIcon class="h-5 w-5 text-indigo-500" />
+                                Facturation
+                            </h4>
+                            <div class="bg-gray-50 rounded-xl p-4 space-y-3">
+                                <div class="flex justify-between">
+                                    <span class="text-sm text-gray-500">Mode de paiement préféré</span>
+                                    <span class="text-sm font-medium text-gray-900">{{ customer.preferred_payment_method || '-' }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-sm text-gray-500">IBAN</span>
+                                    <span class="text-sm font-medium text-gray-900 font-mono">{{ customer.iban || '-' }}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-sm text-gray-500">Score de crédit</span>
+                                    <span class="text-sm font-medium text-gray-900">{{ customer.credit_score || '-' }}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <h4 class="font-semibold text-gray-900 flex items-center gap-2">
+                                <DocumentTextIcon class="h-5 w-5 text-indigo-500" />
+                                Notes
+                            </h4>
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <p class="text-sm text-gray-600 whitespace-pre-wrap">{{ customer.notes || 'Aucune note' }}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fichiers Tab -->
+                    <div v-if="activeTab === 'fichiers'" class="text-center py-12">
+                        <FolderIcon class="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">Aucun fichier</h3>
+                        <p class="text-gray-500 mb-6">Téléchargez des documents pour ce client</p>
+                        <button class="inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-colors">
+                            <ArrowDownTrayIcon class="h-5 w-5 mr-2" />
+                            Télécharger un fichier
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </TenantLayout>
+</template>

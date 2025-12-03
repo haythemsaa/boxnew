@@ -57,7 +57,7 @@ class LeadController extends Controller
      */
     public function show(Request $request, Lead $lead)
     {
-        $this->authorize('view', $lead);
+        $this->authorize('view_leads');
 
         $lead->load(['site', 'assignedTo']);
 
@@ -73,7 +73,7 @@ class LeadController extends Controller
      */
     public function edit(Request $request, Lead $lead)
     {
-        $this->authorize('update', $lead);
+        $this->authorize('edit_leads');
 
         $tenantId = $request->user()->tenant_id;
 
@@ -115,7 +115,7 @@ class LeadController extends Controller
      */
     public function update(Request $request, Lead $lead)
     {
-        $this->authorize('update', $lead);
+        $this->authorize('edit_leads');
 
         $validated = $request->validate([
             'first_name' => 'sometimes|string|max:255',
@@ -138,7 +138,7 @@ class LeadController extends Controller
      */
     public function convertToCustomer(Request $request, Lead $lead)
     {
-        $this->authorize('update', $lead);
+        $this->authorize('edit_leads');
 
         $validated = $request->validate([
             'address' => 'required|string',

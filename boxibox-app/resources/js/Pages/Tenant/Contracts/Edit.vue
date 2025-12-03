@@ -2,6 +2,19 @@
 import { ref, computed } from 'vue'
 import { useForm, Link } from '@inertiajs/vue3'
 import TenantLayout from '@/Layouts/TenantLayout.vue'
+import {
+    ArrowLeftIcon,
+    DocumentTextIcon,
+    UserIcon,
+    CalendarDaysIcon,
+    CurrencyEuroIcon,
+    KeyIcon,
+    PencilSquareIcon,
+    ClockIcon,
+    BuildingOfficeIcon,
+    CubeIcon,
+    CheckIcon,
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     contract: Object,
@@ -9,6 +22,14 @@ const props = defineProps({
     customers: Array,
     boxes: Array,
 })
+
+const currentStep = ref(1)
+const steps = [
+    { number: 1, title: 'Informations', icon: DocumentTextIcon },
+    { number: 2, title: 'Période', icon: CalendarDaysIcon },
+    { number: 3, title: 'Tarification', icon: CurrencyEuroIcon },
+    { number: 4, title: 'Accès & Signature', icon: KeyIcon },
+]
 
 const form = useForm({
     site_id: props.contract.site_id,
@@ -58,11 +79,69 @@ const getBoxLabel = (box) => {
     const parts = [box.code]
     if (box.site) parts.push(box.site.name)
     if (box.building) parts.push(box.building.name)
-    if (box.floor) parts.push(`Floor ${box.floor.floor_number}`)
+    if (box.floor) parts.push(`Étage ${box.floor.floor_number}`)
     if (box.status === 'occupied' && box.id !== props.contract.box_id) {
-        parts.push('(Occupied)')
+        parts.push('(Occupé)')
     }
     return parts.join(' - ')
+}
+
+const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+    }).format(amount || 0)
+}
+
+const statusOptions = [
+    { value: 'draft', label: 'Brouillon' },
+    { value: 'pending_signature', label: 'En attente de signature' },
+    { value: 'active', label: 'Actif' },
+    { value: 'expired', label: 'Expiré' },
+    { value: 'terminated', label: 'Résilié' },
+    { value: 'cancelled', label: 'Annulé' },
+]
+
+const typeOptions = [
+    { value: 'standard', label: 'Standard', description: 'Contrat classique' },
+    { value: 'short_term', label: 'Court terme', description: 'Moins de 3 mois' },
+    { value: 'long_term', label: 'Long terme', description: 'Plus de 12 mois' },
+]
+
+const renewalOptions = [
+    { value: 'monthly', label: 'Mensuel' },
+    { value: 'quarterly', label: 'Trimestriel' },
+    { value: 'yearly', label: 'Annuel' },
+]
+
+const billingOptions = [
+    { value: 'monthly', label: 'Mensuel' },
+    { value: 'quarterly', label: 'Trimestriel' },
+    { value: 'yearly', label: 'Annuel' },
+]
+
+const paymentOptions = [
+    { value: 'card', label: 'Carte bancaire' },
+    { value: 'bank_transfer', label: 'Virement bancaire' },
+    { value: 'cash', label: 'Espèces' },
+    { value: 'sepa', label: 'Prélèvement SEPA' },
+]
+
+const terminationReasons = [
+    { value: '', label: 'Aucune résiliation' },
+    { value: 'customer_request', label: 'Demande du client' },
+    { value: 'non_payment', label: 'Non-paiement' },
+    { value: 'breach', label: 'Rupture de contrat' },
+    { value: 'end_of_term', label: 'Fin de terme' },
+    { value: 'other', label: 'Autre' },
+]
+
+const nextStep = () => {
+    if (currentStep.value < steps.length) currentStep.value++
+}
+
+const prevStep = () => {
+    if (currentStep.value > 1) currentStep.value--
 }
 
 const submit = () => {
@@ -71,586 +150,565 @@ const submit = () => {
 </script>
 
 <template>
-    <TenantLayout title="Edit Contract">
-        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <!-- Header -->
-            <div class="mb-8">
-                <Link
-                    :href="route('tenant.contracts.index')"
-                    class="text-sm text-primary-600 hover:text-primary-900 mb-4 inline-flex items-center"
-                >
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M15 19l-7-7 7-7"
-                        />
-                    </svg>
-                    Back to Contracts
-                </Link>
-                <h1 class="text-3xl font-bold text-gray-900">Edit Contract</h1>
-                <p class="mt-2 text-sm text-gray-700">
-                    Update contract {{ contract.contract_number }}
-                </p>
-            </div>
-
-            <!-- Form -->
-            <form @submit.prevent="submit" class="space-y-8">
-                <!-- Basic Information -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-6">
-                        Basic Information
-                    </h3>
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div class="sm:col-span-2">
-                            <label for="contract_number" class="block text-sm font-medium text-gray-700">
-                                Contract Number
-                            </label>
-                            <input
-                                id="contract_number"
-                                v-model="form.contract_number"
-                                type="text"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.contract_number" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.contract_number }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="site_id" class="block text-sm font-medium text-gray-700">
-                                Site <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="site_id"
-                                v-model="form.site_id"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="">Select a site</option>
-                                <option v-for="site in sites" :key="site.id" :value="site.id">
-                                    {{ site.name }}
-                                </option>
-                            </select>
-                            <div v-if="form.errors.site_id" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.site_id }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="customer_id" class="block text-sm font-medium text-gray-700">
-                                Customer <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="customer_id"
-                                v-model="form.customer_id"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="">Select a customer</option>
-                                <option
-                                    v-for="customer in customers"
-                                    :key="customer.id"
-                                    :value="customer.id"
-                                >
-                                    {{ getCustomerName(customer) }}
-                                </option>
-                            </select>
-                            <div v-if="form.errors.customer_id" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.customer_id }}
-                            </div>
-                        </div>
-
-                        <div class="sm:col-span-2">
-                            <label for="box_id" class="block text-sm font-medium text-gray-700">
-                                Box <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="box_id"
-                                v-model="form.box_id"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="">Select a box</option>
-                                <option v-for="box in filteredBoxes" :key="box.id" :value="box.id">
-                                    {{ getBoxLabel(box) }} - €{{ box.base_price }}/month
-                                </option>
-                            </select>
-                            <div v-if="form.errors.box_id" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.box_id }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="status" class="block text-sm font-medium text-gray-700">
-                                Status <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="status"
-                                v-model="form.status"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="draft">Draft</option>
-                                <option value="pending_signature">Pending Signature</option>
-                                <option value="active">Active</option>
-                                <option value="expired">Expired</option>
-                                <option value="terminated">Terminated</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-                            <div v-if="form.errors.status" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.status }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="type" class="block text-sm font-medium text-gray-700">
-                                Type <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="type"
-                                v-model="form.type"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="standard">Standard</option>
-                                <option value="short_term">Short Term</option>
-                                <option value="long_term">Long Term</option>
-                            </select>
-                            <div v-if="form.errors.type" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.type }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Contract Period -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-6">
-                        Contract Period
-                    </h3>
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label for="start_date" class="block text-sm font-medium text-gray-700">
-                                Start Date <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="start_date"
-                                v-model="form.start_date"
-                                type="date"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.start_date" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.start_date }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="end_date" class="block text-sm font-medium text-gray-700">
-                                End Date
-                            </label>
-                            <input
-                                id="end_date"
-                                v-model="form.end_date"
-                                type="date"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.end_date" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.end_date }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="actual_end_date" class="block text-sm font-medium text-gray-700">
-                                Actual End Date
-                            </label>
-                            <input
-                                id="actual_end_date"
-                                v-model="form.actual_end_date"
-                                type="date"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.actual_end_date" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.actual_end_date }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label
-                                for="notice_period_days"
-                                class="block text-sm font-medium text-gray-700"
-                            >
-                                Notice Period (days) <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="notice_period_days"
-                                v-model.number="form.notice_period_days"
-                                type="number"
-                                min="0"
-                                max="365"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.notice_period_days" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.notice_period_days }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="renewal_period" class="block text-sm font-medium text-gray-700">
-                                Renewal Period <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="renewal_period"
-                                v-model="form.renewal_period"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="monthly">Monthly</option>
-                                <option value="quarterly">Quarterly</option>
-                                <option value="yearly">Yearly</option>
-                            </select>
-                            <div v-if="form.errors.renewal_period" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.renewal_period }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="flex items-center h-full">
-                                <input
-                                    v-model="form.auto_renew"
-                                    type="checkbox"
-                                    class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                />
-                                <span class="ml-2 text-sm text-gray-700">Auto-renew contract</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pricing & Payment -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-6">
-                        Pricing & Payment
-                    </h3>
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label for="monthly_price" class="block text-sm font-medium text-gray-700">
-                                Monthly Price (€) <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="monthly_price"
-                                v-model.number="form.monthly_price"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.monthly_price" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.monthly_price }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="deposit_amount" class="block text-sm font-medium text-gray-700">
-                                Deposit Amount (€) <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="deposit_amount"
-                                v-model.number="form.deposit_amount"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.deposit_amount" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.deposit_amount }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label
-                                for="discount_percentage"
-                                class="block text-sm font-medium text-gray-700"
-                            >
-                                Discount Percentage (%)
-                            </label>
-                            <input
-                                id="discount_percentage"
-                                v-model.number="form.discount_percentage"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                max="100"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.discount_percentage" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.discount_percentage }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="discount_amount" class="block text-sm font-medium text-gray-700">
-                                Discount Amount (€)
-                            </label>
-                            <input
-                                id="discount_amount"
-                                v-model.number="form.discount_amount"
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.discount_amount" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.discount_amount }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label
-                                for="billing_frequency"
-                                class="block text-sm font-medium text-gray-700"
-                            >
-                                Billing Frequency <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="billing_frequency"
-                                v-model="form.billing_frequency"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="monthly">Monthly</option>
-                                <option value="quarterly">Quarterly</option>
-                                <option value="yearly">Yearly</option>
-                            </select>
-                            <div v-if="form.errors.billing_frequency" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.billing_frequency }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="billing_day" class="block text-sm font-medium text-gray-700">
-                                Billing Day <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="billing_day"
-                                v-model.number="form.billing_day"
-                                type="number"
-                                min="1"
-                                max="31"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.billing_day" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.billing_day }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label for="payment_method" class="block text-sm font-medium text-gray-700">
-                                Payment Method <span class="text-red-500">*</span>
-                            </label>
-                            <select
-                                id="payment_method"
-                                v-model="form.payment_method"
-                                required
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="card">Card</option>
-                                <option value="bank_transfer">Bank Transfer</option>
-                                <option value="cash">Cash</option>
-                                <option value="sepa">SEPA</option>
-                            </select>
-                            <div v-if="form.errors.payment_method" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.payment_method }}
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="flex items-center h-full">
-                                <input
-                                    v-model="form.deposit_paid"
-                                    type="checkbox"
-                                    class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                />
-                                <span class="ml-2 text-sm text-gray-700">Deposit paid</span>
-                            </label>
-                        </div>
-
-                        <div class="sm:col-span-2">
-                            <label class="flex items-center">
-                                <input
-                                    v-model="form.auto_pay"
-                                    type="checkbox"
-                                    class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                />
-                                <span class="ml-2 text-sm text-gray-700">Auto-pay enabled</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Access & Keys -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-6">Access & Keys</h3>
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label for="access_code" class="block text-sm font-medium text-gray-700">
-                                Access Code
-                            </label>
-                            <input
-                                id="access_code"
-                                v-model="form.access_code"
-                                type="text"
-                                maxlength="10"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div v-if="form.errors.access_code" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.access_code }}
-                            </div>
-                        </div>
-
-                        <div class="flex items-center space-x-6">
-                            <label class="flex items-center">
-                                <input
-                                    v-model="form.key_given"
-                                    type="checkbox"
-                                    class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                />
-                                <span class="ml-2 text-sm text-gray-700">Key given</span>
-                            </label>
-                            <label class="flex items-center">
-                                <input
-                                    v-model="form.key_returned"
-                                    type="checkbox"
-                                    class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                />
-                                <span class="ml-2 text-sm text-gray-700">Key returned</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Signature -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-6">Signature</h3>
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label class="flex items-center">
-                                <input
-                                    v-model="form.signed_by_customer"
-                                    type="checkbox"
-                                    class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                />
-                                <span class="ml-2 text-sm text-gray-700">Signed by customer</span>
-                            </label>
-                        </div>
-
-                        <div>
-                            <label class="flex items-center">
-                                <input
-                                    v-model="form.signed_by_staff"
-                                    type="checkbox"
-                                    class="rounded border-gray-300 text-primary-600 shadow-sm focus:border-primary-500 focus:ring-primary-500"
-                                />
-                                <span class="ml-2 text-sm text-gray-700">Signed by staff</span>
-                            </label>
-                        </div>
-
-                        <div v-if="form.signed_by_customer">
-                            <label
-                                for="customer_signed_at"
-                                class="block text-sm font-medium text-gray-700"
-                            >
-                                Customer Signed At
-                            </label>
-                            <input
-                                id="customer_signed_at"
-                                v-model="form.customer_signed_at"
-                                type="date"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            />
-                            <div
-                                v-if="form.errors.customer_signed_at"
-                                class="mt-1 text-sm text-red-600"
-                            >
-                                {{ form.errors.customer_signed_at }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Termination -->
-                <div class="bg-white shadow rounded-lg p-6">
-                    <h3 class="text-lg font-medium text-gray-900 border-b pb-2 mb-6">Termination</h3>
-                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                        <div>
-                            <label
-                                for="termination_reason"
-                                class="block text-sm font-medium text-gray-700"
-                            >
-                                Termination Reason
-                            </label>
-                            <select
-                                id="termination_reason"
-                                v-model="form.termination_reason"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            >
-                                <option value="">No termination</option>
-                                <option value="customer_request">Customer Request</option>
-                                <option value="non_payment">Non-Payment</option>
-                                <option value="breach">Breach of Contract</option>
-                                <option value="end_of_term">End of Term</option>
-                                <option value="other">Other</option>
-                            </select>
-                            <div v-if="form.errors.termination_reason" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.termination_reason }}
-                            </div>
-                        </div>
-
-                        <div class="sm:col-span-2">
-                            <label
-                                for="termination_notes"
-                                class="block text-sm font-medium text-gray-700"
-                            >
-                                Termination Notes
-                            </label>
-                            <textarea
-                                id="termination_notes"
-                                v-model="form.termination_notes"
-                                rows="3"
-                                maxlength="2000"
-                                class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                            ></textarea>
-                            <div v-if="form.errors.termination_notes" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.termination_notes }}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Actions -->
-                <div class="flex items-center justify-end space-x-4">
+    <TenantLayout title="Modifier le contrat">
+        <div class="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50 to-purple-50 py-8">
+            <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+                <!-- Header -->
+                <div class="mb-8">
                     <Link
                         :href="route('tenant.contracts.index')"
-                        class="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                        class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900 mb-4 transition-colors"
                     >
-                        Cancel
+                        <ArrowLeftIcon class="w-4 h-4" />
+                        Retour aux contrats
                     </Link>
-                    <button
-                        type="submit"
-                        :disabled="form.processing"
-                        class="inline-flex justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50"
-                    >
-                        <span v-if="form.processing">Updating...</span>
-                        <span v-else>Update Contract</span>
-                    </button>
+                    <div class="flex items-center gap-4">
+                        <div class="p-3 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+                            <DocumentTextIcon class="w-8 h-8 text-white" />
+                        </div>
+                        <div>
+                            <h1 class="text-2xl lg:text-3xl font-bold text-gray-900">Modifier le contrat</h1>
+                            <p class="mt-1 text-gray-600">{{ contract.contract_number }}</p>
+                        </div>
+                    </div>
                 </div>
-            </form>
+
+                <!-- Progress Steps -->
+                <div class="mb-8">
+                    <div class="flex items-center justify-between">
+                        <template v-for="(step, index) in steps" :key="step.number">
+                            <div class="flex items-center">
+                                <div
+                                    :class="[
+                                        'flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-300',
+                                        currentStep >= step.number
+                                            ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg'
+                                            : 'bg-white text-gray-400 border-2 border-gray-200'
+                                    ]"
+                                >
+                                    <component :is="step.icon" class="w-5 h-5" />
+                                </div>
+                                <span
+                                    :class="[
+                                        'ml-3 text-sm font-medium hidden sm:block',
+                                        currentStep >= step.number ? 'text-gray-900' : 'text-gray-400'
+                                    ]"
+                                >
+                                    {{ step.title }}
+                                </span>
+                            </div>
+                            <div
+                                v-if="index < steps.length - 1"
+                                :class="[
+                                    'flex-1 h-1 mx-4 rounded-full transition-all duration-300',
+                                    currentStep > step.number ? 'bg-gradient-to-r from-indigo-500 to-purple-600' : 'bg-gray-200'
+                                ]"
+                            ></div>
+                        </template>
+                    </div>
+                </div>
+
+                <form @submit.prevent="submit">
+                    <!-- Step 1: Informations de base -->
+                    <div v-show="currentStep === 1" class="space-y-6 animate-fade-in">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                <DocumentTextIcon class="w-5 h-5 text-indigo-600" />
+                                Informations générales
+                            </h3>
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <div class="sm:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        N° de contrat
+                                    </label>
+                                    <input
+                                        v-model="form.contract_number"
+                                        type="text"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Site <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.site_id"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    >
+                                        <option value="">Sélectionner un site</option>
+                                        <option v-for="site in sites" :key="site.id" :value="site.id">
+                                            {{ site.name }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Client <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.customer_id"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    >
+                                        <option value="">Sélectionner un client</option>
+                                        <option v-for="customer in customers" :key="customer.id" :value="customer.id">
+                                            {{ getCustomerName(customer) }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="sm:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Box <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.box_id"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    >
+                                        <option value="">Sélectionner un box</option>
+                                        <option v-for="box in filteredBoxes" :key="box.id" :value="box.id">
+                                            {{ getBoxLabel(box) }} - {{ formatCurrency(box.base_price) }}/mois
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Statut <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.status"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    >
+                                        <option v-for="option in statusOptions" :key="option.value" :value="option.value">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Type de contrat -->
+                            <div class="mt-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-3">
+                                    Type de contrat <span class="text-red-500">*</span>
+                                </label>
+                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <label
+                                        v-for="option in typeOptions"
+                                        :key="option.value"
+                                        class="relative cursor-pointer"
+                                    >
+                                        <input
+                                            type="radio"
+                                            v-model="form.type"
+                                            :value="option.value"
+                                            class="peer sr-only"
+                                        />
+                                        <div class="p-4 rounded-xl border-2 border-gray-200 bg-white hover:border-indigo-300 peer-checked:border-indigo-500 peer-checked:bg-indigo-50 transition-all">
+                                            <p class="font-semibold text-gray-900">{{ option.label }}</p>
+                                            <p class="text-sm text-gray-500">{{ option.description }}</p>
+                                        </div>
+                                        <div class="absolute top-3 right-3 hidden peer-checked:block">
+                                            <CheckIcon class="w-5 h-5 text-indigo-600" />
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Période du contrat -->
+                    <div v-show="currentStep === 2" class="space-y-6 animate-fade-in">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                <CalendarDaysIcon class="w-5 h-5 text-indigo-600" />
+                                Période du contrat
+                            </h3>
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Date de début <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model="form.start_date"
+                                        type="date"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Date de fin
+                                    </label>
+                                    <input
+                                        v-model="form.end_date"
+                                        type="date"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Date de fin réelle
+                                    </label>
+                                    <input
+                                        v-model="form.actual_end_date"
+                                        type="date"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Préavis (jours) <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model.number="form.notice_period_days"
+                                        type="number"
+                                        min="0"
+                                        max="365"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Période de renouvellement <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.renewal_period"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    >
+                                        <option v-for="option in renewalOptions" :key="option.value" :value="option.value">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="flex items-center">
+                                    <label class="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors w-full">
+                                        <input
+                                            v-model="form.auto_renew"
+                                            type="checkbox"
+                                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        />
+                                        <div>
+                                            <span class="text-sm font-medium text-gray-900">Renouvellement automatique</span>
+                                            <p class="text-xs text-gray-500">Le contrat sera renouvelé automatiquement</p>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Tarification & Paiement -->
+                    <div v-show="currentStep === 3" class="space-y-6 animate-fade-in">
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                <CurrencyEuroIcon class="w-5 h-5 text-indigo-600" />
+                                Tarification & Paiement
+                            </h3>
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Loyer mensuel (€) <span class="text-red-500">*</span>
+                                    </label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <span class="text-gray-500 font-medium">€</span>
+                                        </div>
+                                        <input
+                                            v-model.number="form.monthly_price"
+                                            type="number"
+                                            step="0.01"
+                                            min="0"
+                                            required
+                                            class="block w-full pl-10 rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-xl font-bold transition-colors"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Dépôt de garantie (€) <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model.number="form.deposit_amount"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Remise (%)
+                                    </label>
+                                    <input
+                                        v-model.number="form.discount_percentage"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        max="100"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Montant remise (€)
+                                    </label>
+                                    <input
+                                        v-model.number="form.discount_amount"
+                                        type="number"
+                                        step="0.01"
+                                        min="0"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Fréquence de facturation <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.billing_frequency"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    >
+                                        <option v-for="option in billingOptions" :key="option.value" :value="option.value">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Jour de facturation <span class="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                        v-model.number="form.billing_day"
+                                        type="number"
+                                        min="1"
+                                        max="31"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Mode de paiement <span class="text-red-500">*</span>
+                                    </label>
+                                    <select
+                                        v-model="form.payment_method"
+                                        required
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    >
+                                        <option v-for="option in paymentOptions" :key="option.value" :value="option.value">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="flex flex-col gap-3">
+                                    <label class="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                                        <input
+                                            v-model="form.deposit_paid"
+                                            type="checkbox"
+                                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        />
+                                        <span class="text-sm font-medium text-gray-900">Dépôt payé</span>
+                                    </label>
+                                    <label class="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                                        <input
+                                            v-model="form.auto_pay"
+                                            type="checkbox"
+                                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        />
+                                        <span class="text-sm font-medium text-gray-900">Paiement automatique</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Accès, Signature & Résiliation -->
+                    <div v-show="currentStep === 4" class="space-y-6 animate-fade-in">
+                        <!-- Accès & Clés -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                <KeyIcon class="w-5 h-5 text-indigo-600" />
+                                Accès & Clés
+                            </h3>
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Code d'accès
+                                    </label>
+                                    <input
+                                        v-model="form.access_code"
+                                        type="text"
+                                        maxlength="10"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors font-mono"
+                                    />
+                                </div>
+
+                                <div class="flex items-center gap-6">
+                                    <label class="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                                        <input
+                                            v-model="form.key_given"
+                                            type="checkbox"
+                                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        />
+                                        <span class="text-sm font-medium text-gray-900">Clé remise</span>
+                                    </label>
+                                    <label class="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                                        <input
+                                            v-model="form.key_returned"
+                                            type="checkbox"
+                                            class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                        />
+                                        <span class="text-sm font-medium text-gray-900">Clé rendue</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Signature -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                <PencilSquareIcon class="w-5 h-5 text-indigo-600" />
+                                Signature
+                            </h3>
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <label class="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                                    <input
+                                        v-model="form.signed_by_customer"
+                                        type="checkbox"
+                                        class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    />
+                                    <span class="text-sm font-medium text-gray-900">Signé par le client</span>
+                                </label>
+
+                                <label class="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 transition-colors">
+                                    <input
+                                        v-model="form.signed_by_staff"
+                                        type="checkbox"
+                                        class="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                                    />
+                                    <span class="text-sm font-medium text-gray-900">Signé par le personnel</span>
+                                </label>
+
+                                <div v-if="form.signed_by_customer">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Date de signature client
+                                    </label>
+                                    <input
+                                        v-model="form.customer_signed_at"
+                                        type="date"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Résiliation -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                                <ClockIcon class="w-5 h-5 text-red-600" />
+                                Résiliation
+                            </h3>
+                            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Motif de résiliation
+                                    </label>
+                                    <select
+                                        v-model="form.termination_reason"
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    >
+                                        <option v-for="option in terminationReasons" :key="option.value" :value="option.value">
+                                            {{ option.label }}
+                                        </option>
+                                    </select>
+                                </div>
+
+                                <div class="sm:col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">
+                                        Notes de résiliation
+                                    </label>
+                                    <textarea
+                                        v-model="form.termination_notes"
+                                        rows="3"
+                                        maxlength="2000"
+                                        placeholder="Informations complémentaires..."
+                                        class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 transition-colors"
+                                    ></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <div class="flex items-center justify-between mt-8 pt-6 border-t border-gray-200">
+                        <div>
+                            <button
+                                v-if="currentStep > 1"
+                                type="button"
+                                @click="prevStep"
+                                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                            >
+                                Précédent
+                            </button>
+                            <Link
+                                v-else
+                                :href="route('tenant.contracts.index')"
+                                class="px-6 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-50 transition-colors inline-block"
+                            >
+                                Annuler
+                            </Link>
+                        </div>
+
+                        <div class="flex items-center gap-3">
+                            <button
+                                v-if="currentStep < steps.length"
+                                type="button"
+                                @click="nextStep"
+                                class="px-6 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg"
+                            >
+                                Suivant
+                            </button>
+                            <button
+                                v-else
+                                type="submit"
+                                :disabled="form.processing"
+                                class="px-8 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-medium hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <span v-if="form.processing" class="flex items-center gap-2">
+                                    <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Mise à jour...
+                                </span>
+                                <span v-else>Mettre à jour le contrat</span>
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
         </div>
     </TenantLayout>
 </template>

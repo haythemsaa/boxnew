@@ -87,6 +87,11 @@ class Box extends Model
         return $this->hasMany(Contract::class);
     }
 
+    public function planElement(): HasOne
+    {
+        return $this->hasOne(PlanElement::class);
+    }
+
     // Scopes
     public function scopeAvailable($query)
     {

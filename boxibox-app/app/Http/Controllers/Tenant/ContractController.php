@@ -206,7 +206,7 @@ class ContractController extends Controller
      */
     public function edit(Request $request, Contract $contract): Response
     {
-        $this->authorize('update_contracts');
+        $this->authorize('edit_contracts');
 
         // Ensure tenant can only edit their own contracts
         if ($contract->tenant_id !== $request->user()->tenant_id) {

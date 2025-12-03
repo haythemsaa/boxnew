@@ -1,7 +1,21 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { router, Link, useForm } from '@inertiajs/vue3'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import TenantLayout from '@/Layouts/TenantLayout.vue'
+import {
+    BellAlertIcon,
+    MagnifyingGlassIcon,
+    ArrowPathIcon,
+    PaperAirplaneIcon,
+    EnvelopeIcon,
+    DocumentTextIcon,
+    CurrencyEuroIcon,
+    ClockIcon,
+    ExclamationTriangleIcon,
+    CheckCircleIcon,
+    XMarkIcon,
+    PlusIcon,
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     reminders: Object,
@@ -9,12 +23,34 @@ const props = defineProps({
     filters: Object,
 })
 
-const search = ref(props.filters.search || '')
-const statusFilter = ref(props.filters.status || '')
-const levelFilter = ref(props.filters.level || '')
+const search = ref(props.filters?.search || '')
+const statusFilter = ref(props.filters?.status || '')
+const levelFilter = ref(props.filters?.level || '')
 const selectedReminders = ref([])
 
 let searchTimeout = null
+
+const statusOptions = [
+    { value: 'pending', label: 'En attente', icon: '⏳', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+    { value: 'sent', label: 'Envoyée', icon: '📤', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+    { value: 'paid', label: 'Payée', icon: '✅', color: 'bg-green-100 text-green-700 border-green-200' },
+    { value: 'cancelled', label: 'Annulée', icon: '❌', color: 'bg-gray-100 text-gray-600 border-gray-200' },
+]
+
+const levelOptions = [
+    { value: 1, label: 'Relance 1', icon: '1️⃣', color: 'bg-blue-100 text-blue-700 border-blue-200' },
+    { value: 2, label: 'Relance 2', icon: '2️⃣', color: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+    { value: 3, label: 'Relance 3', icon: '3️⃣', color: 'bg-orange-100 text-orange-700 border-orange-200' },
+    { value: 4, label: 'Mise en demeure', icon: '⚠️', color: 'bg-red-100 text-red-700 border-red-200' },
+]
+
+const getStatusConfig = (status) => {
+    return statusOptions.find(s => s.value === status) || statusOptions[0]
+}
+
+const getLevelConfig = (level) => {
+    return levelOptions.find(l => l.value === level) || levelOptions[0]
+}
 
 const handleSearch = () => {
     clearTimeout(searchTimeout)
@@ -41,6 +77,17 @@ const handleFilterChange = () => {
     })
 }
 
+const clearFilters = () => {
+    search.value = ''
+    statusFilter.value = ''
+    levelFilter.value = ''
+    router.get(route('tenant.reminders.index'))
+}
+
+const hasActiveFilters = computed(() => {
+    return search.value || statusFilter.value || levelFilter.value
+})
+
 const sendReminder = (reminder) => {
     router.post(route('tenant.reminders.send', reminder.id))
 }
@@ -65,46 +112,6 @@ const toggleSelectAll = (event) => {
     }
 }
 
-const getStatusLabel = (status) => {
-    const labels = {
-        pending: 'En attente',
-        sent: 'Envoyée',
-        paid: 'Payée',
-        cancelled: 'Annulée',
-    }
-    return labels[status] || status
-}
-
-const getStatusColor = (status) => {
-    const colors = {
-        pending: 'bg-yellow-100 text-yellow-800',
-        sent: 'bg-blue-100 text-blue-800',
-        paid: 'bg-green-100 text-green-800',
-        cancelled: 'bg-gray-100 text-gray-600',
-    }
-    return colors[status] || 'bg-gray-100 text-gray-800'
-}
-
-const getLevelLabel = (level) => {
-    const labels = {
-        1: 'Relance 1',
-        2: 'Relance 2',
-        3: 'Relance 3',
-        4: 'Mise en demeure',
-    }
-    return labels[level] || `Niveau ${level}`
-}
-
-const getLevelColor = (level) => {
-    const colors = {
-        1: 'bg-blue-100 text-blue-800',
-        2: 'bg-yellow-100 text-yellow-800',
-        3: 'bg-orange-100 text-orange-800',
-        4: 'bg-red-100 text-red-800',
-    }
-    return colors[level] || 'bg-gray-100 text-gray-800'
-}
-
 const formatDate = (date) => {
     if (!date) return '-'
     return new Date(date).toLocaleDateString('fr-FR')
@@ -121,250 +128,319 @@ const getCustomerName = (customer) => {
     if (!customer) return '-'
     return customer.type === 'company' ? customer.company_name : `${customer.first_name} ${customer.last_name}`
 }
+
+const getTypeIcon = (type) => {
+    switch(type) {
+        case 'email': return '📧'
+        case 'sms': return '📱'
+        case 'letter': return '📬'
+        default: return '📧'
+    }
+}
+
+const getTypeLabel = (type) => {
+    switch(type) {
+        case 'email': return 'Email'
+        case 'sms': return 'SMS'
+        case 'letter': return 'Courrier'
+        default: return type
+    }
+}
 </script>
 
 <template>
-    <AuthenticatedLayout title="Relances">
-        <!-- Success/Error Messages -->
-        <div v-if="$page.props.flash?.success" class="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-            <p class="text-sm text-green-600">{{ $page.props.flash.success }}</p>
-        </div>
-        <div v-if="$page.props.flash?.error" class="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p class="text-sm text-red-600">{{ $page.props.flash.error }}</p>
-        </div>
+    <TenantLayout title="Relances">
+        <div class="space-y-6">
+            <!-- Header avec gradient -->
+            <div class="relative overflow-hidden bg-gradient-to-br from-rose-500 via-pink-500 to-red-500 rounded-2xl shadow-xl">
+                <div class="absolute inset-0 bg-black/10"></div>
+                <div class="absolute -top-24 -right-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+                <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
 
-        <!-- Header -->
-        <div class="flex justify-between items-center mb-6">
-            <div>
-                <h2 class="text-2xl font-bold text-gray-900">Relances</h2>
-                <p class="mt-1 text-sm text-gray-500">Gérez les relances de paiement pour les factures impayées</p>
-            </div>
-            <div class="flex gap-3">
-                <button
-                    v-if="selectedReminders.length > 0"
-                    @click="sendBulkReminders"
-                    class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center"
-                >
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                    </svg>
-                    Envoyer ({{ selectedReminders.length }})
-                </button>
-                <Link
-                    :href="route('tenant.reminders.overdue-invoices')"
-                    class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors inline-flex items-center"
-                >
-                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Nouvelle Relance
-                </Link>
-            </div>
-        </div>
-
-        <!-- Stats -->
-        <div class="grid gap-4 md:grid-cols-6 mb-6">
-            <div class="bg-white rounded-lg shadow p-4 text-center">
-                <p class="text-2xl font-bold text-gray-900">{{ stats.total }}</p>
-                <p class="text-sm text-gray-500">Total</p>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4 text-center border-l-4 border-yellow-500">
-                <p class="text-2xl font-bold text-yellow-600">{{ stats.pending }}</p>
-                <p class="text-sm text-gray-500">En attente</p>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4 text-center border-l-4 border-blue-500">
-                <p class="text-2xl font-bold text-blue-600">{{ stats.sent }}</p>
-                <p class="text-sm text-gray-500">Envoyées</p>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4 text-center border-l-4 border-green-500">
-                <p class="text-2xl font-bold text-green-600">{{ stats.paid }}</p>
-                <p class="text-sm text-gray-500">Payées</p>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4 text-center border-l-4 border-red-500">
-                <p class="text-2xl font-bold text-red-600">{{ stats.overdue_invoices }}</p>
-                <p class="text-sm text-gray-500">Factures impayées</p>
-            </div>
-            <div class="bg-white rounded-lg shadow p-4 text-center border-l-4 border-red-700">
-                <p class="text-lg font-bold text-red-700">{{ formatCurrency(stats.total_overdue) }}</p>
-                <p class="text-sm text-gray-500">Montant impayé</p>
-            </div>
-        </div>
-
-        <!-- Filters -->
-        <div class="bg-white rounded-lg shadow p-4 mb-6">
-            <div class="grid gap-4 md:grid-cols-3">
-                <input
-                    v-model="search"
-                    type="text"
-                    placeholder="Rechercher par facture, client..."
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    @input="handleSearch"
-                />
-                <select
-                    v-model="statusFilter"
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    @change="handleFilterChange"
-                >
-                    <option value="">Tous les statuts</option>
-                    <option value="pending">En attente</option>
-                    <option value="sent">Envoyée</option>
-                    <option value="paid">Payée</option>
-                </select>
-                <select
-                    v-model="levelFilter"
-                    class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                    @change="handleFilterChange"
-                >
-                    <option value="">Tous les niveaux</option>
-                    <option value="1">Relance 1</option>
-                    <option value="2">Relance 2</option>
-                    <option value="3">Relance 3</option>
-                    <option value="4">Mise en demeure</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Reminders Table -->
-        <div class="bg-white rounded-lg shadow overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left">
-                                <input
-                                    type="checkbox"
-                                    @change="toggleSelectAll"
-                                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                                />
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Facture
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Client
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Montant dû
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Niveau
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Type
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Statut
-                            </th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Date
-                            </th>
-                            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Actions
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        <tr v-if="reminders.data.length === 0">
-                            <td colspan="9" class="px-6 py-12 text-center text-gray-500">
-                                <div class="flex flex-col items-center">
-                                    <svg class="h-12 w-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                                    </svg>
-                                    <p class="text-lg font-medium mb-2">Aucune relance</p>
-                                    <Link
-                                        :href="route('tenant.reminders.overdue-invoices')"
-                                        class="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                                    >
-                                        + Créer une relance
-                                    </Link>
+                <div class="relative px-6 py-8 sm:px-8">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <div>
+                            <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+                                <div class="p-2 bg-white/20 rounded-xl backdrop-blur-sm">
+                                    <BellAlertIcon class="h-8 w-8 text-white" />
                                 </div>
-                            </td>
-                        </tr>
-                        <tr v-else v-for="reminder in reminders.data" :key="reminder.id" class="hover:bg-gray-50">
-                            <td class="px-6 py-4">
-                                <input
-                                    v-if="reminder.status === 'pending'"
-                                    type="checkbox"
-                                    :value="reminder.id"
-                                    v-model="selectedReminders"
-                                    class="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                                />
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm font-medium text-gray-900">
-                                    {{ reminder.invoice?.invoice_number || '-' }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <div class="text-sm text-gray-900">
-                                    {{ getCustomerName(reminder.invoice?.customer) }}
-                                </div>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600">
-                                {{ formatCurrency(reminder.amount_due) }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                                    :class="getLevelColor(reminder.level)"
-                                >
-                                    {{ getLevelLabel(reminder.level) }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ reminder.type === 'email' ? 'Email' : reminder.type === 'sms' ? 'SMS' : 'Courrier' }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap">
-                                <span
-                                    class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full"
-                                    :class="getStatusColor(reminder.status)"
-                                >
-                                    {{ getStatusLabel(reminder.status) }}
-                                </span>
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {{ formatDate(reminder.sent_at || reminder.scheduled_at) }}
-                            </td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button
-                                    v-if="reminder.status === 'pending'"
-                                    @click="sendReminder(reminder)"
-                                    class="text-blue-600 hover:text-blue-900"
-                                    title="Envoyer"
-                                >
-                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                </button>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            <div v-if="reminders.data.length > 0" class="px-6 py-4 border-t border-gray-200">
-                <div class="flex items-center justify-between">
-                    <div class="text-sm text-gray-700">
-                        Affichage de <span class="font-medium">{{ reminders.from }}</span> à <span class="font-medium">{{ reminders.to }}</span> sur <span class="font-medium">{{ reminders.total }}</span> résultats
+                                Relances de Paiement
+                            </h1>
+                            <p class="mt-2 text-rose-100">
+                                Gérez les relances pour les factures impayées
+                            </p>
+                        </div>
+                        <div class="flex gap-3">
+                            <button
+                                v-if="selectedReminders.length > 0"
+                                @click="sendBulkReminders"
+                                class="inline-flex items-center px-5 py-3 bg-yellow-500 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+                            >
+                                <PaperAirplaneIcon class="h-5 w-5 mr-2" />
+                                Envoyer ({{ selectedReminders.length }})
+                            </button>
+                            <Link
+                                :href="route('tenant.reminders.overdue-invoices')"
+                                class="inline-flex items-center px-6 py-3 bg-white text-rose-600 rounded-xl font-semibold shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+                            >
+                                <PlusIcon class="h-5 w-5 mr-2" />
+                                Nouvelle Relance
+                            </Link>
+                        </div>
                     </div>
-                    <div class="flex space-x-2">
-                        <Link
-                            v-for="link in reminders.links"
-                            :key="link.label"
-                            :href="link.url"
-                            :class="{
-                                'px-4 py-2 border rounded-lg transition-colors': true,
-                                'bg-primary-600 text-white border-primary-600': link.active,
-                                'bg-white text-gray-700 border-gray-300 hover:bg-gray-50': !link.active && link.url,
-                                'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed': !link.url
-                            }"
-                            :preserve-scroll="true"
-                            v-html="link.label"
+
+                    <!-- Stats -->
+                    <div class="mt-8 grid grid-cols-2 md:grid-cols-6 gap-3">
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                            <p class="text-3xl font-bold text-white">{{ stats?.total || 0 }}</p>
+                            <p class="text-xs text-rose-100 font-medium mt-1">Total</p>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                            <p class="text-3xl font-bold text-white">{{ stats?.pending || 0 }}</p>
+                            <p class="text-xs text-rose-100 font-medium mt-1">En attente</p>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                            <p class="text-3xl font-bold text-white">{{ stats?.sent || 0 }}</p>
+                            <p class="text-xs text-rose-100 font-medium mt-1">Envoyées</p>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                            <p class="text-3xl font-bold text-white">{{ stats?.paid || 0 }}</p>
+                            <p class="text-xs text-rose-100 font-medium mt-1">Payées</p>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                            <p class="text-3xl font-bold text-white">{{ stats?.overdue_invoices || 0 }}</p>
+                            <p class="text-xs text-rose-100 font-medium mt-1">Factures impayées</p>
+                        </div>
+                        <div class="bg-white/20 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                            <p class="text-2xl font-bold text-white">{{ formatCurrency(stats?.total_overdue || 0) }}</p>
+                            <p class="text-xs text-rose-100 font-medium mt-1">Montant impayé</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filtres -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                <div class="flex flex-col lg:flex-row gap-4">
+                    <!-- Recherche -->
+                    <div class="flex-1 relative">
+                        <MagnifyingGlassIcon class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <input
+                            v-model="search"
+                            type="text"
+                            placeholder="Rechercher par facture, client..."
+                            class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all"
+                            @input="handleSearch"
                         />
+                    </div>
+
+                    <!-- Filtre Statut -->
+                    <div class="w-full lg:w-44">
+                        <select
+                            v-model="statusFilter"
+                            class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all bg-white"
+                            @change="handleFilterChange"
+                        >
+                            <option value="">Tous les statuts</option>
+                            <option v-for="status in statusOptions" :key="status.value" :value="status.value">
+                                {{ status.icon }} {{ status.label }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Filtre Niveau -->
+                    <div class="w-full lg:w-44">
+                        <select
+                            v-model="levelFilter"
+                            class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition-all bg-white"
+                            @change="handleFilterChange"
+                        >
+                            <option value="">Tous les niveaux</option>
+                            <option v-for="level in levelOptions" :key="level.value" :value="level.value">
+                                {{ level.icon }} {{ level.label }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <!-- Bouton Reset -->
+                    <button
+                        v-if="hasActiveFilters"
+                        @click="clearFilters"
+                        class="inline-flex items-center px-4 py-2.5 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-xl transition-colors"
+                    >
+                        <ArrowPathIcon class="h-5 w-5 mr-2" />
+                        Réinitialiser
+                    </button>
+                </div>
+            </div>
+
+            <!-- Liste des relances -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <!-- État vide -->
+                <div v-if="!reminders?.data?.length" class="py-16 px-4 text-center">
+                    <div class="mx-auto w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mb-4">
+                        <BellAlertIcon class="h-8 w-8 text-rose-500" />
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Aucune relance</h3>
+                    <p class="text-gray-500 mb-6">Créez une relance pour les factures impayées</p>
+                    <Link
+                        :href="route('tenant.reminders.overdue-invoices')"
+                        class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-rose-500 to-pink-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                    >
+                        <PlusIcon class="h-5 w-5 mr-2" />
+                        Créer une relance
+                    </Link>
+                </div>
+
+                <!-- Table -->
+                <div v-else class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-100">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-4 text-left">
+                                    <input
+                                        type="checkbox"
+                                        @change="toggleSelectAll"
+                                        class="h-4 w-4 text-rose-600 focus:ring-rose-500 border-gray-300 rounded"
+                                    />
+                                </th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Facture
+                                </th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Client
+                                </th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Montant dû
+                                </th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Niveau
+                                </th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Type
+                                </th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Statut
+                                </th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Date
+                                </th>
+                                <th class="px-6 py-4 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                                    Actions
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-50">
+                            <tr
+                                v-for="(reminder, index) in reminders.data"
+                                :key="reminder.id"
+                                class="hover:bg-rose-50/50 transition-colors duration-150"
+                                :style="{ animationDelay: `${index * 50}ms` }"
+                            >
+                                <td class="px-6 py-4">
+                                    <input
+                                        v-if="reminder.status === 'pending'"
+                                        type="checkbox"
+                                        :value="reminder.id"
+                                        v-model="selectedReminders"
+                                        class="h-4 w-4 text-rose-600 focus:ring-rose-500 border-gray-300 rounded"
+                                    />
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center gap-2">
+                                        <DocumentTextIcon class="h-5 w-5 text-gray-400" />
+                                        <span class="text-sm font-medium text-gray-900">
+                                            {{ reminder.invoice?.invoice_number || '-' }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="text-sm text-gray-900">
+                                        {{ getCustomerName(reminder.invoice?.customer) }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="text-sm font-semibold text-red-600">
+                                        {{ formatCurrency(reminder.amount_due) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
+                                        :class="getLevelConfig(reminder.level).color"
+                                    >
+                                        {{ getLevelConfig(reminder.level).icon }}
+                                        {{ getLevelConfig(reminder.level).label }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span class="inline-flex items-center gap-1 text-sm text-gray-600">
+                                        {{ getTypeIcon(reminder.type) }}
+                                        {{ getTypeLabel(reminder.type) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span
+                                        class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border"
+                                        :class="getStatusConfig(reminder.status).color"
+                                    >
+                                        {{ getStatusConfig(reminder.status).icon }}
+                                        {{ getStatusConfig(reminder.status).label }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div class="flex items-center gap-1 text-sm text-gray-500">
+                                        <ClockIcon class="h-4 w-4" />
+                                        {{ formatDate(reminder.sent_at || reminder.scheduled_at) }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-right">
+                                    <button
+                                        v-if="reminder.status === 'pending'"
+                                        @click="sendReminder(reminder)"
+                                        class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                        title="Envoyer"
+                                    >
+                                        <PaperAirplaneIcon class="h-5 w-5" />
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div v-if="reminders?.data?.length > 0" class="px-6 py-4 border-t border-gray-100 bg-gray-50/50">
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <p class="text-sm text-gray-600">
+                            Affichage de <span class="font-semibold">{{ reminders.from }}</span> à
+                            <span class="font-semibold">{{ reminders.to }}</span> sur
+                            <span class="font-semibold">{{ reminders.total }}</span> résultats
+                        </p>
+                        <div class="flex gap-1">
+                            <template v-for="link in reminders.links" :key="link.label">
+                                <Link
+                                    v-if="link.url"
+                                    :href="link.url"
+                                    :class="[
+                                        'px-3 py-2 text-sm rounded-lg transition-all',
+                                        link.active
+                                            ? 'bg-gradient-to-r from-rose-500 to-pink-500 text-white shadow-sm'
+                                            : 'text-gray-600 hover:bg-gray-100'
+                                    ]"
+                                    :preserve-scroll="true"
+                                    v-html="link.label"
+                                />
+                                <span
+                                    v-else
+                                    class="px-3 py-2 text-sm text-gray-300 cursor-not-allowed"
+                                    v-html="link.label"
+                                />
+                            </template>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </TenantLayout>
 </template>

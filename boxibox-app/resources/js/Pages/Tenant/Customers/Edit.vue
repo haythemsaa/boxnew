@@ -1,535 +1,440 @@
 <template>
-    <AuthenticatedLayout title="Edit Customer">
-        <div class="max-w-4xl mx-auto">
-            <!-- Header -->
-            <div class="mb-6">
+    <TenantLayout title="Modifier Client">
+        <!-- Gradient Header -->
+        <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 -mt-6 pt-10 pb-32 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-4xl mx-auto">
                 <Link
-                    :href="route('tenant.customers.index')"
-                    class="text-sm text-gray-600 hover:text-gray-900 mb-4 inline-flex items-center"
+                    :href="route('tenant.customers.show', customer.id)"
+                    class="inline-flex items-center text-blue-100 hover:text-white mb-4 transition-colors duration-200"
                 >
-                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-                    </svg>
-                    Back to Customers
+                    <ArrowLeftIcon class="h-4 w-4 mr-2" />
+                    Retour au client
                 </Link>
-                <h2 class="text-2xl font-bold text-gray-900">Edit Customer</h2>
-                <p class="mt-1 text-sm text-gray-600">Update customer information</p>
+
+                <div class="flex items-center space-x-4">
+                    <div class="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center shadow-xl">
+                        <component :is="form.type === 'company' ? BuildingOfficeIcon : UserIcon" class="w-8 h-8 text-white" />
+                    </div>
+                    <div>
+                        <h1 class="text-3xl font-bold text-white">Modifier {{ customerDisplayName }}</h1>
+                        <p class="text-blue-100 mt-1">Mettez à jour les informations du client</p>
+                    </div>
+                </div>
+
+                <!-- Progress Steps -->
+                <div class="mt-8">
+                    <div class="flex items-center justify-between">
+                        <template v-for="(step, index) in steps" :key="step.number">
+                            <div class="flex items-center">
+                                <div
+                                    :class="[
+                                        'flex items-center justify-center w-12 h-12 rounded-xl border-2 transition-all duration-200',
+                                        currentStep >= step.number
+                                            ? 'bg-white border-white text-blue-600 shadow-lg'
+                                            : 'border-white/30 text-white/60 bg-white/10'
+                                    ]"
+                                >
+                                    <CheckIcon v-if="currentStep > step.number" class="h-6 w-6" />
+                                    <component v-else :is="step.icon" class="h-6 w-6" />
+                                </div>
+                                <span
+                                    :class="[
+                                        'ml-3 text-sm font-semibold hidden sm:block',
+                                        currentStep >= step.number ? 'text-white' : 'text-white/60'
+                                    ]"
+                                >
+                                    {{ step.title }}
+                                </span>
+                            </div>
+                            <div
+                                v-if="index < steps.length - 1"
+                                :class="[
+                                    'flex-1 h-1 mx-4 rounded-full transition-all duration-300',
+                                    currentStep > step.number ? 'bg-white' : 'bg-white/20'
+                                ]"
+                            ></div>
+                        </template>
+                    </div>
+                </div>
             </div>
+        </div>
 
-            <!-- Form Card -->
-            <div class="bg-white rounded-lg shadow p-6">
+        <!-- Main Content -->
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 pb-12">
+            <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
                 <form @submit.prevent="submit">
-                    <!-- Customer Type -->
-                    <div class="space-y-6">
-                        <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Customer Type</h3>
-
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">
-                                Type <span class="text-red-500">*</span>
-                            </label>
-                            <div class="flex space-x-4">
-                                <label class="flex items-center">
-                                    <input
-                                        v-model="form.type"
-                                        type="radio"
-                                        value="individual"
-                                        class="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
-                                    />
-                                    <span class="ml-2 text-sm text-gray-700">Individual</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input
-                                        v-model="form.type"
-                                        type="radio"
-                                        value="company"
-                                        class="w-4 h-4 text-primary-600 border-gray-300 focus:ring-primary-500"
-                                    />
-                                    <span class="ml-2 text-sm text-gray-700">Company</span>
-                                </label>
+                    <!-- Step 1: Type -->
+                    <div v-show="currentStep === 1" class="p-8 space-y-8">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <UserIcon class="h-5 w-5 text-blue-600" />
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Individual Fields -->
-                    <div v-if="form.type === 'individual'" class="space-y-6 mt-8">
-                        <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Personal Information</h3>
-
-                        <div class="grid grid-cols-3 gap-4">
-                            <div>
-                                <label for="civility" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Civility
-                                </label>
-                                <select
-                                    id="civility"
-                                    v-model="form.civility"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                >
-                                    <option value="">Select</option>
-                                    <option value="mr">Mr.</option>
-                                    <option value="mrs">Mrs.</option>
-                                    <option value="ms">Ms.</option>
-                                    <option value="dr">Dr.</option>
-                                    <option value="prof">Prof.</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label for="first_name" class="block text-sm font-medium text-gray-700 mb-1">
-                                    First Name <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    id="first_name"
-                                    v-model="form.first_name"
-                                    type="text"
-                                    required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    :class="{ 'border-red-500': form.errors.first_name }"
-                                />
-                                <p v-if="form.errors.first_name" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.first_name }}
-                                </p>
-                            </div>
-
-                            <div>
-                                <label for="last_name" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Last Name <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    id="last_name"
-                                    v-model="form.last_name"
-                                    type="text"
-                                    required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    :class="{ 'border-red-500': form.errors.last_name }"
-                                />
-                                <p v-if="form.errors.last_name" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.last_name }}
-                                </p>
-                            </div>
+                            <h3 class="text-xl font-semibold text-gray-900">Type de client</h3>
                         </div>
 
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="birth_date" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Birth Date
-                                </label>
-                                <input
-                                    id="birth_date"
-                                    v-model="form.birth_date"
-                                    type="date"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div>
-                                <label for="birth_place" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Birth Place
-                                </label>
-                                <input
-                                    id="birth_place"
-                                    v-model="form.birth_place"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Company Fields -->
-                    <div v-if="form.type === 'company'" class="space-y-6 mt-8">
-                        <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Company Information</h3>
-
-                        <div>
-                            <label for="company_name" class="block text-sm font-medium text-gray-700 mb-1">
-                                Company Name <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="company_name"
-                                v-model="form.company_name"
-                                type="text"
-                                required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                :class="{ 'border-red-500': form.errors.company_name }"
-                            />
-                            <p v-if="form.errors.company_name" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.company_name }}
-                            </p>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="siret" class="block text-sm font-medium text-gray-700 mb-1">
-                                    SIRET Number
-                                </label>
-                                <input
-                                    id="siret"
-                                    v-model="form.siret"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="e.g., 123 456 789 00010"
-                                />
-                            </div>
-
-                            <div>
-                                <label for="vat_number" class="block text-sm font-medium text-gray-700 mb-1">
-                                    VAT Number
-                                </label>
-                                <input
-                                    id="vat_number"
-                                    v-model="form.vat_number"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    placeholder="e.g., FR12345678901"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Contact Information -->
-                    <div class="space-y-6 mt-8">
-                        <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Contact Information</h3>
-
-                        <div class="grid grid-cols-3 gap-4">
-                            <div>
-                                <label for="email" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Email <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    id="email"
-                                    v-model="form.email"
-                                    type="email"
-                                    required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    :class="{ 'border-red-500': form.errors.email }"
-                                />
-                                <p v-if="form.errors.email" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.email }}
-                                </p>
-                            </div>
-
-                            <div>
-                                <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Phone
-                                </label>
-                                <input
-                                    id="phone"
-                                    v-model="form.phone"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div>
-                                <label for="mobile" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Mobile
-                                </label>
-                                <input
-                                    id="mobile"
-                                    v-model="form.mobile"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- ID Information -->
-                    <div class="space-y-6 mt-8">
-                        <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Identification (Optional)</h3>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="id_type" class="block text-sm font-medium text-gray-700 mb-1">
-                                    ID Type
-                                </label>
-                                <select
-                                    id="id_type"
-                                    v-model="form.id_type"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                >
-                                    <option value="">Select</option>
-                                    <option value="passport">Passport</option>
-                                    <option value="id_card">ID Card</option>
-                                    <option value="driver_license">Driver License</option>
-                                    <option value="residence_permit">Residence Permit</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label for="id_number" class="block text-sm font-medium text-gray-700 mb-1">
-                                    ID Number
-                                </label>
-                                <input
-                                    id="id_number"
-                                    v-model="form.id_number"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="id_issue_date" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Issue Date
-                                </label>
-                                <input
-                                    id="id_issue_date"
-                                    v-model="form.id_issue_date"
-                                    type="date"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div>
-                                <label for="id_expiry_date" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Expiry Date
-                                </label>
-                                <input
-                                    id="id_expiry_date"
-                                    v-model="form.id_expiry_date"
-                                    type="date"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    :class="{ 'border-red-500': form.errors.id_expiry_date }"
-                                />
-                                <p v-if="form.errors.id_expiry_date" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.id_expiry_date }}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Primary Address -->
-                    <div class="space-y-6 mt-8">
-                        <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Primary Address</h3>
-
-                        <div>
-                            <label for="address" class="block text-sm font-medium text-gray-700 mb-1">
-                                Street Address <span class="text-red-500">*</span>
-                            </label>
-                            <input
-                                id="address"
-                                v-model="form.address"
-                                type="text"
-                                required
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                :class="{ 'border-red-500': form.errors.address }"
-                            />
-                            <p v-if="form.errors.address" class="mt-1 text-sm text-red-600">
-                                {{ form.errors.address }}
-                            </p>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-4">
-                            <div>
-                                <label for="city" class="block text-sm font-medium text-gray-700 mb-1">
-                                    City <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    id="city"
-                                    v-model="form.city"
-                                    type="text"
-                                    required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    :class="{ 'border-red-500': form.errors.city }"
-                                />
-                                <p v-if="form.errors.city" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.city }}
-                                </p>
-                            </div>
-
-                            <div>
-                                <label for="postal_code" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Postal Code <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    id="postal_code"
-                                    v-model="form.postal_code"
-                                    type="text"
-                                    required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    :class="{ 'border-red-500': form.errors.postal_code }"
-                                />
-                                <p v-if="form.errors.postal_code" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.postal_code }}
-                                </p>
-                            </div>
-
-                            <div>
-                                <label for="country" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Country <span class="text-red-500">*</span>
-                                </label>
-                                <input
-                                    id="country"
-                                    v-model="form.country"
-                                    type="text"
-                                    required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    :class="{ 'border-red-500': form.errors.country }"
-                                />
-                                <p v-if="form.errors.country" class="mt-1 text-sm text-red-600">
-                                    {{ form.errors.country }}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Billing Address -->
-                    <div class="space-y-6 mt-8">
-                        <div class="flex items-center justify-between border-b pb-2">
-                            <h3 class="text-lg font-medium text-gray-900">Billing Address</h3>
-                            <label class="flex items-center text-sm">
-                                <input
-                                    v-model="sameAsPrimary"
-                                    type="checkbox"
-                                    class="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                                    @change="copyPrimaryAddress"
-                                />
-                                <span class="ml-2 text-gray-700">Same as primary</span>
-                            </label>
-                        </div>
-
-                        <div v-if="!sameAsPrimary">
-                            <div>
-                                <label for="billing_address" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Street Address
-                                </label>
-                                <input
-                                    id="billing_address"
-                                    v-model="form.billing_address"
-                                    type="text"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
-                            </div>
-
-                            <div class="grid grid-cols-3 gap-4 mt-4">
-                                <div>
-                                    <label for="billing_city" class="block text-sm font-medium text-gray-700 mb-1">
-                                        City
-                                    </label>
-                                    <input
-                                        id="billing_city"
-                                        v-model="form.billing_city"
-                                        type="text"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    />
+                        <!-- Type Selection -->
+                        <div class="grid grid-cols-2 gap-6">
+                            <label class="relative cursor-pointer group">
+                                <input type="radio" v-model="form.type" value="individual" class="peer sr-only" />
+                                <div class="p-8 border-2 rounded-2xl transition-all duration-200 peer-checked:border-blue-500 peer-checked:bg-blue-50 border-gray-200 group-hover:border-blue-300 group-hover:shadow-lg">
+                                    <div class="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                        <UserIcon class="h-8 w-8 text-blue-600" />
+                                    </div>
+                                    <p class="text-center font-bold text-gray-900 text-lg">Particulier</p>
+                                    <p class="text-center text-sm text-gray-500 mt-2">Personne physique</p>
                                 </div>
-
-                                <div>
-                                    <label for="billing_postal_code" class="block text-sm font-medium text-gray-700 mb-1">
-                                        Postal Code
-                                    </label>
-                                    <input
-                                        id="billing_postal_code"
-                                        v-model="form.billing_postal_code"
-                                        type="text"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    />
+                            </label>
+                            <label class="relative cursor-pointer group">
+                                <input type="radio" v-model="form.type" value="company" class="peer sr-only" />
+                                <div class="p-8 border-2 rounded-2xl transition-all duration-200 peer-checked:border-indigo-500 peer-checked:bg-indigo-50 border-gray-200 group-hover:border-indigo-300 group-hover:shadow-lg">
+                                    <div class="w-16 h-16 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                        <BuildingOfficeIcon class="h-8 w-8 text-indigo-600" />
+                                    </div>
+                                    <p class="text-center font-bold text-gray-900 text-lg">Entreprise</p>
+                                    <p class="text-center text-sm text-gray-500 mt-2">Personne morale</p>
                                 </div>
+                            </label>
+                        </div>
 
+                        <!-- Individual Fields -->
+                        <div v-if="form.type === 'individual'" class="space-y-6 pt-6 border-t border-gray-100">
+                            <div class="grid grid-cols-4 gap-4">
                                 <div>
-                                    <label for="billing_country" class="block text-sm font-medium text-gray-700 mb-1">
-                                        Country
-                                    </label>
-                                    <input
-                                        id="billing_country"
-                                        v-model="form.billing_country"
-                                        type="text"
-                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                    />
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Civilité</label>
+                                    <select v-model="form.civility" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200">
+                                        <option value="">--</option>
+                                        <option v-for="opt in civilityOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                                    </select>
+                                </div>
+                                <div class="col-span-1">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Prénom <span class="text-red-500">*</span></label>
+                                    <input v-model="form.first_name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.first_name }" />
+                                </div>
+                                <div class="col-span-2">
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Nom <span class="text-red-500">*</span></label>
+                                    <input v-model="form.last_name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.last_name }" />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Date de naissance</label>
+                                    <input v-model="form.birth_date" type="date" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Lieu de naissance</label>
+                                    <input v-model="form.birth_place" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Company Fields -->
+                        <div v-if="form.type === 'company'" class="space-y-6 pt-6 border-t border-gray-100">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Raison sociale <span class="text-red-500">*</span></label>
+                                <input v-model="form.company_name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.company_name }" />
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">SIRET</label>
+                                    <input v-model="form.siret" type="text" placeholder="123 456 789 00010" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">N° TVA intracommunautaire</label>
+                                    <input v-model="form.vat_number" type="text" placeholder="FR12345678901" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Prénom du contact</label>
+                                    <input v-model="form.first_name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Nom du contact</label>
+                                    <input v-model="form.last_name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Additional Information -->
-                    <div class="space-y-6 mt-8">
-                        <h3 class="text-lg font-medium text-gray-900 border-b pb-2">Additional Information</h3>
+                    <!-- Step 2: Contact -->
+                    <div v-show="currentStep === 2" class="p-8 space-y-8">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <EnvelopeIcon class="h-5 w-5 text-blue-600" />
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-900">Coordonnées</h3>
+                        </div>
 
-                        <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-6">
                             <div>
-                                <label for="credit_score" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Credit Score (0-1000)
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Email <span class="text-red-500">*</span></label>
+                                <div class="relative">
+                                    <EnvelopeIcon class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                    <input v-model="form.email" type="email" class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.email }" />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Téléphone fixe</label>
+                                    <div class="relative">
+                                        <PhoneIcon class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                        <input v-model="form.phone" type="tel" placeholder="01 23 45 67 89" class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Téléphone mobile</label>
+                                    <div class="relative">
+                                        <DevicePhoneMobileIcon class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+                                        <input v-model="form.mobile" type="tel" placeholder="06 12 34 56 78" class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ID Section -->
+                        <div class="pt-6 border-t border-gray-100 space-y-6">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
+                                    <IdentificationIcon class="h-5 w-5 text-gray-600" />
+                                </div>
+                                <div>
+                                    <h4 class="font-semibold text-gray-900">Pièce d'identité</h4>
+                                    <p class="text-sm text-gray-500">Optionnel - pour vérification</p>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Type de pièce</label>
+                                    <select v-model="form.id_type" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200">
+                                        <option value="">Sélectionner</option>
+                                        <option v-for="opt in idTypeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Numéro</label>
+                                    <input v-model="form.id_number" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Date de délivrance</label>
+                                    <input v-model="form.id_issue_date" type="date" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Date d'expiration</label>
+                                    <input v-model="form.id_expiry_date" type="date" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3: Address -->
+                    <div v-show="currentStep === 3" class="p-8 space-y-8">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <MapPinIcon class="h-5 w-5 text-blue-600" />
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-900">Adresse principale</h3>
+                        </div>
+
+                        <div class="space-y-6">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Adresse <span class="text-red-500">*</span></label>
+                                <input v-model="form.address" type="text" placeholder="Numéro et nom de rue" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.address }" />
+                            </div>
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Code postal <span class="text-red-500">*</span></label>
+                                    <input v-model="form.postal_code" type="text" placeholder="75001" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.postal_code }" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Ville <span class="text-red-500">*</span></label>
+                                    <input v-model="form.city" type="text" placeholder="Paris" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.city }" />
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Pays</label>
+                                    <input v-model="form.country" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Billing Address -->
+                        <div class="pt-6 border-t border-gray-100 space-y-6">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                                        <CreditCardIcon class="h-5 w-5 text-emerald-600" />
+                                    </div>
+                                    <h4 class="font-semibold text-gray-900">Adresse de facturation</h4>
+                                </div>
+                                <label class="flex items-center text-sm cursor-pointer bg-gray-50 px-4 py-2 rounded-xl hover:bg-gray-100 transition-colors duration-200">
+                                    <input v-model="sameAsPrimary" type="checkbox" @change="copyPrimaryAddress" class="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500" />
+                                    <span class="ml-2 text-gray-700 font-medium">Identique à l'adresse principale</span>
                                 </label>
-                                <input
-                                    id="credit_score"
-                                    v-model="form.credit_score"
-                                    type="number"
-                                    min="0"
-                                    max="1000"
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                />
                             </div>
 
+                            <div v-if="!sameAsPrimary" class="space-y-4 p-6 bg-gray-50 rounded-xl">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-2">Adresse</label>
+                                    <input v-model="form.billing_address" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200 bg-white" />
+                                </div>
+                                <div class="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Code postal</label>
+                                        <input v-model="form.billing_postal_code" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200 bg-white" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Ville</label>
+                                        <input v-model="form.billing_city" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200 bg-white" />
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700 mb-2">Pays</label>
+                                        <input v-model="form.billing_country" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200 bg-white" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4: Additional -->
+                    <div v-show="currentStep === 4" class="p-8 space-y-8">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                                <DocumentTextIcon class="h-5 w-5 text-blue-600" />
+                            </div>
+                            <h3 class="text-xl font-semibold text-gray-900">Informations complémentaires</h3>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-6">
                             <div>
-                                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">
-                                    Status <span class="text-red-500">*</span>
-                                </label>
-                                <select
-                                    id="status"
-                                    v-model="form.status"
-                                    required
-                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                >
-                                    <option value="active">Active</option>
-                                    <option value="inactive">Inactive</option>
-                                    <option value="suspended">Suspended</option>
-                                </select>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Score de crédit (0-1000)</label>
+                                <input v-model="form.credit_score" type="number" min="0" max="1000" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" />
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Statut</label>
+                                <div class="flex flex-wrap gap-2">
+                                    <label v-for="opt in statusOptions" :key="opt.value" class="cursor-pointer">
+                                        <input type="radio" v-model="form.status" :value="opt.value" class="peer sr-only" />
+                                        <span :class="[
+                                            'inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold border-2 transition-all duration-200',
+                                            form.status === opt.value
+                                                ? opt.activeColor
+                                                : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                                        ]">
+                                            {{ opt.label }}
+                                        </span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
                         <div>
-                            <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">
-                                Notes
-                            </label>
-                            <textarea
-                                id="notes"
-                                v-model="form.notes"
-                                rows="4"
-                                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                                placeholder="Any additional notes about this customer"
-                            ></textarea>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Notes internes</label>
+                            <textarea v-model="form.notes" rows="4" placeholder="Remarques sur ce client..." class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200 resize-none"></textarea>
+                        </div>
+
+                        <!-- Summary -->
+                        <div class="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                            <div class="flex items-center space-x-2 mb-4">
+                                <CheckCircleIcon class="w-5 h-5 text-blue-600" />
+                                <h4 class="font-semibold text-gray-900">Récapitulatif des modifications</h4>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 text-sm">
+                                <div class="flex justify-between p-3 bg-white/60 rounded-lg">
+                                    <span class="text-gray-500">Type</span>
+                                    <span class="font-semibold text-gray-900">{{ form.type === 'company' ? 'Entreprise' : 'Particulier' }}</span>
+                                </div>
+                                <div class="flex justify-between p-3 bg-white/60 rounded-lg">
+                                    <span class="text-gray-500">Nom</span>
+                                    <span class="font-semibold text-gray-900">{{ customerDisplayName }}</span>
+                                </div>
+                                <div class="flex justify-between p-3 bg-white/60 rounded-lg">
+                                    <span class="text-gray-500">Email</span>
+                                    <span class="font-semibold text-gray-900">{{ form.email || '-' }}</span>
+                                </div>
+                                <div class="flex justify-between p-3 bg-white/60 rounded-lg">
+                                    <span class="text-gray-500">Ville</span>
+                                    <span class="font-semibold text-gray-900">{{ form.city || '-' }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- Actions -->
-                    <div class="mt-8 flex items-center justify-end space-x-3 pt-6 border-t">
-                        <Link
-                            :href="route('tenant.customers.index')"
-                            class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
-                        >
-                            Cancel
-                        </Link>
-                        <button
-                            type="submit"
-                            :disabled="form.processing"
-                            class="px-6 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            <span v-if="!form.processing">Update Customer</span>
-                            <span v-else class="flex items-center">
-                                <svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Updating...
-                            </span>
-                        </button>
+                    <!-- Footer Actions -->
+                    <div class="px-8 py-5 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
+                        <div>
+                            <button
+                                v-if="currentStep > 1"
+                                type="button"
+                                @click="prevStep"
+                                class="px-5 py-2.5 text-gray-600 hover:text-gray-800 font-medium transition-colors duration-200 flex items-center space-x-2"
+                            >
+                                <ArrowLeftIcon class="w-4 h-4" />
+                                <span>Précédent</span>
+                            </button>
+                        </div>
+                        <div class="flex gap-3">
+                            <Link
+                                :href="route('tenant.customers.show', customer.id)"
+                                class="px-5 py-2.5 border border-gray-300 rounded-xl text-gray-700 font-medium hover:bg-gray-100 transition-colors duration-200"
+                            >
+                                Annuler
+                            </Link>
+                            <button
+                                v-if="currentStep < totalSteps"
+                                type="button"
+                                @click="nextStep"
+                                :disabled="!canProceed"
+                                class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg shadow-blue-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                            >
+                                <span>Suivant</span>
+                                <ArrowRightIcon class="w-4 h-4" />
+                            </button>
+                            <button
+                                v-else
+                                type="submit"
+                                :disabled="form.processing"
+                                class="px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 shadow-lg shadow-emerald-200 disabled:opacity-50 flex items-center space-x-2"
+                            >
+                                <CheckIcon v-if="!form.processing" class="w-5 h-5" />
+                                <ArrowPathIcon v-else class="w-5 h-5 animate-spin" />
+                                <span>{{ form.processing ? 'Enregistrement...' : 'Mettre à jour' }}</span>
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
         </div>
-    </AuthenticatedLayout>
+    </TenantLayout>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useForm, Link } from '@inertiajs/vue3'
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue'
+import TenantLayout from '@/Layouts/TenantLayout.vue'
+import {
+    ArrowLeftIcon,
+    ArrowRightIcon,
+    ArrowPathIcon,
+    UserIcon,
+    BuildingOfficeIcon,
+    EnvelopeIcon,
+    PhoneIcon,
+    DevicePhoneMobileIcon,
+    MapPinIcon,
+    IdentificationIcon,
+    CreditCardIcon,
+    DocumentTextIcon,
+    CheckIcon,
+    CheckCircleIcon,
+} from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     customer: Object,
 })
 
+const currentStep = ref(1)
+const totalSteps = 4
 const sameAsPrimary = ref(false)
 
 const form = useForm({
@@ -552,7 +457,7 @@ const form = useForm({
     address: props.customer.address,
     city: props.customer.city,
     postal_code: props.customer.postal_code,
-    country: props.customer.country,
+    country: props.customer.country || 'France',
     billing_address: props.customer.billing_address,
     billing_city: props.customer.billing_city,
     billing_postal_code: props.customer.billing_postal_code,
@@ -561,6 +466,64 @@ const form = useForm({
     notes: props.customer.notes,
     status: props.customer.status,
 })
+
+const steps = [
+    { number: 1, title: 'Type', icon: UserIcon },
+    { number: 2, title: 'Contact', icon: EnvelopeIcon },
+    { number: 3, title: 'Adresse', icon: MapPinIcon },
+    { number: 4, title: 'Compléments', icon: DocumentTextIcon },
+]
+
+const civilityOptions = [
+    { value: 'mr', label: 'M.' },
+    { value: 'mrs', label: 'Mme' },
+    { value: 'ms', label: 'Mlle' },
+    { value: 'dr', label: 'Dr' },
+    { value: 'prof', label: 'Pr' },
+]
+
+const idTypeOptions = [
+    { value: 'id_card', label: "Carte d'identité" },
+    { value: 'passport', label: 'Passeport' },
+    { value: 'driver_license', label: 'Permis de conduire' },
+    { value: 'residence_permit', label: 'Titre de séjour' },
+]
+
+const statusOptions = [
+    { value: 'active', label: 'Actif', activeColor: 'border-emerald-500 bg-emerald-50 text-emerald-700' },
+    { value: 'inactive', label: 'Inactif', activeColor: 'border-gray-500 bg-gray-50 text-gray-700' },
+    { value: 'suspended', label: 'Suspendu', activeColor: 'border-red-500 bg-red-50 text-red-700' },
+]
+
+const canProceed = computed(() => {
+    switch (currentStep.value) {
+        case 1:
+            if (form.type === 'individual') {
+                return form.first_name && form.last_name
+            }
+            return form.company_name
+        case 2:
+            return form.email
+        case 3:
+            return form.address && form.city && form.postal_code
+        case 4:
+            return true
+        default:
+            return false
+    }
+})
+
+const nextStep = () => {
+    if (currentStep.value < totalSteps && canProceed.value) {
+        currentStep.value++
+    }
+}
+
+const prevStep = () => {
+    if (currentStep.value > 1) {
+        currentStep.value--
+    }
+}
 
 const copyPrimaryAddress = () => {
     if (sameAsPrimary.value) {
@@ -579,4 +542,11 @@ const copyPrimaryAddress = () => {
 const submit = () => {
     form.put(route('tenant.customers.update', props.customer.id))
 }
+
+const customerDisplayName = computed(() => {
+    if (form.type === 'company' && form.company_name) {
+        return form.company_name
+    }
+    return `${form.first_name || ''} ${form.last_name || ''}`.trim() || 'Client'
+})
 </script>

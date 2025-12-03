@@ -127,6 +127,130 @@ class PlanController extends Controller
     }
 
     /**
+     * Display the new interactive SVG plan view (Buxida style)
+     */
+    public function interactive(Request $request)
+    {
+        $tenant = auth()->user()->tenant;
+        $siteId = $request->get('site_id');
+
+        $sites = Site::where('tenant_id', $tenant->id)
+            ->select('id', 'name', 'code')
+            ->get();
+
+        $currentSite = $siteId
+            ? Site::where('id', $siteId)->where('tenant_id', $tenant->id)->first()
+            : $sites->first();
+
+        if (!$currentSite) {
+            return Inertia::render('Tenant/Plan/Interactive', [
+                'sites' => $sites,
+                'currentSite' => null,
+                'boxes' => [],
+                'configuration' => [
+                    'canvas_width' => 1200,
+                    'canvas_height' => 800,
+                    'show_grid' => true,
+                ],
+                'statistics' => null,
+            ]);
+        }
+
+        // Get all boxes with their contracts and customers
+        $boxes = Box::where('site_id', $currentSite->id)
+            ->with(['contracts' => function ($query) {
+                $query->where('status', 'active')->with('customer');
+            }])
+            ->orderBy('number')
+            ->get()
+            ->map(function ($box) {
+                $activeContract = $box->contracts->first();
+
+                // Determine status based on contract and box state
+                $status = 'available';
+                if ($activeContract) {
+                    $status = 'occupied';
+                    // Check if contract is ending soon (within 30 days)
+                    if ($activeContract->end_date && $activeContract->end_date->diffInDays(now()) <= 30) {
+                        $status = 'ending';
+                    }
+                } elseif ($box->status === 'reserved') {
+                    $status = 'reserved';
+                } elseif ($box->status === 'maintenance') {
+                    $status = 'maintenance';
+                } elseif ($box->status === 'unavailable') {
+                    $status = 'unavailable';
+                }
+
+                // Get position from plan element if exists
+                $position = null;
+                if ($box->planElement) {
+                    $position = [
+                        'x' => $box->planElement->x,
+                        'y' => $box->planElement->y,
+                        'width' => $box->planElement->width,
+                        'height' => $box->planElement->height,
+                    ];
+                }
+
+                return [
+                    'id' => $box->id,
+                    'number' => $box->number,
+                    'volume' => $box->volume,
+                    'dimensions' => $box->length && $box->width && $box->height
+                        ? "{$box->length}m × {$box->width}m × {$box->height}m"
+                        : null,
+                    'current_price' => $box->current_price ?? $box->base_price,
+                    'status' => $status,
+                    'position' => $position,
+                    'contract' => $activeContract ? [
+                        'id' => $activeContract->id,
+                        'contract_number' => $activeContract->contract_number,
+                        'start_date' => $activeContract->start_date?->format('Y-m-d'),
+                        'end_date' => $activeContract->end_date?->format('Y-m-d'),
+                        'monthly_rent' => $activeContract->monthly_price,
+                        'customer' => $activeContract->customer ? [
+                            'id' => $activeContract->customer->id,
+                            'name' => $activeContract->customer->full_name,
+                            'email' => $activeContract->customer->email,
+                            'phone' => $activeContract->customer->phone,
+                        ] : null,
+                    ] : null,
+                ];
+            });
+
+        // Get configuration
+        $config = PlanConfiguration::where('site_id', $currentSite->id)->first();
+        $configuration = [
+            'canvas_width' => $config?->canvas_width ?? 1200,
+            'canvas_height' => $config?->canvas_height ?? 800,
+            'show_grid' => $config?->show_grid ?? true,
+            'grid_size' => $config?->grid_size ?? 20,
+        ];
+
+        // Calculate statistics
+        $stats = [
+            'total' => $boxes->count(),
+            'occupied' => $boxes->where('status', 'occupied')->count(),
+            'available' => $boxes->where('status', 'available')->count(),
+            'reserved' => $boxes->where('status', 'reserved')->count(),
+            'maintenance' => $boxes->where('status', 'maintenance')->count(),
+            'ending' => $boxes->where('status', 'ending')->count(),
+        ];
+        $stats['occupancy_rate'] = $stats['total'] > 0
+            ? round(($stats['occupied'] / $stats['total']) * 100, 1)
+            : 0;
+
+        return Inertia::render('Tenant/Plan/Interactive', [
+            'sites' => $sites,
+            'currentSite' => $currentSite,
+            'boxes' => $boxes,
+            'configuration' => $configuration,
+            'statistics' => $stats,
+        ]);
+    }
+
+    /**
      * Display the plan editor
      */
     public function editor(Request $request)
