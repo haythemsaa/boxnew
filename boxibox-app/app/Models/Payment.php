@@ -46,6 +46,9 @@ class Payment extends Model
         'processed_at' => 'datetime',
         'failed_at' => 'datetime',
         'gateway_response' => 'array',
+        'deleted_at' => 'datetime',
+        'auto_pay' => 'boolean',
+        'next_retry_at' => 'datetime',
     ];
 
     // Relationships

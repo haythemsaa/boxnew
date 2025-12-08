@@ -6,6 +6,7 @@ const props = defineProps({
     sites: Array,
     currentSite: Object,
     boxes: Array,
+    elements: Array, // Éléments du plan depuis l'éditeur
     configuration: Object,
     statistics: Object,
 });
@@ -63,8 +64,34 @@ const changeSite = () => {
     router.get(route('tenant.plan.interactive'), { site_id: selectedSite.value });
 };
 
-// Generate EXACT layout from Buxida image
+// Utiliser les éléments sauvegardés depuis l'éditeur, sinon générer un layout de démonstration
 const boxLayout = computed(() => {
+    // Si on a des éléments sauvegardés depuis l'éditeur, les utiliser
+    if (props.elements && props.elements.length > 0) {
+        return props.elements.map(el => ({
+            id: el.id,
+            name: el.name || el.label || el.box?.number || '',
+            x: el.x,
+            y: el.y,
+            w: el.w || el.width || 35,
+            h: el.h || el.height || 30,
+            vol: el.vol || el.volume || el.box?.volume || 0,
+            status: el.status || 'available',
+            fill: el.fill,
+            type: el.type || 'box',
+            isLift: el.type === 'lift',
+            boxId: el.boxId || el.box?.id,
+            contract: el.contract ? {
+                id: el.contract.id,
+                contract_number: el.contract.contract_number,
+                customer: el.contract.customer ? {
+                    id: el.contract.customer.id,
+                    name: el.contract.customer.name,
+                } : null,
+            } : null,
+        }));
+    }
+    // Sinon, générer un layout de démonstration
     return generateExactBuxidaLayout();
 });
 
@@ -575,7 +602,7 @@ const freeBoxes = computed(() => boxLayout.value.filter(b => b.status === 'avail
                 </div>
                 <div class="modal-footer">
                     <template v-if="modalBox.status === 'available'">
-                        <Link :href="route('tenant.contracts.create')" class="btn btn-success">
+                        <Link :href="route('tenant.contracts.create', { box_id: modalBox.boxId })" class="btn btn-success">
                             <i class="fas fa-plus"></i> Créer un contrat
                         </Link>
                     </template>

@@ -2,16 +2,18 @@
     <Link
         :href="href"
         :class="[
-            'group relative flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+            'group relative flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
             active
-                ? 'bg-white/15 text-white shadow-lg shadow-white/5'
-                : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                ? 'text-white shadow-md'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
         ]"
+        :style="active ? 'background: linear-gradient(135deg, #8fbd56 0%, #5cd3b9 100%);' : ''"
     >
         <!-- Active Indicator -->
         <div
-            v-if="active"
-            class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary-400 rounded-r-full"
+            v-if="active && !noIndicator"
+            class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 rounded-r-full"
+            style="background: linear-gradient(180deg, #8fbd56 0%, #38cab3 100%);"
         ></div>
 
         <!-- Icon -->
@@ -19,7 +21,7 @@
             :class="[
                 'flex items-center justify-center',
                 collapsed ? 'mx-auto' : 'mr-3',
-                active ? 'text-primary-400' : 'text-gray-400 group-hover:text-white'
+                active ? 'text-white' : 'text-gray-400 group-hover:text-gray-600'
             ]"
         >
             <slot name="icon" />
@@ -36,6 +38,20 @@
         <transition name="fade">
             <span v-if="!collapsed">
                 <slot name="badge" />
+            </span>
+        </transition>
+
+        <!-- Chevron for expandable items -->
+        <transition name="fade">
+            <span v-if="!collapsed && hasSubmenu" class="ml-auto">
+                <svg
+                    :class="['w-4 h-4 transition-transform', expanded ? 'rotate-90' : '']"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
             </span>
         </transition>
 
@@ -63,6 +79,18 @@ defineProps({
         default: false
     },
     collapsed: {
+        type: Boolean,
+        default: false
+    },
+    hasSubmenu: {
+        type: Boolean,
+        default: false
+    },
+    expanded: {
+        type: Boolean,
+        default: false
+    },
+    noIndicator: {
         type: Boolean,
         default: false
     }

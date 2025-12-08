@@ -1,75 +1,101 @@
 <template>
     <TenantLayout title="Dashboard">
-        <!-- Welcome Banner -->
-        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary-600 via-primary-700 to-indigo-800 p-8 mb-8 text-white">
-            <div class="absolute inset-0 bg-grid-white/10"></div>
-            <div class="absolute -right-10 -top-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-            <div class="absolute -left-10 -bottom-10 w-40 h-40 bg-indigo-500/20 rounded-full blur-3xl"></div>
-
-            <div class="relative flex flex-col md:flex-row md:items-center md:justify-between">
-                <div>
-                    <h1 class="text-2xl md:text-3xl font-bold mb-2">
-                        Bonjour, {{ $page.props.auth.user?.name?.split(' ')[0] || 'Admin' }} !
-                    </h1>
-                    <p class="text-primary-100 text-sm md:text-base">
-                        Voici un apercu de votre activite aujourd'hui. Vous avez
-                        <span class="font-semibold text-white">{{ stats.pending_actions || 0 }}</span> actions en attente.
-                    </p>
-                </div>
-                <div class="mt-4 md:mt-0 flex space-x-3">
-                    <Link
-                        :href="route('tenant.contracts.create')"
-                        class="inline-flex items-center px-4 py-2 bg-white text-primary-700 rounded-lg font-medium text-sm hover:bg-primary-50 transition-colors shadow-lg shadow-primary-900/20"
-                    >
-                        <PlusIcon class="w-4 h-4 mr-2" />
-                        Nouveau contrat
-                    </Link>
-                    <Link
-                        :href="route('tenant.bulk-invoicing.index')"
-                        class="inline-flex items-center px-4 py-2 bg-white/10 text-white rounded-lg font-medium text-sm hover:bg-white/20 transition-colors border border-white/20"
-                    >
-                        <DocumentDuplicateIcon class="w-4 h-4 mr-2" />
-                        Facturation
-                    </Link>
-                </div>
+        <!-- Page Header - NOA Style -->
+        <div class="flex items-center justify-between mb-6">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+                <p class="text-sm text-gray-500 mt-1">Bienvenue, {{ $page.props.auth.user?.name?.split(' ')[0] || 'Admin' }}</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <Link
+                    :href="route('tenant.contracts.create')"
+                    class="btn-primary"
+                >
+                    <PlusIcon class="w-4 h-4 mr-2" />
+                    Nouveau contrat
+                </Link>
+                <Link
+                    :href="route('tenant.bulk-invoicing.index')"
+                    class="btn-secondary"
+                >
+                    <DocumentDuplicateIcon class="w-4 h-4 mr-2" />
+                    Facturation
+                </Link>
             </div>
         </div>
 
-        <!-- Key Metrics Row -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <StatsCard
-                title="Revenu mensuel"
-                :value="formatCurrency(stats.monthly_revenue)"
-                :subtitle="'vs ' + formatCurrency(stats.last_month_revenue) + ' dernier mois'"
-                :trend="calculateTrend(stats.monthly_revenue, stats.last_month_revenue)"
-                icon="banknotes"
-                color="emerald"
-                variant="gradient"
-            />
-            <StatsCard
-                title="Taux d'occupation"
-                :value="stats.occupation_rate + '%'"
-                :subtitle="stats.occupied_boxes + '/' + stats.total_boxes + ' boxes'"
-                :progress="stats.occupation_rate"
-                progress-label="Capacite utilisee"
-                icon="chart"
-                color="purple"
-            />
-            <StatsCard
-                title="Clients actifs"
-                :value="stats.active_customers"
-                :subtitle="'+' + (stats.new_customers_this_month || 0) + ' ce mois'"
-                :trend="stats.new_customers_this_month > 0 ? 12 : 0"
-                icon="users"
-                color="blue"
-            />
-            <StatsCard
-                title="Factures en retard"
-                :value="stats.overdue_invoices"
-                :subtitle="formatCurrency(stats.overdue_amount) + ' a recouvrer'"
-                icon="clock"
-                :color="stats.overdue_invoices > 0 ? 'red' : 'green'"
-            />
+        <!-- Key Metrics Row - NOA Style -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+            <!-- Revenue Card -->
+            <div class="noa-stat-card">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="noa-stat-card-value">{{ formatCurrency(stats.monthly_revenue) }}</p>
+                        <p class="noa-stat-card-label">Revenu mensuel</p>
+                        <div class="noa-stat-card-change" :class="calculateTrend(stats.monthly_revenue, stats.last_month_revenue) >= 0 ? 'noa-stat-card-change-up' : 'noa-stat-card-change-down'">
+                            <ArrowTrendingUpIcon v-if="calculateTrend(stats.monthly_revenue, stats.last_month_revenue) >= 0" class="w-4 h-4" />
+                            <ArrowTrendingDownIcon v-else class="w-4 h-4" />
+                            <span>{{ Math.abs(calculateTrend(stats.monthly_revenue, stats.last_month_revenue)) }}%</span>
+                            <span class="text-gray-400 ml-1">vs mois dernier</span>
+                        </div>
+                    </div>
+                    <div class="noa-stat-card-icon noa-stat-card-icon-green">
+                        <BanknotesIcon class="w-6 h-6" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Occupation Card -->
+            <div class="noa-stat-card">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="noa-stat-card-value">{{ stats.occupied_boxes }}</p>
+                        <p class="noa-stat-card-label">Boxes occupées</p>
+                        <div class="noa-stat-card-change noa-stat-card-change-down">
+                            <span class="text-gray-500">{{ stats.occupation_rate }}% d'occupation</span>
+                        </div>
+                    </div>
+                    <div class="noa-stat-card-icon noa-stat-card-icon-pink">
+                        <ArchiveBoxIcon class="w-6 h-6" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Conversion Rate Card -->
+            <div class="noa-stat-card">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="noa-stat-card-value">{{ stats.conversion_rate || 0 }}%</p>
+                        <p class="noa-stat-card-label">Taux de conversion</p>
+                        <div class="noa-stat-card-change noa-stat-card-change-up">
+                            <ArrowTrendingUpIcon class="w-4 h-4" />
+                            <span>27%</span>
+                            <span class="text-gray-400 ml-1">vs mois dernier</span>
+                        </div>
+                    </div>
+                    <div class="noa-stat-card-icon noa-stat-card-icon-orange">
+                        <ChartBarIcon class="w-6 h-6" />
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders/Contracts Card -->
+            <div class="noa-stat-card">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <p class="noa-stat-card-value">{{ formatCurrency(stats.average_contract_value) }}</p>
+                        <p class="noa-stat-card-label">Panier moyen</p>
+                        <div class="noa-stat-card-change noa-stat-card-change-up">
+                            <ArrowTrendingUpIcon class="w-4 h-4" />
+                            <span>9%</span>
+                            <span class="text-gray-400 ml-1">vs mois dernier</span>
+                        </div>
+                    </div>
+                    <div class="noa-stat-card-icon noa-stat-card-icon-cyan">
+                        <ShoppingCartIcon class="w-6 h-6" />
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Advanced KPIs Row -->
@@ -350,7 +376,7 @@
         </div>
 
         <!-- Monthly Summary -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-8">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-lg font-semibold text-gray-900">Resume du mois</h3>
                 <span class="text-sm text-gray-500">{{ currentMonthName }}</span>
@@ -374,6 +400,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- AI Business Advisor -->
+        <AIAdvisor />
     </TenantLayout>
 </template>
 
@@ -382,6 +411,7 @@ import { ref, computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import TenantLayout from '@/Layouts/TenantLayout.vue'
 import StatsCard from '@/Components/StatsCard.vue'
+import AIAdvisor from '@/Components/AIAdvisor.vue'
 import { Line, Doughnut } from 'vue-chartjs'
 import {
     Chart as ChartJS,
@@ -413,9 +443,12 @@ import {
     ChartBarSquareIcon,
     CurrencyEuroIcon,
     ArrowTrendingDownIcon,
+    ArrowTrendingUpIcon,
     CalendarDaysIcon,
     UserGroupIcon,
     ArrowPathIcon,
+    BanknotesIcon,
+    ShoppingCartIcon,
 } from '@heroicons/vue/24/outline'
 
 ChartJS.register(

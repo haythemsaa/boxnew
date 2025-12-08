@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class SmartLock extends Model
 {
@@ -41,6 +42,29 @@ class SmartLock extends Model
     public function accessLogs(): HasMany
     {
         return $this->hasMany(AccessLog::class);
+    }
+
+    /**
+     * Get configuration through the box's site
+     */
+    public function configuration(): ?SmartLockConfiguration
+    {
+        if (!$this->box || !$this->box->site_id) {
+            return null;
+        }
+
+        return SmartLockConfiguration::where('tenant_id', $this->tenant_id)
+            ->where('site_id', $this->box->site_id)
+            ->where('is_active', true)
+            ->first();
+    }
+
+    /**
+     * Accessor for configuration attribute
+     */
+    public function getConfigurationAttribute(): ?SmartLockConfiguration
+    {
+        return $this->configuration();
     }
 
     public function scopeActive($query)

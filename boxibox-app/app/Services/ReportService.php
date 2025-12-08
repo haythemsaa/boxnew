@@ -212,7 +212,7 @@ class ReportService
         return [
             'summary' => [
                 'total_overdue' => $overdueInvoices->count(),
-                'total_amount' => $overdueInvoices->sum('balance'),
+                'total_amount' => $overdueInvoices->sum('total'),
                 'average_days_overdue' => $overdueInvoices->avg(fn($inv) => now()->diffInDays($inv->due_date)),
             ],
             'invoices' => $overdueInvoices->map(fn($invoice) => [

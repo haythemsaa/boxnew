@@ -148,8 +148,8 @@ class FacturXService
         $summation->addChild('ram:TaxBasisTotalAmount', number_format($invoice->subtotal, 2, '.', ''));
         $taxTotal = $summation->addChild('ram:TaxTotalAmount', number_format($invoice->tax_amount, 2, '.', ''));
         $taxTotal->addAttribute('currencyID', 'EUR');
-        $summation->addChild('ram:GrandTotalAmount', number_format($invoice->total_amount, 2, '.', ''));
-        $summation->addChild('ram:DuePayableAmount', number_format($invoice->total_amount - $invoice->paid_amount, 2, '.', ''));
+        $summation->addChild('ram:GrandTotalAmount', number_format($invoice->total, 2, '.', ''));
+        $summation->addChild('ram:DuePayableAmount', number_format($invoice->total - ($invoice->paid_amount ?? 0), 2, '.', ''));
 
         // Format XML
         $dom = new \DOMDocument('1.0', 'UTF-8');

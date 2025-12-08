@@ -18,7 +18,6 @@ class Floor extends Model
         'building_id',
         'floor_number',
         'name',
-        'description',
         'total_area',
         'total_boxes',
         'floor_plan_id',
@@ -28,6 +27,7 @@ class Floor extends Model
         'floor_number' => 'integer',
         'total_area' => 'decimal:2',
         'total_boxes' => 'integer',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships

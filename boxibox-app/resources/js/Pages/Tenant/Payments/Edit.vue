@@ -21,6 +21,7 @@ const props = defineProps({
 })
 
 const currentStep = ref(1)
+const stepErrors = ref({})
 const steps = [
     { number: 1, title: 'Client', icon: UserIcon },
     { number: 2, title: 'Montant', icon: CurrencyEuroIcon },
@@ -95,12 +96,57 @@ const formatCurrency = (amount) => {
     }).format(amount || 0)
 }
 
+const validateStep = (step) => {
+    stepErrors.value = {}
+
+    if (step === 1) {
+        if (!form.customer_id) {
+            stepErrors.value.customer_id = 'Veuillez sélectionner un client'
+        }
+        if (!form.type) {
+            stepErrors.value.type = 'Veuillez sélectionner un type de transaction'
+        }
+    }
+
+    if (step === 2) {
+        if (!form.amount || form.amount <= 0) {
+            stepErrors.value.amount = 'Le montant doit être supérieur à 0'
+        }
+        if (!form.method) {
+            stepErrors.value.method = 'Veuillez sélectionner une méthode de paiement'
+        }
+        if (!form.gateway) {
+            stepErrors.value.gateway = 'Veuillez sélectionner une passerelle'
+        }
+        if (!form.status) {
+            stepErrors.value.status = 'Veuillez sélectionner un statut'
+        }
+    }
+
+    return Object.keys(stepErrors.value).length === 0
+}
+
 const nextStep = () => {
-    if (currentStep.value < steps.length) currentStep.value++
+    if (currentStep.value < steps.length) {
+        if (validateStep(currentStep.value)) {
+            currentStep.value++
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        } else {
+            const firstErrorField = Object.keys(stepErrors.value)[0]
+            const errorElement = document.querySelector(`[name="${firstErrorField}"], #${firstErrorField}`)
+            if (errorElement) {
+                errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                errorElement.focus()
+            }
+        }
+    }
 }
 
 const prevStep = () => {
-    if (currentStep.value > 1) currentStep.value--
+    if (currentStep.value > 1) {
+        stepErrors.value = {}
+        currentStep.value--
+    }
 }
 
 const submit = () => {
@@ -169,7 +215,7 @@ const submit = () => {
 
                 <form @submit.prevent="submit">
                     <!-- Step 1: Client & Facture -->
-                    <div v-show="currentStep === 1" class="space-y-6 animate-fade-in">
+                    <div v-if="currentStep === 1" class="space-y-6 animate-fade-in">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                                 <UserIcon class="w-5 h-5 text-emerald-600" />
@@ -250,7 +296,7 @@ const submit = () => {
                     </div>
 
                     <!-- Step 2: Montant & Méthode -->
-                    <div v-show="currentStep === 2" class="space-y-6 animate-fade-in">
+                    <div v-if="currentStep === 2" class="space-y-6 animate-fade-in">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                                 <CurrencyEuroIcon class="w-5 h-5 text-emerald-600" />
@@ -350,7 +396,7 @@ const submit = () => {
                     </div>
 
                     <!-- Step 3: Notes & Récapitulatif -->
-                    <div v-show="currentStep === 3" class="space-y-6 animate-fade-in">
+                    <div v-if="currentStep === 3" class="space-y-6 animate-fade-in">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                                 <DocumentTextIcon class="w-5 h-5 text-emerald-600" />

@@ -15,24 +15,12 @@ class Conversation extends Model
         'tenant_id',
         'customer_id',
         'lead_id',
-        'channel', // chatbot, email, sms, phone
-        'status', // active, resolved, closed
-        'visitor_name',
-        'visitor_email',
-        'visitor_phone',
-        'requires_appointment',
-        'interested_in_pricing',
-        'started_at',
-        'resolved_at',
-        'metadata',
+        'status',
     ];
 
     protected $casts = [
-        'started_at' => 'datetime',
-        'resolved_at' => 'datetime',
-        'metadata' => 'array',
-        'requires_appointment' => 'boolean',
-        'interested_in_pricing' => 'boolean',
+        'lead_created' => 'boolean',
+        'last_message_at' => 'datetime',
     ];
 
     /**

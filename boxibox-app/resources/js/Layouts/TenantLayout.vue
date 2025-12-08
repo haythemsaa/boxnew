@@ -1,38 +1,39 @@
 <template>
-    <div class="min-h-screen bg-gradient-mesh">
-        <!-- Sidebar -->
+    <div class="min-h-screen bg-gray-50">
+        <!-- Sidebar - NOA Style (Light) -->
         <aside
             :class="[
                 sidebarOpen ? 'translate-x-0' : '-translate-x-full',
-                sidebarCollapsed ? 'lg:w-20' : 'lg:w-72'
+                sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'
             ]"
-            class="fixed inset-y-0 left-0 z-50 w-72 bg-gradient-dark transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col"
+            class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col"
+            data-tutorial="sidebar"
         >
-            <!-- Logo Section -->
-            <div class="flex h-16 items-center justify-between px-4 border-b border-white/10">
+            <!-- Logo Section - NOA Style -->
+            <div class="flex h-16 items-center justify-between px-5 border-b border-gray-100">
                 <div class="flex items-center space-x-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white font-bold text-lg shadow-lg">
-                        <ArchiveBoxIcon class="h-6 w-6" />
+                    <div class="flex h-9 w-9 items-center justify-center rounded-lg text-white font-bold text-lg" style="background: linear-gradient(135deg, #8fbd56 0%, #38cab3 100%);">
+                        <ArchiveBoxIcon class="h-5 w-5" />
                     </div>
                     <transition name="fade">
-                        <span v-if="!sidebarCollapsed" class="text-xl font-bold text-white tracking-tight">
-                            {{ $page.props.tenant?.name || 'Boxibox' }}
+                        <span v-if="!sidebarCollapsed" class="text-lg font-bold text-gray-900 tracking-tight">
+                            {{ $page.props.tenant?.name || 'boxibox' }}
                         </span>
                     </transition>
                 </div>
                 <button
                     @click="sidebarOpen = false"
-                    class="lg:hidden text-gray-400 hover:text-white transition-colors"
+                    class="lg:hidden text-gray-400 hover:text-gray-600 transition-colors"
                 >
                     <XMarkIcon class="h-6 w-6" />
                 </button>
             </div>
 
-            <!-- Navigation -->
-            <nav class="flex-1 px-3 py-6 space-y-1 overflow-y-auto sidebar-scroll">
+            <!-- Navigation - NOA Style -->
+            <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
                 <!-- Main Section -->
-                <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <div class="mb-5">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                         Principal
                     </p>
                     <SidebarLink
@@ -50,6 +51,7 @@
                         :href="route('tenant.sites.index')"
                         :active="route().current('tenant.sites.*')"
                         :collapsed="sidebarCollapsed"
+                        data-tutorial="sites-menu"
                     >
                         <template #icon>
                             <BuildingOffice2Icon class="h-5 w-5" />
@@ -61,6 +63,7 @@
                         :href="route('tenant.boxes.index')"
                         :active="route().current('tenant.boxes.*')"
                         :collapsed="sidebarCollapsed"
+                        data-tutorial="boxes-menu"
                     >
                         <template #icon>
                             <ArchiveBoxIcon class="h-5 w-5" />
@@ -76,14 +79,25 @@
                         <template #icon>
                             <MapIcon class="h-5 w-5" />
                         </template>
-                        Plan
+                        Plan interactif
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.bookings.index')"
+                        :active="route().current('tenant.bookings.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <CalendarDaysIcon class="h-5 w-5" />
+                        </template>
+                        Réservations
                     </SidebarLink>
                 </div>
 
-                <!-- Clients Section -->
+                <!-- CRM Section -->
                 <div class="mb-6">
                     <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                        Clients
+                        CRM
                     </p>
                     <SidebarLink
                         :href="route('tenant.prospects.index')"
@@ -102,9 +116,32 @@
                     </SidebarLink>
 
                     <SidebarLink
+                        :href="route('tenant.crm.leads.index')"
+                        :active="route().current('tenant.crm.leads.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <FunnelIcon class="h-5 w-5" />
+                        </template>
+                        Leads
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.crm.campaigns.index')"
+                        :active="route().current('tenant.crm.campaigns.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <MegaphoneIcon class="h-5 w-5" />
+                        </template>
+                        Campagnes
+                    </SidebarLink>
+
+                    <SidebarLink
                         :href="route('tenant.customers.index')"
                         :active="route().current('tenant.customers.*')"
                         :collapsed="sidebarCollapsed"
+                        data-tutorial="customers-menu"
                     >
                         <template #icon>
                             <UsersIcon class="h-5 w-5" />
@@ -116,6 +153,7 @@
                         :href="route('tenant.contracts.index')"
                         :active="route().current('tenant.contracts.*')"
                         :collapsed="sidebarCollapsed"
+                        data-tutorial="contracts-menu"
                     >
                         <template #icon>
                             <DocumentTextIcon class="h-5 w-5" />
@@ -133,6 +171,7 @@
                         :href="route('tenant.invoices.index')"
                         :active="route().current('tenant.invoices.*')"
                         :collapsed="sidebarCollapsed"
+                        data-tutorial="invoices-menu"
                     >
                         <template #icon>
                             <ReceiptPercentIcon class="h-5 w-5" />
@@ -143,6 +182,17 @@
                                 {{ $page.props.overdueCount }}
                             </span>
                         </template>
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.payments.index')"
+                        :active="route().current('tenant.payments.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <BanknotesIcon class="h-5 w-5" />
+                        </template>
+                        Paiements
                     </SidebarLink>
 
                     <SidebarLink
@@ -176,6 +226,95 @@
                             <BellAlertIcon class="h-5 w-5" />
                         </template>
                         Relances
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.pricing.dashboard')"
+                        :active="route().current('tenant.pricing.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <CurrencyEuroIcon class="h-5 w-5" />
+                        </template>
+                        Tarification
+                    </SidebarLink>
+                </div>
+
+                <!-- Analytics & AI Section -->
+                <div class="mb-6">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Analytics & IA
+                    </p>
+
+                    <!-- AI Copilot - Featured Link -->
+                    <SidebarLink
+                        :href="route('tenant.copilot.index')"
+                        :active="route().current('tenant.copilot.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border border-purple-500/30 hover:from-purple-600/30 hover:to-indigo-600/30"
+                    >
+                        <template #icon>
+                            <SparklesIcon class="h-5 w-5 text-purple-400" />
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Copilot IA
+                            <span class="text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
+                        </span>
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.analytics.revenue')"
+                        :active="route().current('tenant.analytics.revenue')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <ChartBarIcon class="h-5 w-5" />
+                        </template>
+                        Revenus
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.analytics.occupancy')"
+                        :active="route().current('tenant.analytics.occupancy')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <ChartPieIcon class="h-5 w-5" />
+                        </template>
+                        Occupation
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.analytics.operations')"
+                        :active="route().current('tenant.analytics.operations')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <ClipboardDocumentListIcon class="h-5 w-5" />
+                        </template>
+                        Opérations
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.analytics.marketing')"
+                        :active="route().current('tenant.analytics.marketing')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <PresentationChartLineIcon class="h-5 w-5" />
+                        </template>
+                        Marketing
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.analytics.predictive.index')"
+                        :active="route().current('tenant.analytics.predictive.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <ArrowTrendingUpIcon class="h-5 w-5" />
+                        </template>
+                        Prédictif
                     </SidebarLink>
                 </div>
 
@@ -211,29 +350,281 @@
                         Signatures
                     </SidebarLink>
                 </div>
+
+                <!-- Operations Section -->
+                <div class="mb-6">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Opérations
+                    </p>
+                    <SidebarLink
+                        :href="route('tenant.maintenance.index')"
+                        :active="route().current('tenant.maintenance.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <WrenchScrewdriverIcon class="h-5 w-5" />
+                        </template>
+                        Maintenance
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.inspections.index')"
+                        :active="route().current('tenant.inspections.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <ClipboardDocumentCheckIcon class="h-5 w-5" />
+                        </template>
+                        Inspections
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.overdue.index')"
+                        :active="route().current('tenant.overdue.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <ExclamationTriangleIcon class="h-5 w-5" />
+                        </template>
+                        Impayés
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.staff.index')"
+                        :active="route().current('tenant.staff.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <UserGroupIcon class="h-5 w-5" />
+                        </template>
+                        Personnel
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.iot.dashboard')"
+                        :active="route().current('tenant.iot.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <CpuChipIcon class="h-5 w-5" />
+                        </template>
+                        IoT & Smart Entry
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.access-control.dashboard')"
+                        :active="route().current('tenant.access-control.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <LockClosedIcon class="h-5 w-5" />
+                        </template>
+                        Contrôle d'accès
+                    </SidebarLink>
+                </div>
+
+                <!-- Reports Section -->
+                <div class="mb-6">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Rapports
+                    </p>
+                    <SidebarLink
+                        :href="route('tenant.reports.index')"
+                        :active="route().current('tenant.reports.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <DocumentChartBarIcon class="h-5 w-5" />
+                        </template>
+                        Rapports
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.reports.rent-roll')"
+                        :active="route().current('tenant.reports.rent-roll')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <TableCellsIcon class="h-5 w-5" />
+                        </template>
+                        Rent Roll
+                    </SidebarLink>
+                </div>
+
+                <!-- Marketing Section -->
+                <div class="mb-6">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Marketing
+                    </p>
+                    <SidebarLink
+                        :href="route('tenant.calculator.index')"
+                        :active="route().current('tenant.calculator.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <CalculatorIcon class="h-5 w-5" />
+                        </template>
+                        Calculateur
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.loyalty.index')"
+                        :active="route().current('tenant.loyalty.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <GiftIcon class="h-5 w-5" />
+                        </template>
+                        Fidélité
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.reviews.index')"
+                        :active="route().current('tenant.reviews.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <StarIcon class="h-5 w-5" />
+                        </template>
+                        Avis clients
+                    </SidebarLink>
+                </div>
+
+                <!-- Communication Section -->
+                <div class="mb-6">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Communication
+                    </p>
+                    <SidebarLink
+                        :href="route('tenant.notifications.index')"
+                        :active="route().current('tenant.notifications.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <BellIcon class="h-5 w-5" />
+                        </template>
+                        Notifications
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.messages.index')"
+                        :active="route().current('tenant.messages.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <EnvelopeIcon class="h-5 w-5" />
+                        </template>
+                        Messages
+                    </SidebarLink>
+                </div>
+
+                <!-- Security Section -->
+                <div class="mb-6">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Sécurité
+                    </p>
+                    <SidebarLink
+                        :href="route('tenant.access-control.dashboard')"
+                        :active="route().current('tenant.access-control.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <ShieldCheckIcon class="h-5 w-5" />
+                        </template>
+                        Contrôle d'accès
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.gdpr.index')"
+                        :active="route().current('tenant.gdpr.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <LockClosedIcon class="h-5 w-5" />
+                        </template>
+                        RGPD
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.sustainability.index')"
+                        :active="route().current('tenant.sustainability.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </template>
+                        {{ $t('sustainability.dashboard') }}
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.video-calls.index')"
+                        :active="route().current('tenant.video-calls.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
+                        </template>
+                        {{ $t('video_calls.live_agent') }}
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.valet.index')"
+                        :active="route().current('tenant.valet.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                            </svg>
+                        </template>
+                        {{ $t('valet.title') }}
+                    </SidebarLink>
+                </div>
+
+                <!-- Settings Section -->
+                <div class="mb-6">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Configuration
+                    </p>
+                    <SidebarLink
+                        :href="route('tenant.settings.index')"
+                        :active="route().current('tenant.settings.*')"
+                        :collapsed="sidebarCollapsed"
+                        data-tutorial="settings-menu"
+                    >
+                        <template #icon>
+                            <Cog6ToothIcon class="h-5 w-5" />
+                        </template>
+                        Paramètres
+                    </SidebarLink>
+                </div>
             </nav>
 
-            <!-- Collapse Button (Desktop) -->
+            <!-- Collapse Button (Desktop) - NOA Style -->
             <button
                 @click="toggleCollapse"
-                class="hidden lg:flex items-center justify-center h-10 mx-3 mb-2 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+                class="hidden lg:flex items-center justify-center h-9 mx-3 mb-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors"
             >
                 <ChevronLeftIcon v-if="!sidebarCollapsed" class="h-5 w-5" />
                 <ChevronRightIcon v-else class="h-5 w-5" />
             </button>
 
-            <!-- User Section -->
-            <div class="border-t border-white/10 p-4">
+            <!-- User Section - NOA Style -->
+            <div class="border-t border-gray-100 p-4">
                 <div class="flex items-center space-x-3">
-                    <div class="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-emerald-600 text-white font-semibold shadow-lg">
+                    <div class="flex h-10 w-10 items-center justify-center rounded-full text-white font-semibold text-sm" style="background: linear-gradient(135deg, #8fbd56 0%, #38cab3 100%);">
                         {{ $page.props.auth.user?.name?.charAt(0) || 'U' }}
                     </div>
                     <transition name="fade">
                         <div v-if="!sidebarCollapsed" class="flex-1 min-w-0">
-                            <p class="text-sm font-medium text-white truncate">
+                            <p class="text-sm font-medium text-gray-900 truncate">
                                 {{ $page.props.auth.user?.name }}
                             </p>
-                            <p class="text-xs text-gray-400 truncate">
+                            <p class="text-xs text-gray-500 truncate">
                                 {{ $page.props.auth.user?.email }}
                             </p>
                         </div>
@@ -241,14 +632,14 @@
                     <div class="relative" v-if="!sidebarCollapsed">
                         <button
                             @click="showUserMenu = !showUserMenu"
-                            class="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+                            class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
                         >
                             <EllipsisVerticalIcon class="h-5 w-5" />
                         </button>
                         <transition name="dropdown">
                             <div v-if="showUserMenu" class="absolute bottom-full right-0 mb-2 w-48 rounded-xl bg-white shadow-xl border border-gray-100 py-1 z-50">
                                 <Link
-                                    :href="route('tenant.settings')"
+                                    :href="route('tenant.settings.index')"
                                     class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                                 >
                                     <Cog6ToothIcon class="h-4 w-4 mr-3 text-gray-400" />
@@ -280,9 +671,9 @@
         </transition>
 
         <!-- Main Content -->
-        <div :class="sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-72'" class="transition-all duration-300">
-            <!-- Top Header -->
-            <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-200/50">
+        <div :class="sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-64'" class="transition-all duration-300">
+            <!-- Top Header - NOA Style -->
+            <header class="sticky top-0 z-30 bg-white border-b border-gray-200">
                 <div class="flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8">
                     <!-- Mobile Menu Button -->
                     <button
@@ -292,27 +683,41 @@
                         <Bars3Icon class="h-6 w-6" />
                     </button>
 
-                    <!-- Page Title & Breadcrumb -->
-                    <div class="flex-1 flex items-center">
+                    <!-- Search Bar - NOA Style -->
+                    <div class="hidden md:flex items-center flex-1 max-w-md">
+                        <div class="flex items-center w-full bg-gray-100 rounded-lg px-4 py-2.5">
+                            <MagnifyingGlassIcon class="h-5 w-5 text-gray-400 mr-3" />
+                            <input
+                                type="text"
+                                placeholder="Rechercher..."
+                                class="bg-transparent border-none outline-none text-sm text-gray-600 placeholder-gray-400 flex-1"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- Page Title & Breadcrumb (Mobile & alongside search on desktop) -->
+                    <div class="flex-1 flex items-center md:hidden">
                         <div>
-                            <h1 v-if="title" class="text-xl font-bold text-gray-900">
+                            <h1 v-if="title" class="text-lg font-bold text-gray-900">
                                 {{ title }}
                             </h1>
-                            <nav v-if="breadcrumbs && breadcrumbs.length" class="flex items-center space-x-2 text-sm text-gray-500 mt-0.5">
-                                <Link :href="route('tenant.dashboard')" class="hover:text-primary-600 transition-colors">
-                                    Dashboard
-                                </Link>
-                                <template v-for="(crumb, index) in breadcrumbs" :key="index">
-                                    <ChevronRightIcon class="h-4 w-4 text-gray-300" />
-                                    <span v-if="index === breadcrumbs.length - 1" class="text-gray-700 font-medium">
-                                        {{ crumb.label }}
-                                    </span>
-                                    <Link v-else :href="crumb.href" class="hover:text-primary-600 transition-colors">
-                                        {{ crumb.label }}
-                                    </Link>
-                                </template>
-                            </nav>
                         </div>
+                    </div>
+
+                    <!-- Right side breadcrumb - NOA Style -->
+                    <div class="hidden lg:flex items-center gap-2 text-sm">
+                        <Link :href="route('tenant.dashboard')" class="text-primary-400 hover:text-primary-500 transition-colors">
+                            Accueil
+                        </Link>
+                        <template v-for="(crumb, index) in breadcrumbs" :key="index">
+                            <ChevronRightIcon class="h-4 w-4 text-gray-300" />
+                            <span v-if="index === breadcrumbs.length - 1" class="text-gray-700 font-medium">
+                                {{ crumb.label }}
+                            </span>
+                            <Link v-else :href="crumb.href" class="hover:text-primary-600 transition-colors">
+                                {{ crumb.label }}
+                            </Link>
+                        </template>
                     </div>
 
                     <!-- Right Section -->
@@ -330,7 +735,7 @@
                         </button>
 
                         <!-- Quick Actions -->
-                        <div class="relative">
+                        <div class="relative" data-tutorial="quick-actions">
                             <button
                                 @click="showQuickActions = !showQuickActions"
                                 class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
@@ -356,8 +761,59 @@
                             </transition>
                         </div>
 
+                        <!-- Tutorial Help Button -->
+                        <div class="relative" data-tutorial="help-button">
+                            <button
+                                @click="showTutorialMenu = !showTutorialMenu"
+                                class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                                title="Aide & Guide"
+                            >
+                                <QuestionMarkCircleIcon class="h-5 w-5" />
+                            </button>
+                            <transition name="dropdown">
+                                <div v-if="showTutorialMenu" class="absolute right-0 mt-2 w-64 rounded-xl bg-white shadow-xl border border-gray-100 py-2 z-50">
+                                    <div class="px-4 py-2 border-b border-gray-100">
+                                        <h3 class="text-sm font-semibold text-gray-900">Aide & Tutoriel</h3>
+                                    </div>
+                                    <button
+                                        @click="startTutorial"
+                                        class="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
+                                    >
+                                        <svg class="w-5 h-5 mr-3 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                        </svg>
+                                        Lancer le guide interactif
+                                    </button>
+                                    <div class="border-t border-gray-100 my-1"></div>
+                                    <label class="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition">
+                                        <span class="text-sm text-gray-700">Afficher les guides</span>
+                                        <button
+                                            @click="toggleTutorialEnabled"
+                                            :class="isEnabled ? 'bg-primary-600' : 'bg-gray-300'"
+                                            class="relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+                                        >
+                                            <span
+                                                :class="isEnabled ? 'translate-x-4' : 'translate-x-0'"
+                                                class="pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+                                            ></span>
+                                        </button>
+                                    </label>
+                                    <button
+                                        @click="resetTutorials(); showTutorialMenu = false"
+                                        class="flex items-center w-full px-4 py-2.5 text-sm text-gray-500 hover:bg-gray-50 transition"
+                                    >
+                                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                        </svg>
+                                        Reinitialiser les guides
+                                    </button>
+                                </div>
+                            </transition>
+                        </div>
+
                         <!-- Notifications -->
-                        <div class="relative">
+                        <div class="relative" data-tutorial="notifications">
                             <button
                                 @click="showNotifications = !showNotifications"
                                 class="relative p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
@@ -467,6 +923,14 @@
                 </div>
             </div>
         </transition>
+
+        <!-- Tutorial Guide Component -->
+        <TutorialGuide
+            ref="tutorialGuideRef"
+            tour-id="main"
+            :auto-start="shouldAutoStart()"
+            :show-floating-button="false"
+        />
     </div>
 </template>
 
@@ -474,15 +938,20 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import SidebarLink from '@/Components/SidebarLink.vue'
+import TutorialGuide from '@/Components/Tutorial/TutorialGuide.vue'
+import { useTutorial } from '@/Composables/useTutorial'
+import { QuestionMarkCircleIcon } from '@heroicons/vue/24/outline'
 import {
     HomeIcon,
     BuildingOffice2Icon,
     ArchiveBoxIcon,
     UsersIcon,
     UserPlusIcon,
+    UserGroupIcon,
     DocumentTextIcon,
     ReceiptPercentIcon,
     DocumentDuplicateIcon,
+    DocumentChartBarIcon,
     CreditCardIcon,
     BellAlertIcon,
     ChatBubbleLeftRightIcon,
@@ -503,6 +972,27 @@ import {
     ExclamationTriangleIcon,
     InformationCircleIcon,
     MapIcon,
+    CalendarDaysIcon,
+    FunnelIcon,
+    MegaphoneIcon,
+    BanknotesIcon,
+    CurrencyEuroIcon,
+    ChartBarIcon,
+    ChartPieIcon,
+    ClipboardDocumentListIcon,
+    ClipboardDocumentCheckIcon,
+    PresentationChartLineIcon,
+    SparklesIcon,
+    ArrowTrendingUpIcon,
+    ShieldCheckIcon,
+    WrenchScrewdriverIcon,
+    TableCellsIcon,
+    CalculatorIcon,
+    GiftIcon,
+    StarIcon,
+    LockClosedIcon,
+    CpuChipIcon,
+    EnvelopeIcon,
 } from '@heroicons/vue/24/outline'
 
 defineProps({
@@ -516,6 +1006,22 @@ const showUserMenu = ref(false)
 const showNotifications = ref(false)
 const showQuickActions = ref(false)
 const showSearch = ref(false)
+const tutorialGuideRef = ref(null)
+const showTutorialMenu = ref(false)
+
+// Tutorial composable
+const { isEnabled, setEnabled, shouldAutoStart, resetTutorials } = useTutorial()
+
+const startTutorial = () => {
+    showTutorialMenu.value = false
+    if (tutorialGuideRef.value) {
+        tutorialGuideRef.value.startTour()
+    }
+}
+
+const toggleTutorialEnabled = () => {
+    setEnabled(!isEnabled.value)
+}
 
 const toggleCollapse = () => {
     sidebarCollapsed.value = !sidebarCollapsed.value
@@ -537,6 +1043,7 @@ const handleKeydown = (e) => {
         showNotifications.value = false
         showQuickActions.value = false
         showUserMenu.value = false
+        showTutorialMenu.value = false
     }
 }
 

@@ -9,6 +9,7 @@ const props = defineProps({
 })
 
 const currentStep = ref(1)
+const stepErrors = ref({})
 const totalSteps = 4
 
 const form = useForm({
@@ -74,15 +75,50 @@ const canProceed = computed(() => {
     }
 })
 
+const validateStep = (step) => {
+    const errors = {}
+
+    switch (step) {
+        case 1:
+            if (!form.first_name) errors.first_name = 'Le prénom est requis'
+            if (!form.last_name) errors.last_name = 'Le nom est requis'
+            if (!form.type) errors.type = 'Le type de prospect est requis'
+            break
+        case 2:
+            if (!form.email) errors.email = 'L\'email est requis'
+            else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) errors.email = 'L\'email n\'est pas valide'
+            break
+        case 3:
+            // Step 3 has no required fields
+            break
+        case 4:
+            // Step 4 is summary, no validation needed
+            break
+    }
+
+    stepErrors.value = errors
+    return Object.keys(errors).length === 0
+}
+
 const nextStep = () => {
-    if (currentStep.value < totalSteps && canProceed.value) {
-        currentStep.value++
+    if (currentStep.value < totalSteps) {
+        if (validateStep(currentStep.value)) {
+            currentStep.value++
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        } else {
+            const firstError = document.querySelector('.border-red-300, .text-red-600')
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }
     }
 }
 
 const prevStep = () => {
     if (currentStep.value > 1) {
+        stepErrors.value = {}
         currentStep.value--
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 }
 
@@ -181,7 +217,7 @@ const submit = () => {
                 <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
                     <form @submit.prevent="submit">
                         <!-- Step 1: Identité -->
-                        <div v-show="currentStep === 1" class="p-8">
+                        <div v-if="currentStep === 1" class="p-8">
                             <h2 class="text-xl font-semibold text-gray-900 mb-6">Informations d'identité</h2>
 
                             <!-- Type de lead -->
@@ -261,7 +297,7 @@ const submit = () => {
                         </div>
 
                         <!-- Step 2: Contact -->
-                        <div v-show="currentStep === 2" class="p-8">
+                        <div v-if="currentStep === 2" class="p-8">
                             <h2 class="text-xl font-semibold text-gray-900 mb-6">Coordonnées</h2>
 
                             <div class="space-y-6">
@@ -319,7 +355,7 @@ const submit = () => {
                         </div>
 
                         <!-- Step 3: Projet -->
-                        <div v-show="currentStep === 3" class="p-8">
+                        <div v-if="currentStep === 3" class="p-8">
                             <h2 class="text-xl font-semibold text-gray-900 mb-6">Détails du projet</h2>
 
                             <div class="space-y-6">
@@ -432,7 +468,7 @@ const submit = () => {
                         </div>
 
                         <!-- Step 4: Récapitulatif -->
-                        <div v-show="currentStep === 4" class="p-8">
+                        <div v-if="currentStep === 4" class="p-8">
                             <h2 class="text-xl font-semibold text-gray-900 mb-6">Récapitulatif du lead</h2>
 
                             <div class="space-y-6">

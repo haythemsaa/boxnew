@@ -29,9 +29,14 @@ class Booking extends Model
         'customer_country',
         'customer_company',
         'customer_vat_number',
+        'secondary_contact_name',
+        'secondary_contact_phone',
         'start_date',
         'end_date',
         'rental_type',
+        'duration_type',
+        'planned_duration_months',
+        'planned_end_date',
         'monthly_price',
         'deposit_amount',
         'total_amount',
@@ -42,6 +47,7 @@ class Booking extends Model
         'utm_medium',
         'utm_campaign',
         'notes',
+        'special_requests',
         'internal_notes',
         'promo_code',
         'discount_amount',
@@ -52,11 +58,23 @@ class Booking extends Model
         'user_agent',
         'contract_id',
         'converted_at',
+        // Special needs
+        'needs_24h_access',
+        'needs_climate_control',
+        'needs_electricity',
+        'needs_insurance',
+        'needs_moving_help',
+        'preferred_move_in_date',
+        'preferred_time_slot',
+        'storage_contents',
+        'estimated_value',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'planned_end_date' => 'date',
+        'preferred_move_in_date' => 'date',
         'monthly_price' => 'decimal:2',
         'deposit_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
@@ -64,6 +82,13 @@ class Booking extends Model
         'terms_accepted' => 'boolean',
         'terms_accepted_at' => 'datetime',
         'converted_at' => 'datetime',
+        'needs_24h_access' => 'boolean',
+        'needs_climate_control' => 'boolean',
+        'needs_electricity' => 'boolean',
+        'needs_insurance' => 'boolean',
+        'needs_moving_help' => 'boolean',
+        'planned_duration_months' => 'integer',
+        'deleted_at' => 'datetime',
     ];
 
     protected static function boot()
@@ -280,18 +305,30 @@ class Booking extends Model
             ]
         );
 
+        // Generate contract number - search globally including soft deleted
+        $year = date('Y');
+        $prefix = 'CTR' . $year;
+
+        $lastContract = Contract::withTrashed()
+            ->where('contract_number', 'like', $prefix . '%')
+            ->orderByRaw('CAST(SUBSTRING(contract_number, -5) AS UNSIGNED) DESC')
+            ->first();
+
+        $nextNumber = $lastContract ? ((int) substr($lastContract->contract_number, -5)) + 1 : 1;
+        $contractNumber = $prefix . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+
         // Create contract
         $contract = Contract::create([
             'tenant_id' => $this->tenant_id,
             'site_id' => $this->site_id,
             'box_id' => $this->box_id,
             'customer_id' => $customer->id,
+            'contract_number' => $contractNumber,
             'start_date' => $this->start_date,
             'end_date' => $this->end_date,
-            'monthly_rent' => $this->monthly_price,
+            'monthly_price' => $this->monthly_price,
             'deposit_amount' => $this->deposit_amount,
             'status' => 'active',
-            'notes' => "Créé depuis la réservation #{$this->booking_number}",
         ]);
 
         $this->update([

@@ -68,6 +68,7 @@ class Contract extends Model
         'auto_pay' => 'boolean',
         'key_given' => 'boolean',
         'key_returned' => 'boolean',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships

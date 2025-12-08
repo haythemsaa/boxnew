@@ -22,33 +22,20 @@ class Site extends Model
         'latitude',
         'longitude',
         'opening_hours',
-        'description',
-        'image',
-        'total_capacity',
-        'occupied_capacity',
-        'available_capacity',
         'occupation_rate',
-        'total_buildings',
-        'total_floors',
         'total_boxes',
         'phone',
         'email',
-        'status',
-        'features',
     ];
 
     protected $casts = [
         'opening_hours' => 'array',
-        'features' => 'array',
         'latitude' => 'decimal:8',
         'longitude' => 'decimal:8',
         'occupation_rate' => 'decimal:2',
-        'total_capacity' => 'integer',
-        'occupied_capacity' => 'integer',
-        'available_capacity' => 'integer',
-        'total_buildings' => 'integer',
-        'total_floors' => 'integer',
         'total_boxes' => 'integer',
+        'is_active' => 'boolean',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships

@@ -11,6 +11,7 @@ use App\Models\BookingWidget;
 use App\Models\Box;
 use App\Models\Site;
 use App\Models\Tenant;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -52,16 +53,122 @@ class BookingController extends Controller
                     'boxes' => $site->boxes->map(function ($box) {
                         return [
                             'id' => $box->id,
-                            'name' => $box->name,
-                            'code' => $box->code,
+                            'name' => $box->display_name,
+                            'number' => $box->number,
                             'volume' => $box->volume,
                             'formatted_volume' => $box->formatted_volume,
                             'dimensions' => $box->formatted_dimensions,
                             'current_price' => $box->current_price,
                             'climate_controlled' => $box->climate_controlled,
                             'has_electricity' => $box->has_electricity,
-                            'has_24_7_access' => $box->has_24_7_access,
-                            'is_ground_floor' => $box->is_ground_floor,
+                            'has_24_7_access' => $box->has_24_7_access ?? false,
+                            'is_ground_floor' => $box->ground_floor ?? false,
+                            'images' => $box->images ?? [],
+                            'photo_url' => $box->photo_url ?? null,
+                        ];
+                    }),
+                ];
+            }),
+        ]);
+    }
+
+    /**
+     * Show kiosk mode for unmanned facilities
+     */
+    public function kiosk(string $slug)
+    {
+        $settings = BookingSettings::getBySlug($slug);
+
+        if (!$settings || !$settings->is_enabled) {
+            abort(404, 'Page de réservation non trouvée');
+        }
+
+        $tenant = $settings->tenant;
+        $sites = Site::where('tenant_id', $tenant->id)
+            ->where('is_active', true)
+            ->with(['boxes' => function ($q) {
+                $q->where('status', 'available')
+                    ->orderBy('current_price');
+            }])
+            ->get();
+
+        return Inertia::render('Public/Kiosk/Index', [
+            'settings' => $settings,
+            'tenant' => $tenant->only(['id', 'name', 'slug']),
+            'sites' => $sites->map(function ($site) {
+                return [
+                    'id' => $site->id,
+                    'name' => $site->name,
+                    'address' => $site->address,
+                    'city' => $site->city,
+                    'postal_code' => $site->postal_code,
+                    'available_boxes_count' => $site->boxes->count(),
+                    'boxes' => $site->boxes->map(function ($box) {
+                        return [
+                            'id' => $box->id,
+                            'name' => $box->display_name,
+                            'number' => $box->number,
+                            'volume' => $box->volume,
+                            'formatted_volume' => $box->formatted_volume,
+                            'dimensions' => $box->formatted_dimensions,
+                            'current_price' => $box->current_price,
+                            'climate_controlled' => $box->climate_controlled,
+                            'has_electricity' => $box->has_electricity,
+                            'has_24_7_access' => $box->has_24_7_access ?? false,
+                            'is_ground_floor' => $box->ground_floor ?? false,
+                            'status' => $box->status,
+                        ];
+                    }),
+                ];
+            }),
+        ]);
+    }
+
+    /**
+     * Show optimized one-page checkout
+     */
+    public function checkout(string $slug)
+    {
+        $settings = BookingSettings::getBySlug($slug);
+
+        if (!$settings || !$settings->is_enabled) {
+            abort(404, 'Page de réservation non trouvée');
+        }
+
+        $tenant = $settings->tenant;
+        $sites = Site::where('tenant_id', $tenant->id)
+            ->where('is_active', true)
+            ->with(['boxes' => function ($q) {
+                $q->where('status', 'available')
+                    ->orderBy('current_price');
+            }])
+            ->get();
+
+        return Inertia::render('Public/Booking/Checkout', [
+            'settings' => $settings,
+            'tenant' => $tenant->only(['id', 'name', 'slug']),
+            'sites' => $sites->map(function ($site) {
+                return [
+                    'id' => $site->id,
+                    'name' => $site->name,
+                    'address' => $site->address,
+                    'city' => $site->city,
+                    'postal_code' => $site->postal_code,
+                    'available_boxes_count' => $site->boxes->count(),
+                    'boxes' => $site->boxes->map(function ($box) {
+                        return [
+                            'id' => $box->id,
+                            'name' => $box->display_name,
+                            'number' => $box->number,
+                            'volume' => $box->volume,
+                            'formatted_volume' => $box->formatted_volume,
+                            'dimensions' => $box->formatted_dimensions,
+                            'current_price' => $box->current_price,
+                            'climate_controlled' => $box->climate_controlled,
+                            'has_electricity' => $box->has_electricity,
+                            'has_24_7_access' => $box->has_24_7_access ?? false,
+                            'is_ground_floor' => $box->ground_floor ?? false,
+                            'status' => $box->status,
                         ];
                     }),
                 ];
@@ -97,8 +204,8 @@ class BookingController extends Controller
             ->map(function ($box) {
                 return [
                     'id' => $box->id,
-                    'name' => $box->name,
-                    'code' => $box->code,
+                    'name' => $box->display_name,
+                    'number' => $box->number,
                     'volume' => $box->volume,
                     'formatted_volume' => $box->formatted_volume,
                     'dimensions' => $box->formatted_dimensions,
@@ -108,11 +215,11 @@ class BookingController extends Controller
                     'current_price' => $box->current_price,
                     'climate_controlled' => $box->climate_controlled,
                     'has_electricity' => $box->has_electricity,
-                    'has_24_7_access' => $box->has_24_7_access,
+                    'has_24_7_access' => $box->has_24_7_access ?? false,
                     'has_alarm' => $box->has_alarm,
-                    'has_wifi' => $box->has_wifi,
-                    'has_shelving' => $box->has_shelving,
-                    'is_ground_floor' => $box->is_ground_floor,
+                    'has_wifi' => $box->has_wifi ?? false,
+                    'has_shelving' => $box->has_shelving ?? false,
+                    'is_ground_floor' => $box->ground_floor ?? false,
                 ];
             });
 
@@ -186,11 +293,24 @@ class BookingController extends Controller
             'customer_country' => 'nullable|string|max:2',
             'customer_company' => 'nullable|string|max:255',
             'customer_vat_number' => 'nullable|string|max:50',
+            'secondary_contact_name' => 'nullable|string|max:255',
+            'secondary_contact_phone' => 'nullable|string|max:20',
             'start_date' => 'required|date|after_or_equal:today',
             'end_date' => 'nullable|date|after:start_date',
             'rental_type' => 'nullable|in:fixed,month_to_month',
+            'duration_type' => 'nullable|in:month_to_month,fixed_term',
+            'planned_duration_months' => 'nullable|integer|min:1|max:60',
             'promo_code' => 'nullable|string',
             'notes' => 'nullable|string|max:1000',
+            'special_requests' => 'nullable|string|max:2000',
+            'needs_24h_access' => 'nullable|boolean',
+            'needs_climate_control' => 'nullable|boolean',
+            'needs_electricity' => 'nullable|boolean',
+            'needs_insurance' => 'nullable|boolean',
+            'needs_moving_help' => 'nullable|boolean',
+            'preferred_time_slot' => 'nullable|in:morning,afternoon,evening,flexible',
+            'storage_contents' => 'nullable|string|max:1000',
+            'estimated_value' => 'nullable|in:under_1000,1000_5000,5000_10000,over_10000',
             'terms_accepted' => 'required|accepted',
             'source' => 'nullable|in:website,widget,api',
             'utm_source' => 'nullable|string|max:100',
@@ -236,6 +356,13 @@ class BookingController extends Controller
 
         DB::beginTransaction();
         try {
+            // Calculate planned end date if duration specified
+            $plannedEndDate = null;
+            if ($request->duration_type === 'fixed_term' && $request->planned_duration_months) {
+                $plannedEndDate = \Carbon\Carbon::parse($request->start_date)
+                    ->addMonths($request->planned_duration_months);
+            }
+
             // Create booking
             $booking = Booking::create([
                 'tenant_id' => $request->tenant_id,
@@ -251,9 +378,14 @@ class BookingController extends Controller
                 'customer_country' => $request->customer_country ?? 'FR',
                 'customer_company' => $request->customer_company,
                 'customer_vat_number' => $request->customer_vat_number,
+                'secondary_contact_name' => $request->secondary_contact_name,
+                'secondary_contact_phone' => $request->secondary_contact_phone,
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
                 'rental_type' => $request->rental_type ?? 'month_to_month',
+                'duration_type' => $request->duration_type ?? 'month_to_month',
+                'planned_duration_months' => $request->planned_duration_months,
+                'planned_end_date' => $plannedEndDate,
                 'monthly_price' => $box->current_price - $discountAmount,
                 'deposit_amount' => $depositAmount,
                 'status' => 'pending',
@@ -265,6 +397,15 @@ class BookingController extends Controller
                 'promo_code' => $request->promo_code,
                 'discount_amount' => $discountAmount,
                 'notes' => $request->notes,
+                'special_requests' => $request->special_requests,
+                'needs_24h_access' => $request->boolean('needs_24h_access'),
+                'needs_climate_control' => $request->boolean('needs_climate_control'),
+                'needs_electricity' => $request->boolean('needs_electricity'),
+                'needs_insurance' => $request->boolean('needs_insurance'),
+                'needs_moving_help' => $request->boolean('needs_moving_help'),
+                'preferred_time_slot' => $request->preferred_time_slot,
+                'storage_contents' => $request->storage_contents,
+                'estimated_value' => $request->estimated_value,
                 'terms_accepted' => true,
                 'terms_accepted_at' => now(),
                 'ip_address' => $request->ip(),
@@ -272,21 +413,72 @@ class BookingController extends Controller
             ]);
 
             // Create status history
+            $initialStatus = 'pending';
+            $statusNotes = 'Réservation créée depuis ' . ($request->source ?? 'website');
+
+            // If paid online, update status and create payment record
+            if ($request->payment_intent_id && $request->amount_paid > 0) {
+                $booking->update([
+                    'payment_method' => 'card',
+                    'payment_intent_id' => $request->payment_intent_id,
+                    'amount_paid' => $request->amount_paid,
+                    'paid_at' => now(),
+                ]);
+
+                // Create payment record
+                BookingPayment::create([
+                    'booking_id' => $booking->id,
+                    'tenant_id' => $request->tenant_id,
+                    'amount' => $request->amount_paid,
+                    'payment_method' => 'card',
+                    'stripe_payment_intent_id' => $request->payment_intent_id,
+                    'status' => 'completed',
+                    'paid_at' => now(),
+                ]);
+
+                $initialStatus = 'confirmed';
+                $statusNotes = 'Réservation payée en ligne - ' . number_format($request->amount_paid, 2) . ' €';
+
+                // Auto-confirm since paid
+                $booking->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+            } else {
+                // Mark payment method as at_signing
+                $booking->update([
+                    'payment_method' => $request->payment_method ?? 'at_signing',
+                ]);
+            }
+
             $booking->statusHistory()->create([
                 'from_status' => null,
-                'to_status' => 'pending',
-                'notes' => 'Réservation créée depuis ' . ($request->source ?? 'website'),
+                'to_status' => $initialStatus,
+                'notes' => $statusNotes,
             ]);
 
             // Mark box as reserved
             $box->update(['status' => 'reserved']);
 
-            // Auto-confirm if enabled
-            if ($settings && $settings->auto_confirm) {
+            // Auto-confirm if enabled and not already confirmed
+            if ($settings && $settings->auto_confirm && $booking->status !== 'confirmed') {
                 $booking->confirm(null, 'Confirmation automatique');
             }
 
             DB::commit();
+
+            // Send notifications after successful commit
+            try {
+                $notificationService = app(NotificationService::class);
+
+                // Notify tenant users about new booking (in-app + email)
+                $notificationService->notifyNewBooking($booking);
+
+                // Send confirmation email to customer
+                $notificationService->sendBookingConfirmationToCustomer($booking);
+            } catch (\Exception $e) {
+                // Log error but don't fail the booking creation
+                \Illuminate\Support\Facades\Log::error('Failed to send booking notifications: ' . $e->getMessage(), [
+                    'booking_id' => $booking->id,
+                ]);
+            }
 
             return response()->json([
                 'success' => true,
@@ -294,13 +486,17 @@ class BookingController extends Controller
                     'id' => $booking->id,
                     'uuid' => $booking->uuid,
                     'booking_number' => $booking->booking_number,
-                    'status' => $booking->status,
-                    'status_label' => $booking->status_label,
+                    'status' => $booking->fresh()->status,
+                    'status_label' => $booking->fresh()->status_label,
                     'monthly_price' => $booking->monthly_price,
                     'deposit_amount' => $booking->deposit_amount,
                     'discount_amount' => $booking->discount_amount,
+                    'amount_paid' => $request->amount_paid ?? 0,
+                    'payment_method' => $booking->payment_method,
                 ],
-                'message' => 'Votre réservation a été enregistrée avec succès !',
+                'message' => $request->payment_intent_id
+                    ? 'Votre réservation a été payée et confirmée !'
+                    : 'Votre réservation a été enregistrée avec succès !',
             ]);
 
         } catch (\Exception $e) {
@@ -336,6 +532,97 @@ class BookingController extends Controller
                 'status_color' => $booking->status_color,
                 'created_at' => $booking->created_at->format('d/m/Y H:i'),
             ],
+        ]);
+    }
+
+    /**
+     * Create Stripe PaymentIntent for online payment
+     */
+    public function createPaymentIntent(Request $request)
+    {
+        $request->validate([
+            'tenant_id' => 'required|exists:tenants,id',
+            'amount' => 'required|numeric|min:1',
+            'customer_email' => 'required|email',
+            'customer_name' => 'required|string',
+        ]);
+
+        $settings = BookingSettings::getForTenant($request->tenant_id);
+
+        if (!$settings || !$settings->stripe_secret_key) {
+            return response()->json([
+                'error' => 'Payment not configured',
+            ], 400);
+        }
+
+        try {
+            // Set Stripe API key
+            \Stripe\Stripe::setApiKey($settings->stripe_secret_key);
+
+            // Create PaymentIntent
+            $paymentIntent = \Stripe\PaymentIntent::create([
+                'amount' => (int) ($request->amount * 100), // Amount in cents
+                'currency' => 'eur',
+                'description' => 'Reservation de box - ' . $settings->company_name,
+                'receipt_email' => $request->customer_email,
+                'metadata' => [
+                    'tenant_id' => $request->tenant_id,
+                    'customer_name' => $request->customer_name,
+                    'customer_email' => $request->customer_email,
+                ],
+            ]);
+
+            return response()->json([
+                'client_secret' => $paymentIntent->client_secret,
+                'payment_intent_id' => $paymentIntent->id,
+            ]);
+
+        } catch (\Stripe\Exception\ApiErrorException $e) {
+            \Log::error('Stripe PaymentIntent creation failed: ' . $e->getMessage());
+            return response()->json([
+                'error' => 'Erreur lors de la création du paiement',
+            ], 500);
+        }
+    }
+
+    /**
+     * Check availability for a specific box on a given date
+     */
+    public function checkAvailability(Request $request)
+    {
+        $request->validate([
+            'box_id' => 'required|exists:boxes,id',
+            'start_date' => 'required|date',
+            'tenant_id' => 'required|exists:tenants,id',
+        ]);
+
+        $box = Box::find($request->box_id);
+
+        if (!$box) {
+            return response()->json(['available' => false]);
+        }
+
+        // Check if box is currently available
+        if ($box->status !== 'available') {
+            return response()->json(['available' => false]);
+        }
+
+        // Check for conflicting bookings at the given start date
+        $conflictingBooking = Booking::where('box_id', $box->id)
+            ->whereIn('status', ['pending', 'confirmed', 'active'])
+            ->where(function ($query) use ($request) {
+                $query->where('start_date', '<=', $request->start_date)
+                    ->where(function ($q) use ($request) {
+                        $q->whereNull('end_date')
+                            ->orWhere('end_date', '>=', $request->start_date);
+                    });
+            })
+            ->exists();
+
+        return response()->json([
+            'available' => !$conflictingBooking,
+            'box_id' => $box->id,
+            'date' => $request->start_date,
         ]);
     }
 
@@ -380,7 +667,7 @@ class BookingController extends Controller
                     'boxes' => $site->boxes->map(function ($box) {
                         return [
                             'id' => $box->id,
-                            'name' => $box->name,
+                            'name' => $box->display_name,
                             'volume' => $box->volume,
                             'current_price' => $box->current_price,
                         ];

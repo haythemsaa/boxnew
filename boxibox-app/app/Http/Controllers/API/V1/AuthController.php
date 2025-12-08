@@ -10,10 +10,37 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 
+/**
+ * @tags Authentication
+ */
 class AuthController extends Controller
 {
     /**
-     * Register a new user.
+     * Register a new user
+     *
+     * Creates a new user account and returns an API token.
+     *
+     * @unauthenticated
+     *
+     * @bodyParam name string required The user's full name. Example: John Doe
+     * @bodyParam email string required The user's email address. Example: john@example.com
+     * @bodyParam password string required The password (min 8 characters). Example: password123
+     * @bodyParam password_confirmation string required Password confirmation. Example: password123
+     *
+     * @response 201 {
+     *   "message": "User registered successfully",
+     *   "user": {
+     *     "id": 1,
+     *     "name": "John Doe",
+     *     "email": "john@example.com",
+     *     "status": "active"
+     *   },
+     *   "token": "1|abc123..."
+     * }
+     * @response 422 {
+     *   "message": "The email has already been taken.",
+     *   "errors": {"email": ["The email has already been taken."]}
+     * }
      */
     public function register(Request $request): JsonResponse
     {
@@ -49,7 +76,31 @@ class AuthController extends Controller
     }
 
     /**
-     * Login user and create token.
+     * Login user
+     *
+     * Authenticates a user and returns an API token for subsequent requests.
+     *
+     * @unauthenticated
+     *
+     * @bodyParam email string required The user's email address. Example: john@example.com
+     * @bodyParam password string required The user's password. Example: password123
+     *
+     * @response 200 {
+     *   "message": "Login successful",
+     *   "user": {
+     *     "id": 1,
+     *     "tenant_id": 1,
+     *     "name": "John Doe",
+     *     "email": "john@example.com",
+     *     "status": "active",
+     *     "roles": ["admin"]
+     *   },
+     *   "token": "1|abc123..."
+     * }
+     * @response 422 {
+     *   "message": "The provided credentials are incorrect.",
+     *   "errors": {"email": ["The provided credentials are incorrect."]}
+     * }
      */
     public function login(Request $request): JsonResponse
     {
@@ -92,7 +143,13 @@ class AuthController extends Controller
     }
 
     /**
-     * Logout user (revoke token).
+     * Logout user
+     *
+     * Revokes the current API token, effectively logging out the user.
+     *
+     * @response 200 {
+     *   "message": "Logout successful"
+     * }
      */
     public function logout(Request $request): JsonResponse
     {
@@ -105,7 +162,23 @@ class AuthController extends Controller
     }
 
     /**
-     * Get authenticated user.
+     * Get authenticated user
+     *
+     * Returns the currently authenticated user's information including roles and permissions.
+     *
+     * @response 200 {
+     *   "user": {
+     *     "id": 1,
+     *     "tenant_id": 1,
+     *     "name": "John Doe",
+     *     "email": "john@example.com",
+     *     "phone": "+33612345678",
+     *     "avatar": null,
+     *     "status": "active",
+     *     "roles": ["admin"],
+     *     "permissions": ["view-sites", "manage-boxes"]
+     *   }
+     * }
      */
     public function user(Request $request): JsonResponse
     {

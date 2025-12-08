@@ -15,21 +15,23 @@ class Notification extends Model
         'message',
         'channels',
         'data',
-        'is_sent',
-        'sent_at',
         'scheduled_for',
         'is_read',
         'read_at',
+        'priority',
+        'related_type',
+        'related_id',
+        'alert_key',
     ];
 
     protected $casts = [
         'channels' => 'array',
         'data' => 'array',
-        'is_sent' => 'boolean',
         'is_read' => 'boolean',
-        'sent_at' => 'datetime',
         'scheduled_for' => 'datetime',
         'read_at' => 'datetime',
+        'email_sent' => 'boolean',
+        'email_sent_at' => 'datetime',
     ];
 
     // Relationships

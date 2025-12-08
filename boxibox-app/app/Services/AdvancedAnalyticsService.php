@@ -100,7 +100,7 @@ class AdvancedAnalyticsService
             ->when($siteId, fn($q) => $q->where('site_id', $siteId))
             ->get();
 
-        $mrr = $activeContracts->sum('monthly_amount');
+        $mrr = $activeContracts->sum('monthly_price');
         $arr = $mrr * 12;
 
         // Invoices
@@ -109,9 +109,9 @@ class AdvancedAnalyticsService
             ->when($siteId, fn($q) => $q->whereHas('contract', fn($q2) => $q2->where('site_id', $siteId)))
             ->get();
 
-        $totalRevenue = $invoices->where('status', 'paid')->sum('total_amount');
-        $pendingRevenue = $invoices->where('status', 'pending')->sum('total_amount');
-        $overdueRevenue = $invoices->where('status', 'overdue')->sum('total_amount');
+        $totalRevenue = $invoices->where('status', 'paid')->sum('total');
+        $pendingRevenue = $invoices->where('status', 'pending')->sum('total');
+        $overdueRevenue = $invoices->where('status', 'overdue')->sum('total');
 
         // Revenue Per Available Foot/Unit (RevPAF/RevPAU)
         $totalBoxes = Box::where('tenant_id', $tenantId)
@@ -120,7 +120,8 @@ class AdvancedAnalyticsService
 
         $totalSquareMeters = Box::where('tenant_id', $tenantId)
             ->when($siteId, fn($q) => $q->where('site_id', $siteId))
-            ->sum('square_meters');
+            ->selectRaw('SUM(length * width) as total')
+            ->value('total') ?? 0;
 
         $revPAU = $totalBoxes > 0 ? $mrr / $totalBoxes : 0;
         $revPAF = $totalSquareMeters > 0 ? $mrr / $totalSquareMeters : 0;
@@ -133,7 +134,7 @@ class AdvancedAnalyticsService
         $byType = $invoices->where('status', 'paid')->groupBy(function ($invoice) {
             // Simplified - in production would check invoice items
             return 'rent'; // or 'products', 'services', 'penalties'
-        })->map->sum('total_amount');
+        })->map->sum('total');
 
         // 12-month revenue trend
         $revenueTrend = $this->getRevenueTrend($tenantId, $siteId, 12);
@@ -195,7 +196,7 @@ class AdvancedAnalyticsService
         // LTV (Lifetime Value)
         $avgContractValue = Contract::where('tenant_id', $tenantId)
             ->where('status', 'active')
-            ->avg('monthly_amount');
+            ->avg('monthly_price');
 
         $avgContractDuration = 12; // Simplified - could calculate from historical data
         $ltv = $avgContractValue * $avgContractDuration;
@@ -315,7 +316,7 @@ class AdvancedAnalyticsService
                 ->where('status', 'paid')
                 ->whereBetween('created_at', [$monthStart, $monthEnd])
                 ->when($siteId, fn($q) => $q->whereHas('contract', fn($q2) => $q2->where('site_id', $siteId)))
-                ->sum('total_amount');
+                ->sum('total');
 
             $trend[] = [
                 'month' => $date->format('Y-m'),

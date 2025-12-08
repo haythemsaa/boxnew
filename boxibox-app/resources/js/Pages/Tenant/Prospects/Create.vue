@@ -61,7 +61,7 @@
                 <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
                     <form @submit.prevent="submit">
                         <!-- Step 1: Type & Identité -->
-                        <div v-show="currentStep === 1" class="p-8">
+                        <div v-if="currentStep === 1" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-rose-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,7 +180,7 @@
                         </div>
 
                         <!-- Step 2: Contact -->
-                        <div v-show="currentStep === 2" class="p-8">
+                        <div v-if="currentStep === 2" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-pink-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,7 +272,7 @@
                         </div>
 
                         <!-- Step 3: Projet -->
-                        <div v-show="currentStep === 3" class="p-8">
+                        <div v-if="currentStep === 3" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -396,7 +396,7 @@
                         </div>
 
                         <!-- Step 4: Récapitulatif -->
-                        <div v-show="currentStep === 4" class="p-8">
+                        <div v-if="currentStep === 4" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -547,6 +547,7 @@ import { useForm, Link } from '@inertiajs/vue3'
 import TenantLayout from '@/Layouts/TenantLayout.vue'
 
 const currentStep = ref(1)
+const stepErrors = ref({})
 
 const steps = [
     { number: 1, title: 'Identité' },
@@ -621,14 +622,57 @@ const selectedSourceLabel = computed(() => {
     return source ? source.label : form.source
 })
 
+const validateStep = (step) => {
+    stepErrors.value = {}
+
+    if (step === 1) {
+        if (!form.first_name) {
+            stepErrors.value.first_name = 'Le prénom est requis'
+        }
+        if (!form.last_name) {
+            stepErrors.value.last_name = 'Le nom est requis'
+        }
+        if (form.type === 'company' && !form.company_name) {
+            stepErrors.value.company_name = 'Le nom de l\'entreprise est requis'
+        }
+    }
+
+    if (step === 2) {
+        if (!form.email) {
+            stepErrors.value.email = 'L\'email est requis'
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+            stepErrors.value.email = 'L\'email n\'est pas valide'
+        }
+    }
+
+    if (step === 3) {
+        if (!form.source) {
+            stepErrors.value.source = 'La source est requise'
+        }
+    }
+
+    return Object.keys(stepErrors.value).length === 0
+}
+
 const nextStep = () => {
-    if (currentStep.value < 4 && canProceed.value) {
-        currentStep.value++
+    if (currentStep.value < 4) {
+        if (validateStep(currentStep.value)) {
+            currentStep.value++
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        } else {
+            const firstErrorField = Object.keys(stepErrors.value)[0]
+            const errorElement = document.querySelector(`[name="${firstErrorField}"], #${firstErrorField}`)
+            if (errorElement) {
+                errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                errorElement.focus()
+            }
+        }
     }
 }
 
 const prevStep = () => {
     if (currentStep.value > 1) {
+        stepErrors.value = {}
         currentStep.value--
     }
 }

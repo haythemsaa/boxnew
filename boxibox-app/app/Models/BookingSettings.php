@@ -29,6 +29,9 @@ class BookingSettings extends Model
         'require_id_verification',
         'allow_promo_codes',
         'available_payment_methods',
+        'stripe_publishable_key',
+        'stripe_secret_key',
+        'online_payment_enabled',
         'business_hours',
         'contact_email',
         'contact_phone',
@@ -44,9 +47,15 @@ class BookingSettings extends Model
         'auto_confirm' => 'boolean',
         'require_id_verification' => 'boolean',
         'allow_promo_codes' => 'boolean',
+        'online_payment_enabled' => 'boolean',
         'available_payment_methods' => 'array',
         'business_hours' => 'array',
         'meta_data' => 'array',
+    ];
+
+    // Hide sensitive data from JSON serialization
+    protected $hidden = [
+        'stripe_secret_key',
     ];
 
     // Relationships

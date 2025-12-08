@@ -28,6 +28,7 @@ class BookingApiKey extends Model
         'ip_whitelist' => 'array',
         'is_active' => 'boolean',
         'last_used_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     protected $hidden = [

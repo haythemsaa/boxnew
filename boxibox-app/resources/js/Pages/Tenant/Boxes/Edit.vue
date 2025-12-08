@@ -26,6 +26,7 @@ const props = defineProps({
 })
 
 const currentStep = ref(1)
+const stepErrors = ref({})
 const steps = [
     { number: 1, title: 'Informations', icon: CubeIcon },
     { number: 2, title: 'Dimensions', icon: Square3Stack3DIcon },
@@ -103,12 +104,63 @@ const formatCurrency = (amount) => {
     }).format(amount || 0)
 }
 
+const validateStep = (step) => {
+    stepErrors.value = {}
+
+    if (step === 1) {
+        if (!form.name) {
+            stepErrors.value.name = 'Le nom du box est requis'
+        }
+        if (!form.code) {
+            stepErrors.value.code = 'Le code du box est requis'
+        }
+        if (!form.site_id) {
+            stepErrors.value.site_id = 'Le site est requis'
+        }
+        if (!form.status) {
+            stepErrors.value.status = 'Le statut est requis'
+        }
+    }
+
+    if (step === 2) {
+        if (!form.length || form.length <= 0) {
+            stepErrors.value.length = 'La longueur doit être supérieure à 0'
+        }
+        if (!form.width || form.width <= 0) {
+            stepErrors.value.width = 'La largeur doit être supérieure à 0'
+        }
+        if (!form.height || form.height <= 0) {
+            stepErrors.value.height = 'La hauteur doit être supérieure à 0'
+        }
+        if (!form.base_price || form.base_price <= 0) {
+            stepErrors.value.base_price = 'Le prix de base doit être supérieur à 0'
+        }
+    }
+
+    return Object.keys(stepErrors.value).length === 0
+}
+
 const nextStep = () => {
-    if (currentStep.value < steps.length) currentStep.value++
+    if (currentStep.value < steps.length) {
+        if (validateStep(currentStep.value)) {
+            currentStep.value++
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        } else {
+            const firstErrorField = Object.keys(stepErrors.value)[0]
+            const errorElement = document.querySelector(`[name="${firstErrorField}"], #${firstErrorField}`)
+            if (errorElement) {
+                errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                errorElement.focus()
+            }
+        }
+    }
 }
 
 const prevStep = () => {
-    if (currentStep.value > 1) currentStep.value--
+    if (currentStep.value > 1) {
+        stepErrors.value = {}
+        currentStep.value--
+    }
 }
 
 const submit = () => {
@@ -177,7 +229,7 @@ const submit = () => {
 
                 <form @submit.prevent="submit">
                     <!-- Step 1: Informations de base -->
-                    <div v-show="currentStep === 1" class="space-y-6 animate-fade-in">
+                    <div v-if="currentStep === 1" class="space-y-6 animate-fade-in">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                                 <CubeIcon class="w-5 h-5 text-amber-600" />
@@ -305,7 +357,7 @@ const submit = () => {
                     </div>
 
                     <!-- Step 2: Dimensions & Prix -->
-                    <div v-show="currentStep === 2" class="space-y-6 animate-fade-in">
+                    <div v-if="currentStep === 2" class="space-y-6 animate-fade-in">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                                 <Square3Stack3DIcon class="w-5 h-5 text-amber-600" />
@@ -439,7 +491,7 @@ const submit = () => {
                     </div>
 
                     <!-- Step 3: Équipements -->
-                    <div v-show="currentStep === 3" class="space-y-6 animate-fade-in">
+                    <div v-if="currentStep === 3" class="space-y-6 animate-fade-in">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                                 <Cog6ToothIcon class="w-5 h-5 text-amber-600" />

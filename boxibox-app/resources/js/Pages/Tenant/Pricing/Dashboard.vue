@@ -1,7 +1,9 @@
 <template>
-    <AppLayout title="Dynamic Pricing Dashboard">
-        <div class="py-12">
-            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+    <Head :title="$t('pricing.dashboard')" />
+
+    <TenantLayout>
+        <div class="py-6">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Header -->
                 <div class="mb-8">
                     <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Dynamic Pricing Dashboard</h1>
@@ -141,14 +143,15 @@
                 </div>
             </div>
         </div>
-    </AppLayout>
+    </TenantLayout>
 </template>
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
+import { Head } from '@inertiajs/vue3';
 import { Chart, registerables } from 'chart.js';
 import { router } from '@inertiajs/vue3';
-import AppLayout from '@/Layouts/AppLayout.vue';
+import TenantLayout from '@/Layouts/TenantLayout.vue';
 
 Chart.register(...registerables);
 

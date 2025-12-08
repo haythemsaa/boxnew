@@ -45,6 +45,7 @@ class FloorPlan extends Model
         'grid_size' => 'integer',
         'total_boxes_on_plan' => 'integer',
         'elements' => 'array',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships

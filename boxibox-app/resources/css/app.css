@@ -13,30 +13,45 @@
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
         'Segoe UI Symbol', 'Noto Color Emoji';
 
-    /* Modern Blue Primary */
-    --color-primary-50: #eff6ff;
-    --color-primary-100: #dbeafe;
-    --color-primary-200: #bfdbfe;
-    --color-primary-300: #93c5fd;
-    --color-primary-400: #60a5fa;
-    --color-primary-500: #3b82f6;
-    --color-primary-600: #2563eb;
-    --color-primary-700: #1d4ed8;
-    --color-primary-800: #1e40af;
-    --color-primary-900: #1e3a8a;
-    --color-primary-950: #172554;
+    /* NOA Theme - Green Primary #8FBD56 */
+    --color-primary-50: #f4f9ed;
+    --color-primary-100: #e6f2d7;
+    --color-primary-200: #cee6b3;
+    --color-primary-300: #afd484;
+    --color-primary-400: #8fbd56;
+    --color-primary-500: #7ba844;
+    --color-primary-600: #5f8635;
+    --color-primary-700: #4a682c;
+    --color-primary-800: #3d5427;
+    --color-primary-900: #354724;
+    --color-primary-950: #1a2710;
 
-    /* Accent colors */
-    --color-accent-50: #f0fdfa;
+    /* NOA Accent - Teal/Turquoise */
+    --color-accent-50: #effefa;
+    --color-accent-100: #c8fff0;
+    --color-accent-200: #91fee2;
+    --color-accent-300: #5cd3b9;
+    --color-accent-400: #38cab3;
     --color-accent-500: #14b8a6;
     --color-accent-600: #0d9488;
+    --color-accent-700: #0f766e;
+    --color-accent-800: #115e59;
+    --color-accent-900: #134e4a;
 
-    /* Gradient backgrounds */
-    --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    --gradient-success: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-    --gradient-warning: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-    --gradient-info: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-    --gradient-dark: linear-gradient(135deg, #232526 0%, #414345 100%);
+    /* NOA Secondary colors */
+    --color-noa-pink: #ff6b9d;
+    --color-noa-orange: #ffa726;
+    --color-noa-purple: #ab47bc;
+    --color-noa-cyan: #26c6da;
+    --color-noa-dark: #2c2f3e;
+
+    /* Gradient backgrounds - NOA style */
+    --gradient-primary: linear-gradient(135deg, #8fbd56 0%, #5cd3b9 100%);
+    --gradient-success: linear-gradient(135deg, #8fbd56 0%, #38cab3 100%);
+    --gradient-warning: linear-gradient(135deg, #ffa726 0%, #ffcc02 100%);
+    --gradient-info: linear-gradient(135deg, #26c6da 0%, #00bcd4 100%);
+    --gradient-danger: linear-gradient(135deg, #ff6b9d 0%, #ff5252 100%);
+    --gradient-dark: linear-gradient(135deg, #2c2f3e 0%, #1a1c24 100%);
 }
 
 /* Base styles */
@@ -220,33 +235,370 @@ body {
     @apply bg-white rounded-xl shadow-lg border border-gray-100;
 }
 
-/* Button styles */
-.btn {
-    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2;
-}
+/* ============================================
+   BUTTON STYLES - Modern & Professional
+   ============================================ */
 
-.btn-primary {
-    @apply bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500 shadow-sm hover:shadow-md;
-}
-
-.btn-secondary {
-    @apply bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500;
-}
-
-.btn-success {
-    @apply bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-500 shadow-sm hover:shadow-md;
-}
-
-.btn-danger {
-    @apply bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm hover:shadow-md;
-}
-
-.btn-outline {
-    @apply border-2 border-primary-600 text-primary-600 hover:bg-primary-50 focus:ring-primary-500;
-}
-
+/* Base button styles - Applied to ALL button variants */
+.btn,
+.btn-primary,
+.btn-secondary,
+.btn-success,
+.btn-danger,
+.btn-outline,
 .btn-ghost {
-    @apply text-gray-600 hover:text-gray-900 hover:bg-gray-100 focus:ring-gray-500;
+    @apply inline-flex items-center justify-center
+           px-5 py-2.5
+           text-sm font-semibold
+           rounded-xl
+           transition-all duration-300 ease-out
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+    letter-spacing: 0.02em;
+    text-decoration: none;
+}
+
+/* PRIMARY BUTTON - NOA Green Gradient */
+.btn-primary {
+    @apply text-white relative overflow-hidden cursor-pointer;
+    background: linear-gradient(135deg, #8fbd56 0%, #7ba844 50%, #5f8635 100%);
+    box-shadow:
+        0 4px 15px -3px rgba(143, 189, 86, 0.5),
+        0 2px 8px -2px rgba(143, 189, 86, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(143, 189, 86, 0.3);
+}
+
+.btn-primary::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.3) 50%,
+        transparent 100%
+    );
+    transition: left 0.6s ease;
+}
+
+.btn-primary:hover {
+    background: linear-gradient(135deg, #afd484 0%, #8fbd56 50%, #7ba844 100%);
+    box-shadow:
+        0 8px 25px -5px rgba(143, 189, 86, 0.6),
+        0 4px 12px -3px rgba(143, 189, 86, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+.btn-primary:hover::before {
+    left: 100%;
+}
+
+.btn-primary:active {
+    transform: translateY(-1px);
+    box-shadow:
+        0 4px 12px -3px rgba(143, 189, 86, 0.5),
+        inset 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.btn-primary:focus {
+    @apply ring-green-400 ring-offset-2;
+}
+
+/* Icon animation inside buttons */
+.btn-primary svg,
+.btn-secondary svg,
+.btn-success svg,
+.btn-danger svg,
+.btn-outline svg {
+    @apply w-4 h-4 mr-2 transition-all duration-300;
+}
+
+.btn-primary:hover svg {
+    transform: translateX(3px) scale(1.1);
+}
+
+/* SECONDARY BUTTON - Clean White */
+.btn-secondary {
+    @apply bg-white text-gray-700 cursor-pointer;
+    border: 1px solid #e5e7eb;
+    box-shadow:
+        0 1px 3px rgba(0, 0, 0, 0.08),
+        inset 0 1px 0 rgba(255, 255, 255, 1);
+}
+
+.btn-secondary:hover {
+    @apply bg-gray-50 text-gray-900;
+    border-color: #d1d5db;
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 1);
+    transform: translateY(-2px);
+}
+
+.btn-secondary:active {
+    transform: translateY(0);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+.btn-secondary:focus {
+    @apply ring-gray-400;
+}
+
+/* SUCCESS BUTTON - Gradient Green */
+.btn-success {
+    @apply text-white relative overflow-hidden cursor-pointer;
+    background: linear-gradient(135deg, #34d399 0%, #22c55e 25%, #16a34a 50%, #15803d 100%);
+    box-shadow:
+        0 4px 15px -3px rgba(34, 197, 94, 0.5),
+        0 2px 8px -2px rgba(34, 197, 94, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.btn-success:hover {
+    background: linear-gradient(135deg, #4ade80 0%, #34d399 25%, #22c55e 50%, #16a34a 100%);
+    box-shadow:
+        0 8px 25px -5px rgba(34, 197, 94, 0.6),
+        0 4px 12px -3px rgba(34, 197, 94, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transform: translateY(-3px);
+}
+
+.btn-success:active {
+    transform: translateY(-1px);
+}
+
+.btn-success:focus {
+    @apply ring-emerald-400;
+}
+
+.btn-success:hover svg {
+    transform: translateX(3px) scale(1.1);
+}
+
+/* DANGER BUTTON - Gradient Red */
+.btn-danger {
+    @apply text-white relative overflow-hidden cursor-pointer;
+    background: linear-gradient(135deg, #fca5a5 0%, #f87171 25%, #ef4444 50%, #dc2626 100%);
+    box-shadow:
+        0 4px 15px -3px rgba(239, 68, 68, 0.5),
+        0 2px 8px -2px rgba(239, 68, 68, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #fecaca 0%, #fca5a5 25%, #f87171 50%, #ef4444 100%);
+    box-shadow:
+        0 8px 25px -5px rgba(239, 68, 68, 0.6),
+        0 4px 12px -3px rgba(239, 68, 68, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transform: translateY(-3px);
+}
+
+.btn-danger:active {
+    transform: translateY(-1px);
+}
+
+.btn-danger:focus {
+    @apply ring-red-400;
+}
+
+.btn-danger:hover svg {
+    transform: scale(1.15);
+}
+
+/* OUTLINE BUTTON - NOA Green bordered */
+.btn-outline {
+    @apply bg-transparent cursor-pointer relative overflow-hidden;
+    color: #8fbd56;
+    border: 2px solid #8fbd56;
+    box-shadow: 0 2px 4px rgba(143, 189, 86, 0.1);
+}
+
+.btn-outline::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 0;
+    height: 100%;
+    background: linear-gradient(135deg, #8fbd56 0%, #7ba844 100%);
+    transition: width 0.3s ease;
+    z-index: -1;
+}
+
+.btn-outline:hover {
+    @apply text-white;
+    border-color: #7ba844;
+    box-shadow: 0 6px 20px -5px rgba(143, 189, 86, 0.5);
+    transform: translateY(-2px);
+}
+
+.btn-outline:hover::before {
+    width: 100%;
+}
+
+.btn-outline:active {
+    transform: translateY(0);
+}
+
+.btn-outline:focus {
+    @apply ring-green-400;
+}
+
+/* GHOST BUTTON - Minimal style */
+.btn-ghost {
+    @apply text-gray-600 bg-transparent cursor-pointer;
+    border: 1px solid transparent;
+}
+
+.btn-ghost:hover {
+    @apply text-gray-900 bg-gray-100;
+    transform: translateY(-1px);
+}
+
+.btn-ghost:active {
+    transform: translateY(0);
+    @apply bg-gray-200;
+}
+
+.btn-ghost:focus {
+    @apply ring-gray-400;
+}
+
+/* WARNING BUTTON - Gradient Orange */
+.btn-warning {
+    @apply inline-flex items-center justify-center
+           px-5 py-2.5 text-sm font-semibold rounded-xl
+           text-white relative overflow-hidden cursor-pointer
+           transition-all duration-300 ease-out
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
+    background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 25%, #d97706 50%, #b45309 100%);
+    box-shadow:
+        0 4px 15px -3px rgba(245, 158, 11, 0.5),
+        0 2px 8px -2px rgba(245, 158, 11, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 25%, #f59e0b 50%, #d97706 100%);
+    box-shadow: 0 8px 25px -5px rgba(245, 158, 11, 0.6);
+    transform: translateY(-3px);
+}
+
+.btn-warning:focus {
+    @apply ring-amber-400;
+}
+
+/* INFO BUTTON - Gradient Cyan */
+.btn-info {
+    @apply inline-flex items-center justify-center
+           px-5 py-2.5 text-sm font-semibold rounded-xl
+           text-white relative overflow-hidden cursor-pointer
+           transition-all duration-300 ease-out
+           focus:outline-none focus:ring-2 focus:ring-offset-2;
+    background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 25%, #0891b2 50%, #0e7490 100%);
+    box-shadow:
+        0 4px 15px -3px rgba(6, 182, 212, 0.5),
+        0 2px 8px -2px rgba(6, 182, 212, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.btn-info:hover {
+    background: linear-gradient(135deg, #67e8f9 0%, #22d3ee 25%, #06b6d4 50%, #0891b2 100%);
+    box-shadow: 0 8px 25px -5px rgba(6, 182, 212, 0.6);
+    transform: translateY(-3px);
+}
+
+.btn-info:focus {
+    @apply ring-cyan-400;
+}
+
+/* Button Sizes */
+.btn-xs {
+    @apply px-2.5 py-1 text-xs rounded-lg;
+}
+
+.btn-sm {
+    @apply px-3.5 py-1.5 text-xs rounded-lg;
+}
+
+.btn-lg {
+    @apply px-8 py-3.5 text-base rounded-2xl;
+}
+
+.btn-xl {
+    @apply px-10 py-4 text-lg rounded-2xl;
+}
+
+/* Button with icon spacing */
+.btn-primary > svg:first-child,
+.btn-secondary > svg:first-child,
+.btn-success > svg:first-child,
+.btn-danger > svg:first-child,
+.btn-outline > svg:first-child,
+.btn-warning > svg:first-child,
+.btn-info > svg:first-child {
+    @apply -ml-1 mr-2;
+}
+
+.btn-primary > svg:last-child:not(:first-child),
+.btn-secondary > svg:last-child:not(:first-child),
+.btn-success > svg:last-child:not(:first-child),
+.btn-danger > svg:last-child:not(:first-child) {
+    @apply ml-2 -mr-1;
+}
+
+/* Icon-only button */
+.btn-icon {
+    @apply p-2.5 rounded-xl;
+}
+
+.btn-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin: 0;
+}
+
+/* Loading state */
+.btn-loading {
+    @apply pointer-events-none relative;
+}
+
+.btn-loading::after {
+    content: '';
+    @apply absolute w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin;
+}
+
+/* Full width button */
+.btn-block {
+    @apply w-full justify-center;
+}
+
+/* Button group */
+.btn-group {
+    @apply inline-flex;
+}
+
+.btn-group > .btn-primary,
+.btn-group > .btn-secondary {
+    @apply rounded-none first:rounded-l-xl last:rounded-r-xl;
+}
+
+.btn-group > *:not(:last-child) {
+    @apply border-r-0;
 }
 
 /* Input styles */
@@ -562,5 +914,348 @@ body {
     }
 }
 
-/* Import modern animations and styles */
-@import './modern.css';
+/* Modern animations and styles are included in modern.css */
+/* Note: To use modern.css, add @import './modern.css' after @import 'tailwindcss' at the top of this file */
+
+/* ============================================
+   NOA THEME SPECIFIC STYLES
+   ============================================ */
+
+/* NOA Sidebar - Light theme */
+.noa-sidebar {
+    @apply bg-white border-r border-gray-200;
+    width: 260px;
+    min-height: 100vh;
+}
+
+.noa-sidebar-header {
+    @apply px-6 py-5 border-b border-gray-100;
+}
+
+.noa-sidebar-logo {
+    @apply flex items-center gap-2;
+}
+
+.noa-sidebar-logo-icon {
+    @apply w-8 h-8 rounded-lg flex items-center justify-center;
+    background: linear-gradient(135deg, #8fbd56 0%, #38cab3 100%);
+}
+
+.noa-sidebar-menu {
+    @apply py-4 px-3;
+}
+
+.noa-sidebar-section {
+    @apply mb-6;
+}
+
+.noa-sidebar-section-title {
+    @apply px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider;
+}
+
+.noa-sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 transition-all duration-200;
+}
+
+.noa-sidebar-item:hover {
+    @apply bg-gray-50 text-gray-900;
+}
+
+.noa-sidebar-item.active {
+    @apply text-white;
+    background: linear-gradient(135deg, #8fbd56 0%, #5cd3b9 100%);
+}
+
+.noa-sidebar-item.active:hover {
+    @apply text-white;
+    background: linear-gradient(135deg, #7ba844 0%, #38cab3 100%);
+}
+
+.noa-sidebar-item svg {
+    @apply w-5 h-5 flex-shrink-0;
+}
+
+.noa-sidebar-badge {
+    @apply ml-auto px-2 py-0.5 text-xs font-medium rounded-full;
+}
+
+.noa-sidebar-badge-new {
+    @apply bg-green-100 text-green-700;
+}
+
+.noa-sidebar-badge-count {
+    @apply bg-red-100 text-red-700;
+}
+
+/* NOA Header */
+.noa-header {
+    @apply bg-white border-b border-gray-200 px-6 py-4;
+}
+
+.noa-header-search {
+    @apply flex items-center gap-3 bg-gray-100 rounded-lg px-4 py-2.5 w-96;
+}
+
+.noa-header-search input {
+    @apply bg-transparent border-none outline-none text-sm text-gray-600 placeholder-gray-400 flex-1;
+}
+
+.noa-header-icons {
+    @apply flex items-center gap-3;
+}
+
+.noa-header-icon {
+    @apply w-10 h-10 rounded-lg flex items-center justify-center text-gray-500 hover:bg-gray-100 transition-colors relative;
+}
+
+.noa-header-icon-badge {
+    @apply absolute -top-1 -right-1 w-5 h-5 rounded-full bg-red-500 text-white text-xs flex items-center justify-center;
+}
+
+/* NOA Stat Cards */
+.noa-stat-card {
+    @apply bg-white rounded-xl border border-gray-100 p-5 transition-all duration-300;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.noa-stat-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transform: translateY(-2px);
+}
+
+.noa-stat-card-header {
+    @apply flex items-start justify-between mb-3;
+}
+
+.noa-stat-card-icon {
+    @apply w-12 h-12 rounded-full flex items-center justify-center;
+}
+
+.noa-stat-card-icon-green {
+    background: linear-gradient(135deg, rgba(143, 189, 86, 0.15) 0%, rgba(92, 211, 185, 0.15) 100%);
+    color: #8fbd56;
+}
+
+.noa-stat-card-icon-pink {
+    background: linear-gradient(135deg, rgba(255, 107, 157, 0.15) 0%, rgba(255, 82, 82, 0.15) 100%);
+    color: #ff6b9d;
+}
+
+.noa-stat-card-icon-orange {
+    background: linear-gradient(135deg, rgba(255, 167, 38, 0.15) 0%, rgba(255, 204, 2, 0.15) 100%);
+    color: #ffa726;
+}
+
+.noa-stat-card-icon-cyan {
+    background: linear-gradient(135deg, rgba(38, 198, 218, 0.15) 0%, rgba(0, 188, 212, 0.15) 100%);
+    color: #26c6da;
+}
+
+.noa-stat-card-icon-purple {
+    background: linear-gradient(135deg, rgba(171, 71, 188, 0.15) 0%, rgba(156, 39, 176, 0.15) 100%);
+    color: #ab47bc;
+}
+
+.noa-stat-card-value {
+    @apply text-2xl font-bold text-gray-900 mb-1;
+}
+
+.noa-stat-card-label {
+    @apply text-sm text-gray-500;
+}
+
+.noa-stat-card-change {
+    @apply flex items-center gap-1 text-sm mt-3;
+}
+
+.noa-stat-card-change-up {
+    @apply text-green-600;
+}
+
+.noa-stat-card-change-down {
+    @apply text-red-500;
+}
+
+/* NOA Charts Container */
+.noa-chart-card {
+    @apply bg-white rounded-xl border border-gray-100 p-5;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.noa-chart-card-header {
+    @apply flex items-center justify-between mb-4;
+}
+
+.noa-chart-card-title {
+    @apply text-base font-semibold text-gray-900;
+}
+
+.noa-chart-card-tabs {
+    @apply flex items-center gap-2;
+}
+
+.noa-chart-card-tab {
+    @apply px-3 py-1 text-sm rounded-lg text-gray-500 hover:bg-gray-100 transition-colors;
+}
+
+.noa-chart-card-tab.active {
+    @apply text-white;
+    background: linear-gradient(135deg, #8fbd56 0%, #5cd3b9 100%);
+}
+
+/* NOA Progress bars */
+.noa-progress-bar {
+    @apply h-2 bg-gray-100 rounded-full overflow-hidden;
+}
+
+.noa-progress-bar-fill {
+    @apply h-full rounded-full transition-all duration-500;
+}
+
+.noa-progress-bar-fill-green {
+    background: linear-gradient(90deg, #8fbd56 0%, #5cd3b9 100%);
+}
+
+.noa-progress-bar-fill-pink {
+    background: linear-gradient(90deg, #ff6b9d 0%, #ff5252 100%);
+}
+
+.noa-progress-bar-fill-orange {
+    background: linear-gradient(90deg, #ffa726 0%, #ffcc02 100%);
+}
+
+.noa-progress-bar-fill-cyan {
+    background: linear-gradient(90deg, #26c6da 0%, #00bcd4 100%);
+}
+
+/* NOA Breadcrumb */
+.noa-breadcrumb {
+    @apply flex items-center gap-2 text-sm;
+}
+
+.noa-breadcrumb a {
+    @apply text-primary-400 hover:text-primary-500 transition-colors;
+}
+
+.noa-breadcrumb span {
+    @apply text-gray-400;
+}
+
+.noa-breadcrumb-current {
+    @apply text-gray-600;
+}
+
+/* NOA Transaction list */
+.noa-transaction-item {
+    @apply flex items-center gap-4 py-3 border-b border-gray-100 last:border-0;
+}
+
+.noa-transaction-icon {
+    @apply w-10 h-10 rounded-lg flex items-center justify-center;
+}
+
+.noa-transaction-icon-in {
+    @apply bg-green-100 text-green-600;
+}
+
+.noa-transaction-icon-out {
+    @apply bg-orange-100 text-orange-600;
+}
+
+.noa-transaction-info {
+    @apply flex-1;
+}
+
+.noa-transaction-title {
+    @apply text-sm font-medium text-gray-900;
+}
+
+.noa-transaction-subtitle {
+    @apply text-xs text-gray-500;
+}
+
+.noa-transaction-amount {
+    @apply text-sm font-semibold;
+}
+
+.noa-transaction-amount-in {
+    @apply text-green-600;
+}
+
+.noa-transaction-amount-out {
+    @apply text-gray-900;
+}
+
+/* NOA Avatar */
+.noa-avatar {
+    @apply relative inline-flex items-center justify-center rounded-full overflow-hidden bg-gray-200;
+}
+
+.noa-avatar-sm { @apply w-8 h-8 text-xs; }
+.noa-avatar-md { @apply w-10 h-10 text-sm; }
+.noa-avatar-lg { @apply w-12 h-12 text-base; }
+
+.noa-avatar-online::after {
+    content: '';
+    @apply absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white;
+}
+
+/* NOA Dropdown */
+.noa-dropdown {
+    @apply absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-1 z-50;
+}
+
+.noa-dropdown-item {
+    @apply flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors;
+}
+
+.noa-dropdown-divider {
+    @apply my-1 border-t border-gray-100;
+}
+
+/* NOA Table */
+.noa-table {
+    @apply w-full;
+}
+
+.noa-table thead {
+    @apply bg-gray-50;
+}
+
+.noa-table th {
+    @apply px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider;
+}
+
+.noa-table td {
+    @apply px-4 py-3 text-sm text-gray-700 border-b border-gray-100;
+}
+
+.noa-table tbody tr:hover {
+    @apply bg-gray-50;
+}
+
+/* NOA Badge variations */
+.noa-badge {
+    @apply inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium;
+}
+
+.noa-badge-success {
+    @apply bg-green-100 text-green-700;
+}
+
+.noa-badge-warning {
+    @apply bg-orange-100 text-orange-700;
+}
+
+.noa-badge-danger {
+    @apply bg-red-100 text-red-700;
+}
+
+.noa-badge-info {
+    @apply bg-blue-100 text-blue-700;
+}
+
+.noa-badge-primary {
+    background: rgba(143, 189, 86, 0.15);
+    color: #7ba844;
+}

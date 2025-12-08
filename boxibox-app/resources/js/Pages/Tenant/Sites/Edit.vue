@@ -55,7 +55,7 @@
                 <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
                     <form @submit.prevent="submit">
                         <!-- Step 1: Informations du Site -->
-                        <div v-show="currentStep === 1" class="p-8">
+                        <div v-if="currentStep === 1" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
                                     <BuildingOfficeIcon class="w-5 h-5 text-indigo-600" />
@@ -149,7 +149,7 @@
                         </div>
 
                         <!-- Step 2: Adresse -->
-                        <div v-show="currentStep === 2" class="p-8">
+                        <div v-if="currentStep === 2" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
                                     <MapPinIcon class="w-5 h-5 text-purple-600" />
@@ -260,7 +260,7 @@
                         </div>
 
                         <!-- Step 3: Contact & Récapitulatif -->
-                        <div v-show="currentStep === 3" class="p-8">
+                        <div v-if="currentStep === 3" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
                                     <CheckCircleIcon class="w-5 h-5 text-emerald-600" />
@@ -443,6 +443,7 @@ const props = defineProps({
 })
 
 const currentStep = ref(1)
+const stepErrors = ref({})
 
 const steps = [
     { number: 1, title: 'Informations', icon: BuildingOfficeIcon },
@@ -513,15 +514,44 @@ const statusColor = computed(() => {
     }
 })
 
+const validateStep = (step) => {
+    const errors = {}
+    switch (step) {
+        case 1:
+            if (!form.name) errors.name = 'Le nom du site est obligatoire'
+            if (!form.code) errors.code = 'Le code du site est obligatoire'
+            break
+        case 2:
+            if (!form.address) errors.address = 'L\'adresse est obligatoire'
+            if (!form.city) errors.city = 'La ville est obligatoire'
+            if (!form.postal_code) errors.postal_code = 'Le code postal est obligatoire'
+            break
+    }
+    return errors
+}
+
 const nextStep = () => {
-    if (currentStep.value < 3 && canProceed.value) {
+    const errors = validateStep(currentStep.value)
+    stepErrors.value = errors
+    if (Object.keys(errors).length > 0) {
+        setTimeout(() => {
+            const firstErrorField = document.querySelector('.field-error')
+            if (firstErrorField) {
+                firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }, 100)
+        return
+    }
+    if (currentStep.value < 3) {
         currentStep.value++
+        stepErrors.value = {}
     }
 }
 
 const prevStep = () => {
     if (currentStep.value > 1) {
         currentStep.value--
+        stepErrors.value = {}
     }
 }
 

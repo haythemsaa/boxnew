@@ -33,7 +33,6 @@ class User extends Authenticatable
         'status',
         'two_factor_enabled',
         'two_factor_secret',
-        'two_factor_backup_codes',
         'two_factor_confirmed_at',
         'last_login_at',
         'last_login_ip',
@@ -62,8 +61,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'two_factor_enabled' => 'boolean',
             'two_factor_confirmed_at' => 'datetime',
-            'two_factor_backup_codes' => 'array',
             'last_login_at' => 'datetime',
             'locked_until' => 'datetime',
             'whitelisted_ips' => 'array',
@@ -94,6 +93,21 @@ class User extends Authenticatable
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
+    }
+
+    public function videoAgentStatus(): HasOne
+    {
+        return $this->hasOne(VideoAgentStatus::class);
+    }
+
+    public function videoCallsAsAgent(): HasMany
+    {
+        return $this->hasMany(VideoCall::class, 'agent_id');
+    }
+
+    public function valetDriver(): HasOne
+    {
+        return $this->hasOne(ValetDriver::class);
     }
 
     // Helper Methods

@@ -32,7 +32,7 @@ class RevenueManagementService
         // Revenus du mois
         $grossRevenue = Contract::where('site_id', $site->id)
             ->where('status', 'active')
-            ->sum('monthly_rent');
+            ->sum('monthly_price');
 
         // RevPAU = Revenu total / Nombre total d'unités
         $revpau = $totalUnits > 0 ? $grossRevenue / $totalUnits : 0;

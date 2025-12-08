@@ -203,8 +203,9 @@
                                             class="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200"
                                             :class="{ 'ring-2 ring-red-500/50 bg-red-50': form.errors.first_name }"
                                         />
-                                        <p v-if="form.errors.first_name" class="mt-1.5 text-sm text-red-600">
-                                            {{ form.errors.first_name }}
+                                        <p v-if="form.errors.first_name || stepErrors.first_name" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                            {{ form.errors.first_name || stepErrors.first_name }}
                                         </p>
                                     </div>
 
@@ -220,8 +221,9 @@
                                             class="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200"
                                             :class="{ 'ring-2 ring-red-500/50 bg-red-50': form.errors.last_name }"
                                         />
-                                        <p v-if="form.errors.last_name" class="mt-1.5 text-sm text-red-600">
-                                            {{ form.errors.last_name }}
+                                        <p v-if="form.errors.last_name || stepErrors.last_name" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                            {{ form.errors.last_name || stepErrors.last_name }}
                                         </p>
                                     </div>
                                 </div>
@@ -262,8 +264,9 @@
                                         class="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200"
                                         :class="{ 'ring-2 ring-red-500/50 bg-red-50': form.errors.company_name }"
                                     />
-                                    <p v-if="form.errors.company_name" class="mt-1.5 text-sm text-red-600">
-                                        {{ form.errors.company_name }}
+                                    <p v-if="form.errors.company_name || stepErrors.company_name" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.company_name || stepErrors.company_name }}
                                     </p>
                                 </div>
 
@@ -343,11 +346,12 @@
                                             required
                                             placeholder="client@exemple.fr"
                                             class="w-full pl-11 pr-4 py-3 bg-gray-50 border-0 rounded-xl text-sm placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200"
-                                            :class="{ 'ring-2 ring-red-500/50 bg-red-50': form.errors.email }"
+                                            :class="{ 'ring-2 ring-red-500/50 bg-red-50': form.errors.email || stepErrors.email }"
                                         />
                                     </div>
-                                    <p v-if="form.errors.email" class="mt-1.5 text-sm text-red-600">
-                                        {{ form.errors.email }}
+                                    <p v-if="form.errors.email || stepErrors.email" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.email || stepErrors.email }}
                                     </p>
                                 </div>
 
@@ -367,12 +371,17 @@
                                                     type="tel"
                                                     placeholder="01 23 45 67 89"
                                                     class="w-full pl-11 pr-4 py-3 bg-gray-50 border-0 rounded-xl text-sm placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200"
+                                                    :class="{ 'ring-2 ring-red-500/50 bg-red-50': stepErrors.phone }"
                                                 />
                                             </div>
                                             <span class="inline-flex items-center px-3 py-2 bg-gray-100 rounded-xl text-xs font-medium text-gray-500">
                                                 Fixe
                                             </span>
                                         </div>
+                                        <p v-if="stepErrors.phone" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                            {{ stepErrors.phone }}
+                                        </p>
                                         <div class="flex gap-3">
                                             <div class="relative flex-1">
                                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -497,11 +506,12 @@
                                             required
                                             placeholder="123 Rue de la Paix"
                                             class="w-full pl-11 pr-4 py-3 bg-gray-50 border-0 rounded-xl text-sm placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200"
-                                            :class="{ 'ring-2 ring-red-500/50 bg-red-50': form.errors.address }"
+                                            :class="{ 'ring-2 ring-red-500/50 bg-red-50': form.errors.address || stepErrors.address }"
                                         />
                                     </div>
-                                    <p v-if="form.errors.address" class="mt-1.5 text-sm text-red-600">
-                                        {{ form.errors.address }}
+                                    <p v-if="form.errors.address || stepErrors.address" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.address || stepErrors.address }}
                                     </p>
                                 </div>
 
@@ -516,8 +526,12 @@
                                             required
                                             placeholder="75001"
                                             class="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200"
-                                            :class="{ 'ring-2 ring-red-500/50 bg-red-50': form.errors.postal_code }"
+                                            :class="{ 'ring-2 ring-red-500/50 bg-red-50': form.errors.postal_code || stepErrors.postal_code }"
                                         />
+                                        <p v-if="form.errors.postal_code || stepErrors.postal_code" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                            {{ form.errors.postal_code || stepErrors.postal_code }}
+                                        </p>
                                     </div>
 
                                     <div>
@@ -530,8 +544,12 @@
                                             required
                                             placeholder="Paris"
                                             class="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-sm placeholder-gray-400 focus:bg-white focus:ring-2 focus:ring-primary-500/20 transition-all duration-200"
-                                            :class="{ 'ring-2 ring-red-500/50 bg-red-50': form.errors.city }"
+                                            :class="{ 'ring-2 ring-red-500/50 bg-red-50': form.errors.city || stepErrors.city }"
                                         />
+                                        <p v-if="form.errors.city || stepErrors.city" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                            {{ form.errors.city || stepErrors.city }}
+                                        </p>
                                     </div>
 
                                     <div>
@@ -826,9 +844,67 @@ const form = useForm({
     status: 'active',
 })
 
+// Validation errors for each step
+const stepErrors = ref({})
+
+const validateStep = (step) => {
+    const errors = {}
+
+    switch (step) {
+        case 0: // Type
+            // Pas de validation requise - type a une valeur par défaut
+            break
+        case 1: // Identité
+            if (form.type === 'individual') {
+                if (!form.first_name) errors.first_name = 'Le prénom est obligatoire'
+                if (!form.last_name) errors.last_name = 'Le nom est obligatoire'
+            } else {
+                if (!form.company_name) errors.company_name = 'La raison sociale est obligatoire'
+            }
+            break
+        case 2: // Contact
+            if (!form.email) {
+                errors.email = 'L\'email est obligatoire'
+            } else {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                if (!emailRegex.test(form.email)) {
+                    errors.email = 'Format d\'email invalide'
+                }
+            }
+            if (form.phone && !/^[\d\s\+\-\(\)\.]{8,20}$/.test(form.phone)) {
+                errors.phone = 'Format de téléphone invalide'
+            }
+            break
+        case 3: // Adresse
+            if (!form.address) errors.address = 'L\'adresse est obligatoire'
+            if (!form.city) errors.city = 'La ville est obligatoire'
+            if (!form.postal_code) errors.postal_code = 'Le code postal est obligatoire'
+            break
+        case 4: // Finalisation
+            // Pas de champs obligatoires
+            break
+    }
+
+    return errors
+}
+
 const nextStep = () => {
+    const errors = validateStep(currentStep.value)
+    stepErrors.value = errors
+
+    if (Object.keys(errors).length > 0) {
+        setTimeout(() => {
+            const firstErrorField = document.querySelector('.field-error')
+            if (firstErrorField) {
+                firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }, 100)
+        return
+    }
+
     if (currentStep.value < steps.length - 1) {
         currentStep.value++
+        stepErrors.value = {}
         if (currentStep.value > maxVisitedStep.value) {
             maxVisitedStep.value = currentStep.value
         }
@@ -838,6 +914,7 @@ const nextStep = () => {
 const previousStep = () => {
     if (currentStep.value > 0) {
         currentStep.value--
+        stepErrors.value = {}
     }
 }
 

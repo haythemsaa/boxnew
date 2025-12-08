@@ -14,6 +14,7 @@ class ProspectController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Prospect::class);
         $tenantId = auth()->user()->tenant_id;
 
         $query = Prospect::where('tenant_id', $tenantId)
@@ -41,20 +42,28 @@ class ProspectController extends Controller
 
         $prospects = $query->orderBy('created_at', 'desc')->paginate(15);
 
-        // Stats
+        // Stats - Optimized with single query using GROUP BY
+        $statusCounts = Prospect::where('tenant_id', $tenantId)
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        $hotCount = Prospect::where('tenant_id', $tenantId)
+            ->whereNotIn('status', ['converted', 'lost'])
+            ->where('move_in_date', '<=', now()->addDays(30))
+            ->where('move_in_date', '>=', now())
+            ->count();
+
         $stats = [
-            'total' => Prospect::where('tenant_id', $tenantId)->count(),
-            'new' => Prospect::where('tenant_id', $tenantId)->where('status', 'new')->count(),
-            'contacted' => Prospect::where('tenant_id', $tenantId)->where('status', 'contacted')->count(),
-            'qualified' => Prospect::where('tenant_id', $tenantId)->where('status', 'qualified')->count(),
-            'quoted' => Prospect::where('tenant_id', $tenantId)->where('status', 'quoted')->count(),
-            'converted' => Prospect::where('tenant_id', $tenantId)->where('status', 'converted')->count(),
-            'lost' => Prospect::where('tenant_id', $tenantId)->where('status', 'lost')->count(),
-            'hot' => Prospect::where('tenant_id', $tenantId)
-                ->whereNotIn('status', ['converted', 'lost'])
-                ->where('move_in_date', '<=', now()->addDays(30))
-                ->where('move_in_date', '>=', now())
-                ->count(),
+            'total' => array_sum($statusCounts),
+            'new' => $statusCounts['new'] ?? 0,
+            'contacted' => $statusCounts['contacted'] ?? 0,
+            'qualified' => $statusCounts['qualified'] ?? 0,
+            'quoted' => $statusCounts['quoted'] ?? 0,
+            'converted' => $statusCounts['converted'] ?? 0,
+            'lost' => $statusCounts['lost'] ?? 0,
+            'hot' => $hotCount,
         ];
 
         return Inertia::render('Tenant/Prospects/Index', [
@@ -69,6 +78,7 @@ class ProspectController extends Controller
      */
     public function create()
     {
+        $this->authorize('create', Prospect::class);
         return Inertia::render('Tenant/Prospects/Create');
     }
 
@@ -110,10 +120,7 @@ class ProspectController extends Controller
      */
     public function show(Prospect $prospect)
     {
-        // Verify tenant access
-        if ($prospect->tenant_id !== auth()->user()->tenant_id) {
-            abort(403);
-        }
+        $this->authorize('view', $prospect);
 
         $prospect->load('customer');
 
@@ -127,9 +134,7 @@ class ProspectController extends Controller
      */
     public function edit(Prospect $prospect)
     {
-        if ($prospect->tenant_id !== auth()->user()->tenant_id) {
-            abort(403);
-        }
+        $this->authorize('update', $prospect);
 
         return Inertia::render('Tenant/Prospects/Edit', [
             'prospect' => $prospect,
@@ -141,9 +146,7 @@ class ProspectController extends Controller
      */
     public function update(Request $request, Prospect $prospect)
     {
-        if ($prospect->tenant_id !== auth()->user()->tenant_id) {
-            abort(403);
-        }
+        $this->authorize('update', $prospect);
 
         $validated = $request->validate([
             'type' => 'required|in:individual,company',
@@ -175,9 +178,7 @@ class ProspectController extends Controller
      */
     public function destroy(Prospect $prospect)
     {
-        if ($prospect->tenant_id !== auth()->user()->tenant_id) {
-            abort(403);
-        }
+        $this->authorize('delete', $prospect);
 
         $prospect->delete();
 
@@ -190,9 +191,7 @@ class ProspectController extends Controller
      */
     public function convert(Prospect $prospect)
     {
-        if ($prospect->tenant_id !== auth()->user()->tenant_id) {
-            abort(403);
-        }
+        $this->authorize('convert', $prospect);
 
         if ($prospect->status === 'converted') {
             return redirect()->back()

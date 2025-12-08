@@ -43,15 +43,21 @@ class SignatureController extends Controller
 
         $signatures = $query->orderBy('created_at', 'desc')->paginate(15);
 
-        // Stats
+        // Stats - Optimized with single query using GROUP BY
+        $statusCounts = Signature::where('tenant_id', $tenantId)
+            ->selectRaw('status, COUNT(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
         $stats = [
-            'total' => Signature::where('tenant_id', $tenantId)->count(),
-            'pending' => Signature::where('tenant_id', $tenantId)->where('status', 'pending')->count(),
-            'sent' => Signature::where('tenant_id', $tenantId)->where('status', 'sent')->count(),
-            'viewed' => Signature::where('tenant_id', $tenantId)->where('status', 'viewed')->count(),
-            'signed' => Signature::where('tenant_id', $tenantId)->where('status', 'signed')->count(),
-            'refused' => Signature::where('tenant_id', $tenantId)->where('status', 'refused')->count(),
-            'expired' => Signature::where('tenant_id', $tenantId)->where('status', 'expired')->count(),
+            'total' => array_sum($statusCounts),
+            'pending' => $statusCounts['pending'] ?? 0,
+            'sent' => $statusCounts['sent'] ?? 0,
+            'viewed' => $statusCounts['viewed'] ?? 0,
+            'signed' => $statusCounts['signed'] ?? 0,
+            'refused' => $statusCounts['refused'] ?? 0,
+            'expired' => $statusCounts['expired'] ?? 0,
         ];
 
         return Inertia::render('Tenant/Signatures/Index', [

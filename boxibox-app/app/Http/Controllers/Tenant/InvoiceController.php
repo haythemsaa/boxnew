@@ -271,23 +271,41 @@ class InvoiceController extends Controller
             abort(403);
         }
 
-        // Load relationships
-        $invoice->load(['customer', 'contract.box', 'contract.site']);
+        try {
+            // Load relationships
+            $invoice->load(['customer', 'contract.box', 'contract.site']);
 
-        // Get tenant information
-        $tenant = $request->user()->tenant;
+            // Get tenant information
+            $tenant = $request->user()->tenant;
 
-        // Generate PDF
-        $pdf = Pdf::loadView('pdf.invoice', [
-            'invoice' => $invoice,
-            'tenant' => $tenant,
-        ]);
+            // Validate that required data exists
+            if (!$invoice->customer) {
+                \Log::error("Cannot generate PDF: Invoice #{$invoice->id} has no customer");
+                return redirect()->back()
+                    ->with('error', 'Impossible de generer le PDF: client introuvable.');
+            }
 
-        // Set paper size and orientation
-        $pdf->setPaper('a4', 'portrait');
+            // Generate PDF
+            $pdf = Pdf::loadView('pdf.invoice', [
+                'invoice' => $invoice,
+                'tenant' => $tenant,
+            ]);
 
-        // Return PDF for download
-        return $pdf->download("invoice-{$invoice->invoice_number}.pdf");
+            // Set paper size and orientation
+            $pdf->setPaper('a4', 'portrait');
+
+            // Return PDF for download
+            return $pdf->download("invoice-{$invoice->invoice_number}.pdf");
+
+        } catch (\Exception $e) {
+            \Log::error("Failed to generate PDF for invoice #{$invoice->id}: " . $e->getMessage(), [
+                'invoice_id' => $invoice->id,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'Une erreur est survenue lors de la generation du PDF. Veuillez reessayer.');
+        }
     }
 
     /**
@@ -297,16 +315,34 @@ class InvoiceController extends Controller
     {
         $this->authorize('view_invoices');
 
-        $tenantId = $request->user()->tenant_id;
-        $status = $request->query('status');
+        try {
+            $tenantId = $request->user()->tenant_id;
+            $status = $request->query('status');
 
-        $result = $exportService->exportInvoices($tenantId, $status);
-        $csv = $exportService->generateCSV($result['data']);
+            $result = $exportService->exportInvoices($tenantId, $status);
 
-        return response($csv, 200, [
-            'Content-Type' => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $result['filename'] . '"',
-        ]);
+            if (empty($result['data'])) {
+                return redirect()->back()
+                    ->with('warning', 'Aucune facture a exporter avec les criteres selectionnes.');
+            }
+
+            $csv = $exportService->generateCSV($result['data']);
+
+            return response($csv, 200, [
+                'Content-Type' => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $result['filename'] . '"',
+            ]);
+
+        } catch (\Exception $e) {
+            \Log::error('Failed to export invoices: ' . $e->getMessage(), [
+                'tenant_id' => $request->user()->tenant_id ?? null,
+                'status' => $request->query('status'),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return redirect()->back()
+                ->with('error', 'Une erreur est survenue lors de l\'export. Veuillez reessayer.');
+        }
     }
 
     /**

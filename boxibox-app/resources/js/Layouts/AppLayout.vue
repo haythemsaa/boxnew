@@ -91,8 +91,8 @@
                 </NavLink>
 
                 <NavLink
-                    :href="route('tenant.settings')"
-                    :active="route().current('tenant.settings')"
+                    :href="route('tenant.settings.index')"
+                    :active="route().current('tenant.settings.*')"
                     icon="settings"
                 >
                     Settings

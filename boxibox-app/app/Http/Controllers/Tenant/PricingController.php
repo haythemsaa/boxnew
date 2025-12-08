@@ -54,11 +54,12 @@ class PricingController extends Controller
 
         $optimalPrice = $this->pricingService->calculateOptimalPrice($box, $request->only(['duration', 'customer_type']));
 
+        $currentPrice = $box->current_price ?? $box->base_price ?? 0;
         return response()->json([
             'optimal_price' => $optimalPrice,
-            'current_price' => $box->price_per_month,
-            'difference' => $optimalPrice - $box->price_per_month,
-            'difference_percentage' => (($optimalPrice - $box->price_per_month) / $box->price_per_month) * 100,
+            'current_price' => $currentPrice,
+            'difference' => $optimalPrice - $currentPrice,
+            'difference_percentage' => $currentPrice > 0 ? (($optimalPrice - $currentPrice) / $currentPrice) * 100 : 0,
         ]);
     }
 
@@ -85,7 +86,7 @@ class PricingController extends Controller
                 // Enable dynamic pricing for all boxes in site
                 Box::where('site_id', $site->id)->each(function ($box) {
                     $optimalPrice = $this->pricingService->calculateOptimalPrice($box);
-                    $box->update(['price_per_month' => $optimalPrice]);
+                    $box->update(['current_price' => $optimalPrice]);
                 });
                 break;
 
@@ -116,7 +117,7 @@ class PricingController extends Controller
                         ->where('status', 'available')
                         ->each(function ($box) {
                             $box->update([
-                                'price_per_month' => $box->price_per_month * 1.10 // +10%
+                                'current_price' => ($box->current_price ?? $box->base_price) * 1.10 // +10%
                             ]);
                         });
                 }

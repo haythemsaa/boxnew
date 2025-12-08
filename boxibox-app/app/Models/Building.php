@@ -18,22 +18,16 @@ class Building extends Model
         'code',
         'type',
         'description',
-        'floor_count',
         'total_floors',
-        'total_boxes',
         'has_elevator',
         'has_security',
-        'has_cctv',
-        'status',
     ];
 
     protected $casts = [
         'has_elevator' => 'boolean',
         'has_security' => 'boolean',
-        'has_cctv' => 'boolean',
-        'floor_count' => 'integer',
         'total_floors' => 'integer',
-        'total_boxes' => 'integer',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships

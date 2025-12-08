@@ -64,7 +64,7 @@
             <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
                 <form @submit.prevent="submit">
                     <!-- Step 1: Type -->
-                    <div v-show="currentStep === 1" class="p-8 space-y-8">
+                    <div v-if="currentStep === 1" class="p-8 space-y-8">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
                                 <UserIcon class="h-5 w-5 text-blue-600" />
@@ -108,11 +108,19 @@
                                 </div>
                                 <div class="col-span-1">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Prénom <span class="text-red-500">*</span></label>
-                                    <input v-model="form.first_name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.first_name }" />
+                                    <input v-model="form.first_name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.first_name || stepErrors.first_name }" />
+                                    <p v-if="form.errors.first_name || stepErrors.first_name" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.first_name || stepErrors.first_name }}
+                                    </p>
                                 </div>
                                 <div class="col-span-2">
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Nom <span class="text-red-500">*</span></label>
-                                    <input v-model="form.last_name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.last_name }" />
+                                    <input v-model="form.last_name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.last_name || stepErrors.last_name }" />
+                                    <p v-if="form.errors.last_name || stepErrors.last_name" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.last_name || stepErrors.last_name }}
+                                    </p>
                                 </div>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
@@ -131,7 +139,11 @@
                         <div v-if="form.type === 'company'" class="space-y-6 pt-6 border-t border-gray-100">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Raison sociale <span class="text-red-500">*</span></label>
-                                <input v-model="form.company_name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.company_name }" />
+                                <input v-model="form.company_name" type="text" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.company_name || stepErrors.company_name }" />
+                                <p v-if="form.errors.company_name || stepErrors.company_name" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                    {{ form.errors.company_name || stepErrors.company_name }}
+                                </p>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -157,7 +169,7 @@
                     </div>
 
                     <!-- Step 2: Contact -->
-                    <div v-show="currentStep === 2" class="p-8 space-y-8">
+                    <div v-if="currentStep === 2" class="p-8 space-y-8">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
                                 <EnvelopeIcon class="h-5 w-5 text-blue-600" />
@@ -170,8 +182,12 @@
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Email <span class="text-red-500">*</span></label>
                                 <div class="relative">
                                     <EnvelopeIcon class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                    <input v-model="form.email" type="email" class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.email }" />
+                                    <input v-model="form.email" type="email" class="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.email || stepErrors.email }" />
                                 </div>
+                                <p v-if="form.errors.email || stepErrors.email" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                    {{ form.errors.email || stepErrors.email }}
+                                </p>
                             </div>
                             <div class="grid grid-cols-2 gap-4">
                                 <div>
@@ -229,7 +245,7 @@
                     </div>
 
                     <!-- Step 3: Address -->
-                    <div v-show="currentStep === 3" class="p-8 space-y-8">
+                    <div v-if="currentStep === 3" class="p-8 space-y-8">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
                                 <MapPinIcon class="h-5 w-5 text-blue-600" />
@@ -240,16 +256,28 @@
                         <div class="space-y-6">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700 mb-2">Adresse <span class="text-red-500">*</span></label>
-                                <input v-model="form.address" type="text" placeholder="Numéro et nom de rue" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.address }" />
+                                <input v-model="form.address" type="text" placeholder="Numéro et nom de rue" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.address || stepErrors.address }" />
+                                <p v-if="form.errors.address || stepErrors.address" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                    {{ form.errors.address || stepErrors.address }}
+                                </p>
                             </div>
                             <div class="grid grid-cols-3 gap-4">
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Code postal <span class="text-red-500">*</span></label>
-                                    <input v-model="form.postal_code" type="text" placeholder="75001" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.postal_code }" />
+                                    <input v-model="form.postal_code" type="text" placeholder="75001" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.postal_code || stepErrors.postal_code }" />
+                                    <p v-if="form.errors.postal_code || stepErrors.postal_code" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.postal_code || stepErrors.postal_code }}
+                                    </p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Ville <span class="text-red-500">*</span></label>
-                                    <input v-model="form.city" type="text" placeholder="Paris" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.city }" />
+                                    <input v-model="form.city" type="text" placeholder="Paris" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-200 focus:border-blue-500 transition-all duration-200" :class="{ 'border-red-300 bg-red-50': form.errors.city || stepErrors.city }" />
+                                    <p v-if="form.errors.city || stepErrors.city" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.city || stepErrors.city }}
+                                    </p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">Pays</label>
@@ -297,7 +325,7 @@
                     </div>
 
                     <!-- Step 4: Additional -->
-                    <div v-show="currentStep === 4" class="p-8 space-y-8">
+                    <div v-if="currentStep === 4" class="p-8 space-y-8">
                         <div class="flex items-center space-x-3">
                             <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
                                 <DocumentTextIcon class="h-5 w-5 text-blue-600" />
@@ -436,6 +464,7 @@ const props = defineProps({
 const currentStep = ref(1)
 const totalSteps = 4
 const sameAsPrimary = ref(false)
+const stepErrors = ref({})
 
 const form = useForm({
     type: props.customer.type,
@@ -513,15 +542,65 @@ const canProceed = computed(() => {
     }
 })
 
+const validateStep = (step) => {
+    const errors = {}
+
+    switch (step) {
+        case 1: // Type & Identité
+            if (form.type === 'individual') {
+                if (!form.first_name) errors.first_name = 'Le prénom est obligatoire'
+                if (!form.last_name) errors.last_name = 'Le nom est obligatoire'
+            } else {
+                if (!form.company_name) errors.company_name = 'La raison sociale est obligatoire'
+            }
+            break
+        case 2: // Contact
+            if (!form.email) {
+                errors.email = 'L\'email est obligatoire'
+            } else {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                if (!emailRegex.test(form.email)) {
+                    errors.email = 'Format d\'email invalide'
+                }
+            }
+            break
+        case 3: // Adresse
+            if (!form.address) errors.address = 'L\'adresse est obligatoire'
+            if (!form.city) errors.city = 'La ville est obligatoire'
+            if (!form.postal_code) errors.postal_code = 'Le code postal est obligatoire'
+            break
+        case 4: // Compléments
+            // Pas de champs obligatoires
+            break
+    }
+
+    return errors
+}
+
 const nextStep = () => {
-    if (currentStep.value < totalSteps && canProceed.value) {
+    const errors = validateStep(currentStep.value)
+    stepErrors.value = errors
+
+    if (Object.keys(errors).length > 0) {
+        setTimeout(() => {
+            const firstErrorField = document.querySelector('.field-error')
+            if (firstErrorField) {
+                firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }, 100)
+        return
+    }
+
+    if (currentStep.value < totalSteps) {
         currentStep.value++
+        stepErrors.value = {}
     }
 }
 
 const prevStep = () => {
     if (currentStep.value > 1) {
         currentStep.value--
+        stepErrors.value = {}
     }
 }
 

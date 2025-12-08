@@ -18,7 +18,6 @@ class Box extends Model
         'building_id',
         'floor_id',
         'name',
-        'code',
         'description',
         'length',
         'width',
@@ -30,13 +29,8 @@ class Box extends Model
         'climate_controlled',
         'has_electricity',
         'has_alarm',
-        'has_24_7_access',
-        'has_wifi',
-        'has_shelving',
-        'is_ground_floor',
         'position',
         'access_code',
-        'notes',
     ];
 
     protected $casts = [
@@ -49,11 +43,14 @@ class Box extends Model
         'climate_controlled' => 'boolean',
         'has_electricity' => 'boolean',
         'has_alarm' => 'boolean',
-        'has_24_7_access' => 'boolean',
-        'has_wifi' => 'boolean',
-        'has_shelving' => 'boolean',
-        'is_ground_floor' => 'boolean',
         'position' => 'array',
+        'available_from' => 'date',
+        'has_camera' => 'boolean',
+        'drive_up_access' => 'boolean',
+        'ground_floor' => 'boolean',
+        'indoor' => 'boolean',
+        'occupied_since' => 'date',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships
@@ -114,6 +111,11 @@ class Box extends Model
     }
 
     // Accessors
+    public function getDisplayNameAttribute(): string
+    {
+        return $this->name ?? $this->number ?? "Box #{$this->id}";
+    }
+
     public function getIsAvailableAttribute(): bool
     {
         return $this->status === 'available';
@@ -127,6 +129,16 @@ class Box extends Model
     public function getFormattedDimensionsAttribute(): string
     {
         return "{$this->length}m × {$this->width}m × {$this->height}m";
+    }
+
+    public function getSizeAttribute(): float
+    {
+        return $this->length * $this->width;
+    }
+
+    public function getPriceAttribute(): float
+    {
+        return $this->current_price ?? $this->base_price ?? 0;
     }
 
     // Helper Methods

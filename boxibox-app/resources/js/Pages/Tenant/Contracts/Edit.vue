@@ -136,15 +136,72 @@ const terminationReasons = [
     { value: 'other', label: 'Autre' },
 ]
 
+// Validation errors for each step
+const stepErrors = ref({})
+
+const validateStep = (step) => {
+    const errors = {}
+
+    switch (step) {
+        case 1:
+            if (!form.site_id) errors.site_id = 'Veuillez sélectionner un site'
+            if (!form.customer_id) errors.customer_id = 'Veuillez sélectionner un client'
+            if (!form.box_id) errors.box_id = 'Veuillez sélectionner un box'
+            break
+        case 2:
+            if (!form.start_date) errors.start_date = 'La date de début est obligatoire'
+            if (form.end_date && form.start_date && new Date(form.end_date) <= new Date(form.start_date)) {
+                errors.end_date = 'La date de fin doit être après la date de début'
+            }
+            break
+        case 3:
+            if (!form.monthly_price || form.monthly_price <= 0) errors.monthly_price = 'Le prix mensuel est obligatoire'
+            break
+        case 4:
+            // Pas de champs obligatoires à l'étape 4
+            break
+    }
+
+    return errors
+}
+
 const nextStep = () => {
-    if (currentStep.value < steps.length) currentStep.value++
+    const errors = validateStep(currentStep.value)
+    stepErrors.value = errors
+
+    if (Object.keys(errors).length > 0) {
+        const firstErrorField = document.querySelector('.field-error')
+        if (firstErrorField) {
+            firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+        return
+    }
+
+    if (currentStep.value < steps.length) {
+        currentStep.value++
+        stepErrors.value = {}
+    }
 }
 
 const prevStep = () => {
-    if (currentStep.value > 1) currentStep.value--
+    if (currentStep.value > 1) {
+        currentStep.value--
+        stepErrors.value = {}
+    }
 }
 
 const submit = () => {
+    // Final validation before submit
+    const allErrors = {}
+    for (let i = 1; i <= 4; i++) {
+        Object.assign(allErrors, validateStep(i))
+    }
+
+    if (Object.keys(allErrors).length > 0) {
+        stepErrors.value = allErrors
+        return
+    }
+
     form.put(route('tenant.contracts.update', props.contract.id))
 }
 </script>
@@ -210,7 +267,7 @@ const submit = () => {
 
                 <form @submit.prevent="submit">
                     <!-- Step 1: Informations de base -->
-                    <div v-show="currentStep === 1" class="space-y-6 animate-fade-in">
+                    <div v-if="currentStep === 1" class="space-y-6 animate-fade-in">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                                 <DocumentTextIcon class="w-5 h-5 text-indigo-600" />
@@ -323,7 +380,7 @@ const submit = () => {
                     </div>
 
                     <!-- Step 2: Période du contrat -->
-                    <div v-show="currentStep === 2" class="space-y-6 animate-fade-in">
+                    <div v-if="currentStep === 2" class="space-y-6 animate-fade-in">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                                 <CalendarDaysIcon class="w-5 h-5 text-indigo-600" />
@@ -411,7 +468,7 @@ const submit = () => {
                     </div>
 
                     <!-- Step 3: Tarification & Paiement -->
-                    <div v-show="currentStep === 3" class="space-y-6 animate-fade-in">
+                    <div v-if="currentStep === 3" class="space-y-6 animate-fade-in">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">
                                 <CurrencyEuroIcon class="w-5 h-5 text-indigo-600" />
@@ -545,7 +602,7 @@ const submit = () => {
                     </div>
 
                     <!-- Step 4: Accès, Signature & Résiliation -->
-                    <div v-show="currentStep === 4" class="space-y-6 animate-fade-in">
+                    <div v-if="currentStep === 4" class="space-y-6 animate-fade-in">
                         <!-- Accès & Clés -->
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6 flex items-center gap-2">

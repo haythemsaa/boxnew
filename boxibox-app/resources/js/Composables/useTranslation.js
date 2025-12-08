@@ -1,173 +1,101 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 
-// Translations object
-const translations = {
-    fr: {
-        menu: {
-            dashboard: 'Tableau de bord',
-            contracts: 'Contrats',
-            invoices: 'Factures',
-            customers: 'Clients',
-            boxes: 'Box de stockage',
-            payments: 'Paiements',
-            reports: 'Rapports',
-            settings: 'Paramètres',
-            profile: 'Profil',
-            logout: 'Déconnexion',
-        },
-        contracts: {
-            title: 'Gestion des Contrats',
-            create: 'Nouveau contrat',
-            edit: 'Modifier le contrat',
-            view: 'Voir le contrat',
-            delete: 'Supprimer',
-            list: 'Liste des contrats',
-            status: 'Statut',
-            startDate: 'Date de début',
-            endDate: 'Date de fin',
-            customer: 'Client',
-            box: 'Box de stockage',
-            price: 'Prix mensuel',
-            sign: 'Signer le contrat',
-            renew: 'Renouveler',
-            terminate: 'Résilier',
-            signed: 'Signé',
-            pending: 'En attente de signature',
-            active: 'Actif',
-            expired: 'Expiré',
-            terminated: 'Résilié',
-            noContracts: 'Aucun contrat trouvé',
-            confirmDelete: 'Êtes-vous sûr de vouloir supprimer ce contrat ?',
-            successCreate: 'Contrat créé avec succès',
-            successUpdate: 'Contrat mis à jour avec succès',
-            successDelete: 'Contrat supprimé avec succès',
-        },
-        invoices: {
-            title: 'Gestion des Factures',
-            create: 'Nouvelle facture',
-            edit: 'Modifier la facture',
-            view: 'Voir la facture',
-            delete: 'Supprimer',
-            list: 'Liste des factures',
-            invoiceNumber: 'Numéro de facture',
-            amount: 'Montant',
-            total: 'Total TTC',
-            status: 'Statut',
-            date: 'Date',
-            dueDate: 'Échéance',
-            paid: 'Payée',
-            pending: 'En attente',
-            partial: 'Partiellement payée',
-            overdue: 'En retard',
-            pay: 'Payer',
-            download: 'Télécharger',
-            send: 'Envoyer par email',
-            recordPayment: 'Enregistrer un paiement',
-            noInvoices: 'Aucune facture trouvée',
-            confirmDelete: 'Êtes-vous sûr de vouloir supprimer cette facture ?',
-            successCreate: 'Facture créée avec succès',
-            successUpdate: 'Facture mise à jour avec succès',
-            successDelete: 'Facture supprimée avec succès',
-            successPayment: 'Paiement enregistré avec succès',
-        },
-        customers: {
-            title: 'Gestion des Clients',
-            create: 'Nouveau client',
-            edit: 'Modifier le client',
-            view: 'Voir le client',
-            delete: 'Supprimer',
-            list: 'Liste des clients',
-            name: 'Nom',
-            email: 'E-mail',
-            phone: 'Téléphone',
-            address: 'Adresse',
-            city: 'Ville',
-            postalCode: 'Code postal',
-            country: 'Pays',
-            company: 'Entreprise',
-            type: 'Type',
-            individual: 'Personne physique',
-            companyType: 'Entreprise',
-            status: 'Statut',
-            active: 'Actif',
-            inactive: 'Inactif',
-            suspended: 'Suspendu',
-            contractsCount: 'Nombre de contrats',
-            noCustomers: 'Aucun client trouvé',
-            confirmDelete: 'Êtes-vous sûr de vouloir supprimer ce client ?',
-            successCreate: 'Client créé avec succès',
-            successUpdate: 'Client mis à jour avec succès',
-            successDelete: 'Client supprimé avec succès',
-        },
-        forms: {
-            save: 'Enregistrer',
-            cancel: 'Annuler',
-            delete: 'Supprimer',
-            edit: 'Modifier',
-            add: 'Ajouter',
-            remove: 'Retirer',
-            submit: 'Soumettre',
-            reset: 'Réinitialiser',
-            search: 'Rechercher',
-            filter: 'Filtrer',
-            export: 'Exporter',
-            import: 'Importer',
-            loading: 'Chargement...',
-            requiredField: 'Ce champ est obligatoire',
-            invalidEmail: 'Adresse e-mail invalide',
-            passwordMismatch: 'Les mots de passe ne correspondent pas',
-            success: 'Opération réussie',
-            error: 'Une erreur est survenue',
-            confirm: 'Êtes-vous sûr ?',
-            yes: 'Oui',
-            no: 'Non',
-        },
-        notifications: {
-            title: 'Notifications',
-            invoiceDue: 'Facture due',
-            contractExpiring: 'Contrat en expiration',
-            paymentReceived: 'Paiement reçu',
-            newContract: 'Nouveau contrat',
-            noNotifications: 'Aucune notification',
-            markRead: 'Marquer comme lue',
-            markUnread: 'Marquer comme non lue',
-        },
-    },
+// Supported locales
+export const LOCALES = {
+    fr: { code: 'fr', name: 'Français', flag: '🇫🇷' },
+    en: { code: 'en', name: 'English', flag: '🇬🇧' },
+    es: { code: 'es', name: 'Español', flag: '🇪🇸' },
+    nl: { code: 'nl', name: 'Nederlands', flag: '🇳🇱' },
 }
 
-const currentLanguage = ref('fr')
+// Current locale (reactive)
+const currentLocale = ref(localStorage.getItem('locale') || 'fr')
 
-export const useTranslation = () => {
-    const t = (key) => {
+// Translations cache
+const translations = ref({})
+
+// Load translations for a locale
+async function loadTranslations(locale) {
+    if (translations.value[locale]) {
+        return translations.value[locale]
+    }
+
+    try {
+        // Try the API route first (with caching)
+        const response = await fetch(`/lang/${locale}`)
+        if (response.ok) {
+            const data = await response.json()
+            translations.value[locale] = data
+            return data
+        }
+    } catch (error) {
+        console.error(`Failed to load translations for ${locale}:`, error)
+    }
+
+    return {}
+}
+
+// Initialize translations
+loadTranslations(currentLocale.value)
+
+export function useTranslation() {
+    const page = usePage()
+
+    // Get current locale from page props or localStorage
+    const locale = computed(() => {
+        return page.props?.locale || currentLocale.value
+    })
+
+    // Translate function
+    const t = (key, replacements = {}) => {
         const keys = key.split('.')
-        let value = translations[currentLanguage.value]
+        let value = translations.value[locale.value]
 
         for (const k of keys) {
-            value = value?.[k]
+            if (value && typeof value === 'object' && k in value) {
+                value = value[k]
+            } else {
+                return key
+            }
         }
 
-        return value || key
-    }
-
-    const setLanguage = (lang) => {
-        if (translations[lang]) {
-            currentLanguage.value = lang
-            localStorage.setItem('language', lang)
+        if (typeof value !== 'string') {
+            return key
         }
+
+        let result = value
+        for (const [replaceKey, replaceValue] of Object.entries(replacements)) {
+            result = result.replace(new RegExp(`\{${replaceKey}\}`, 'g'), replaceValue)
+            result = result.replace(new RegExp(`:${replaceKey}`, 'g'), replaceValue)
+        }
+
+        return result
     }
 
-    const getLanguage = () => currentLanguage.value
+    // Change locale
+    const setLocale = async (newLocale) => {
+        if (!LOCALES[newLocale]) {
+            console.error(`Unsupported locale: ${newLocale}`)
+            return
+        }
 
-    const availableLanguages = () => Object.keys(translations)
+        await loadTranslations(newLocale)
+        localStorage.setItem('locale', newLocale)
+        currentLocale.value = newLocale
+    }
+
+    const availableLocales = computed(() => Object.values(LOCALES))
+    const currentLocaleInfo = computed(() => LOCALES[locale.value] || LOCALES.fr)
 
     return {
         t,
-        setLanguage,
-        getLanguage,
-        availableLanguages,
+        locale,
+        setLocale,
+        availableLocales,
+        currentLocaleInfo,
+        LOCALES,
     }
 }
 
-// Initialize language from localStorage or default to French
-const savedLanguage = localStorage.getItem('language') || 'fr'
-currentLanguage.value = savedLanguage
+export default useTranslation

@@ -20,9 +20,11 @@ class Lead extends Model
         'email',
         'phone',
         'company',
+        'type',
         'status',
         'source',
         'score',
+        'priority',
         'box_type_interest',
         'budget_min',
         'budget_max',
@@ -43,6 +45,7 @@ class Lead extends Model
         'first_contacted_at' => 'datetime',
         'last_contacted_at' => 'datetime',
         'converted_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     public function tenant(): BelongsTo

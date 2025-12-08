@@ -304,7 +304,7 @@ class CRMService
 
         return [
             'vip' => $customers->filter(function ($c) {
-                return $c->contracts->sum('monthly_amount') >= 200;
+                return $c->contracts->sum('monthly_price') >= 200;
             })->count(),
             'active' => $customers->filter(function ($c) {
                 return $c->contracts()->where('status', 'active')->exists();

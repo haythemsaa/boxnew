@@ -155,15 +155,23 @@ class MLService
 
         // Factor 5: Price sensitivity (10%)
         // Check if customer always chooses cheapest options
-        $hasDowngrades = $customer->contracts()
+        $contracts = $customer->contracts()
             ->where('created_at', '>=', now()->subMonths(6))
+            ->with('box')
             ->get()
             ->sortBy('created_at')
-            ->sliding(2)
-            ->filter(function ($pair) {
-                return $pair[1]->box->price < $pair[0]->box->price;
-            })
-            ->count();
+            ->values();
+
+        $hasDowngrades = 0;
+        if ($contracts->count() >= 2) {
+            for ($i = 1; $i < $contracts->count(); $i++) {
+                $prevBox = $contracts[$i - 1]->box ?? null;
+                $currBox = $contracts[$i]->box ?? null;
+                if ($prevBox && $currBox && $currBox->price < $prevBox->price) {
+                    $hasDowngrades++;
+                }
+            }
+        }
 
         if ($hasDowngrades >= 1) {
             $score += 10;

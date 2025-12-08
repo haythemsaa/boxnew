@@ -17,14 +17,12 @@ class SMSCampaign extends Model
         'tenant_id',
         'name',
         'message',
-        'segment', // all, vip, at_risk, new, inactive
-        'status', // draft, scheduled, sending, sent, failed
+        'segment',
+        'status',
         'scheduled_at',
         'sent_at',
         'sent_count',
         'failed_count',
-        'cost',
-        'metadata',
     ];
 
     protected $casts = [
@@ -32,8 +30,9 @@ class SMSCampaign extends Model
         'sent_at' => 'datetime',
         'sent_count' => 'integer',
         'failed_count' => 'integer',
-        'cost' => 'decimal:2',
-        'metadata' => 'array',
+        'estimated_cost' => 'decimal:2',
+        'actual_cost' => 'decimal:2',
+        'deleted_at' => 'datetime',
     ];
 
     /**

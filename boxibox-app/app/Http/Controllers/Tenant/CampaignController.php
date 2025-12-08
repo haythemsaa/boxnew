@@ -67,6 +67,7 @@ class CampaignController extends Controller
 
         $campaign = SMSCampaign::create([
             'tenant_id' => auth()->user()->tenant_id,
+            'created_by' => auth()->id(),
             'name' => $request->name,
             'message' => $request->message,
             'segment' => $request->segment,

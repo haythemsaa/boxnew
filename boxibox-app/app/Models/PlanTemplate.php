@@ -3,29 +3,30 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PlanTemplate extends Model
 {
-    use SoftDeletes;
-
     protected $fillable = [
         'tenant_id',
         'name',
+        'slug',
         'description',
+        'thumbnail',
         'category',
-        'width',
-        'height',
+        'suggested_width',
+        'suggested_height',
         'template_data',
+        'is_system',
         'is_public',
     ];
 
     protected $casts = [
         'template_data' => 'array',
         'is_public' => 'boolean',
-        'width' => 'integer',
-        'height' => 'integer',
+        'is_system' => 'boolean',
+        'suggested_width' => 'integer',
+        'suggested_height' => 'integer',
     ];
 
     // Relationships

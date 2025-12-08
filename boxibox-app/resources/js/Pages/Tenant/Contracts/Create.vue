@@ -7,15 +7,18 @@ const props = defineProps({
     sites: Array,
     customers: Array,
     boxes: Array,
+    selectedBoxId: Number,
+    selectedSiteId: Number,
+    selectedBox: Object,
 })
 
 const currentStep = ref(1)
 const totalSteps = 5
 
 const form = useForm({
-    site_id: '',
+    site_id: props.selectedSiteId || '',
     customer_id: '',
-    box_id: '',
+    box_id: props.selectedBoxId || '',
     contract_number: '',
     status: 'draft',
     type: 'standard',
@@ -24,8 +27,8 @@ const form = useForm({
     notice_period_days: 30,
     auto_renew: true,
     renewal_period: 'monthly',
-    monthly_price: '',
-    deposit_amount: 0,
+    monthly_price: props.selectedBox?.base_price || '',
+    deposit_amount: props.selectedBox ? props.selectedBox.base_price * 2 : 0,
     deposit_paid: false,
     discount_percentage: 0,
     discount_amount: 0,
@@ -88,8 +91,9 @@ const getCustomerInitials = (customer) => {
 }
 
 const getBoxLabel = (box) => {
-    const parts = [box.code]
-    if (box.size) parts.push(`${box.size}m²`)
+    const parts = [box.number || box.name]
+    const size = box.length && box.width ? (box.length * box.width).toFixed(1) : null
+    if (size) parts.push(`${size}m²`)
     return parts.join(' - ')
 }
 
@@ -107,26 +111,65 @@ const formatCurrency = (amount) => {
     }).format(amount || 0)
 }
 
-const canProceed = computed(() => {
-    switch (currentStep.value) {
+// Validation errors for each step
+const stepErrors = ref({})
+
+const validateStep = (step) => {
+    const errors = {}
+
+    switch (step) {
         case 1:
-            return form.site_id && form.customer_id && form.box_id
+            if (!form.site_id) errors.site_id = 'Veuillez sélectionner un site'
+            if (!form.customer_id) errors.customer_id = 'Veuillez sélectionner un client'
+            if (!form.box_id) errors.box_id = 'Veuillez sélectionner un box'
+            break
         case 2:
-            return form.start_date
+            if (!form.start_date) errors.start_date = 'La date de début est obligatoire'
+            if (form.end_date && form.start_date && new Date(form.end_date) <= new Date(form.start_date)) {
+                errors.end_date = 'La date de fin doit être après la date de début'
+            }
+            break
         case 3:
-            return form.monthly_price > 0
+            if (!form.monthly_price || form.monthly_price <= 0) errors.monthly_price = 'Le prix mensuel est obligatoire'
+            if (form.deposit_amount < 0) errors.deposit_amount = 'Le dépôt ne peut pas être négatif'
+            break
         case 4:
-            return true
+            // Pas de champs obligatoires à l'étape 4
+            break
         case 5:
-            return true
-        default:
-            return false
+            // Validation finale - vérifier tous les champs obligatoires
+            if (!form.site_id) errors.site_id = 'Site manquant'
+            if (!form.customer_id) errors.customer_id = 'Client manquant'
+            if (!form.box_id) errors.box_id = 'Box manquant'
+            if (!form.start_date) errors.start_date = 'Date de début manquante'
+            if (!form.monthly_price || form.monthly_price <= 0) errors.monthly_price = 'Prix mensuel manquant'
+            break
     }
+
+    return errors
+}
+
+const canProceed = computed(() => {
+    const errors = validateStep(currentStep.value)
+    return Object.keys(errors).length === 0
 })
 
 const nextStep = () => {
-    if (currentStep.value < totalSteps && canProceed.value) {
+    const errors = validateStep(currentStep.value)
+    stepErrors.value = errors
+
+    if (Object.keys(errors).length > 0) {
+        // Scroll to first error
+        const firstErrorField = document.querySelector('.field-error')
+        if (firstErrorField) {
+            firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        }
+        return
+    }
+
+    if (currentStep.value < totalSteps) {
         currentStep.value++
+        stepErrors.value = {}
     }
 }
 
@@ -257,7 +300,7 @@ const paymentMethods = [
                 <!-- Form Content -->
                 <form @submit.prevent="submit">
                     <!-- Step 1: Client & Box -->
-                    <div v-show="currentStep === 1" class="space-y-6 animate-fade-in-up">
+                    <div v-if="currentStep === 1" class="space-y-6 animate-fade-in-up">
                         <!-- Site Selection -->
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -285,7 +328,10 @@ const paymentMethods = [
                                     <p class="text-sm text-gray-500">{{ site.city }}</p>
                                 </button>
                             </div>
-                            <div v-if="form.errors.site_id" class="mt-2 text-sm text-red-600">{{ form.errors.site_id }}</div>
+                            <div v-if="form.errors.site_id || stepErrors.site_id" class="mt-2 text-sm text-red-600 field-error flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                {{ form.errors.site_id || stepErrors.site_id }}
+                            </div>
                         </div>
 
                         <!-- Customer Selection -->
@@ -321,7 +367,10 @@ const paymentMethods = [
                                     <p class="text-sm text-gray-500">{{ selectedCustomer.email }}</p>
                                 </div>
                             </div>
-                            <div v-if="form.errors.customer_id" class="mt-2 text-sm text-red-600">{{ form.errors.customer_id }}</div>
+                            <div v-if="form.errors.customer_id || stepErrors.customer_id" class="mt-2 text-sm text-red-600 field-error flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                {{ form.errors.customer_id || stepErrors.customer_id }}
+                            </div>
                         </div>
 
                         <!-- Box Selection -->
@@ -359,17 +408,20 @@ const paymentMethods = [
                                             : 'border-gray-200 hover:border-emerald-300 hover:bg-gray-50'
                                     ]"
                                 >
-                                    <p class="font-bold text-gray-900">{{ box.code }}</p>
-                                    <p class="text-sm text-gray-500">{{ box.size }}m²</p>
+                                    <p class="font-bold text-gray-900">{{ box.number || box.name }}</p>
+                                    <p class="text-sm text-gray-500">{{ box.length && box.width ? (box.length * box.width).toFixed(1) : '-' }}m²</p>
                                     <p class="text-lg font-bold text-emerald-600 mt-2">{{ formatCurrency(box.base_price) }}/mois</p>
                                 </button>
                             </div>
-                            <div v-if="form.errors.box_id" class="mt-2 text-sm text-red-600">{{ form.errors.box_id }}</div>
+                            <div v-if="form.errors.box_id || stepErrors.box_id" class="mt-2 text-sm text-red-600 field-error flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                {{ form.errors.box_id || stepErrors.box_id }}
+                            </div>
                         </div>
                     </div>
 
                     <!-- Step 2: Duration -->
-                    <div v-show="currentStep === 2" class="space-y-6 animate-fade-in-up">
+                    <div v-if="currentStep === 2" class="space-y-6 animate-fade-in-up">
                         <!-- Contract Type -->
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-4">Type de contrat</h3>
@@ -407,7 +459,10 @@ const paymentMethods = [
                                         required
                                         class="block w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                                     />
-                                    <div v-if="form.errors.start_date" class="mt-1 text-sm text-red-600">{{ form.errors.start_date }}</div>
+                                    <div v-if="form.errors.start_date || stepErrors.start_date" class="mt-1 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.start_date || stepErrors.start_date }}
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -418,6 +473,10 @@ const paymentMethods = [
                                         type="date"
                                         class="block w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                                     />
+                                    <div v-if="stepErrors.end_date" class="mt-1 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ stepErrors.end_date }}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -465,7 +524,7 @@ const paymentMethods = [
                     </div>
 
                     <!-- Step 3: Pricing -->
-                    <div v-show="currentStep === 3" class="space-y-6 animate-fade-in-up">
+                    <div v-if="currentStep === 3" class="space-y-6 animate-fade-in-up">
                         <!-- Pricing -->
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-4">Tarification</h3>
@@ -485,11 +544,14 @@ const paymentMethods = [
                                             class="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                                         />
                                     </div>
-                                    <div v-if="form.errors.monthly_price" class="mt-1 text-sm text-red-600">{{ form.errors.monthly_price }}</div>
+                                    <div v-if="form.errors.monthly_price || stepErrors.monthly_price" class="mt-1 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.monthly_price || stepErrors.monthly_price }}
+                                    </div>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
-                                        Caution (€) <span class="text-red-500">*</span>
+                                        Caution (€)
                                     </label>
                                     <div class="relative">
                                         <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500">€</span>
@@ -500,6 +562,10 @@ const paymentMethods = [
                                             min="0"
                                             class="block w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200"
                                         />
+                                    </div>
+                                    <div v-if="stepErrors.deposit_amount" class="mt-1 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ stepErrors.deposit_amount }}
                                     </div>
                                 </div>
                                 <div>
@@ -604,7 +670,7 @@ const paymentMethods = [
                     </div>
 
                     <!-- Step 4: Access -->
-                    <div v-show="currentStep === 4" class="space-y-6 animate-fade-in-up">
+                    <div v-if="currentStep === 4" class="space-y-6 animate-fade-in-up">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-4">Accès au box</h3>
                             <div class="space-y-6">
@@ -667,7 +733,7 @@ const paymentMethods = [
                     </div>
 
                     <!-- Step 5: Summary -->
-                    <div v-show="currentStep === 5" class="space-y-6 animate-fade-in-up">
+                    <div v-if="currentStep === 5" class="space-y-6 animate-fade-in-up">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6">Récapitulatif du contrat</h3>
 
@@ -699,8 +765,8 @@ const paymentMethods = [
                                             </svg>
                                         </div>
                                         <div>
-                                            <p class="font-semibold text-gray-900">{{ selectedBox.code }}</p>
-                                            <p class="text-sm text-gray-500">{{ selectedBox.size }}m² - {{ selectedSite?.name }}</p>
+                                            <p class="font-semibold text-gray-900">{{ selectedBox.number || selectedBox.name }}</p>
+                                            <p class="text-sm text-gray-500">{{ selectedBox.length && selectedBox.width ? (selectedBox.length * selectedBox.width).toFixed(1) : '-' }}m² - {{ selectedSite?.name }}</p>
                                         </div>
                                     </div>
                                 </div>

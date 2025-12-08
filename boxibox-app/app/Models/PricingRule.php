@@ -38,6 +38,7 @@ class PricingRule extends Model
         'max_price' => 'decimal:2',
         'valid_from' => 'date',
         'valid_until' => 'date',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships

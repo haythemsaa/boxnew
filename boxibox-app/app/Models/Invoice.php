@@ -11,6 +11,36 @@ class Invoice extends Model
 {
     use SoftDeletes;
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($invoice) {
+            if (empty($invoice->invoice_number)) {
+                $invoice->invoice_number = static::generateInvoiceNumber($invoice->tenant_id);
+            }
+        });
+    }
+
+    /**
+     * Generate a unique invoice number
+     */
+    public static function generateInvoiceNumber($tenantId): string
+    {
+        $year = date('Y');
+        $month = date('m');
+        $prefix = 'FAC' . $year . $month;
+
+        $lastInvoice = static::withTrashed()
+            ->where('invoice_number', 'like', $prefix . '%')
+            ->orderByRaw('CAST(SUBSTRING(invoice_number, -5) AS UNSIGNED) DESC')
+            ->first();
+
+        $nextNumber = $lastInvoice ? ((int) substr($lastInvoice->invoice_number, -5)) + 1 : 1;
+
+        return $prefix . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+    }
+
     protected $fillable = [
         'tenant_id',
         'customer_id',
@@ -54,6 +84,7 @@ class Invoice extends Model
         'paid_amount' => 'decimal:2',
         'is_recurring' => 'boolean',
         'reminder_count' => 'integer',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships

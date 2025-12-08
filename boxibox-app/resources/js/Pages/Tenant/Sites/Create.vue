@@ -62,7 +62,7 @@
                 <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
                     <form @submit.prevent="submit">
                         <!-- Step 1: Informations du Site -->
-                        <div v-show="currentStep === 1" class="p-8">
+                        <div v-if="currentStep === 1" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -88,7 +88,10 @@
                                         :class="{ 'border-red-300 focus:border-red-500 focus:ring-red-500/10': form.errors.name }"
                                         placeholder="ex: Paris Centre"
                                     />
-                                    <p v-if="form.errors.name" class="mt-2 text-sm text-red-600">{{ form.errors.name }}</p>
+                                    <p v-if="form.errors.name || stepErrors.name" class="mt-2 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.name || stepErrors.name }}
+                                    </p>
                                 </div>
 
                                 <!-- Code du site -->
@@ -104,7 +107,10 @@
                                         placeholder="ex: PAR-001"
                                     />
                                     <p class="mt-1 text-xs text-gray-500">Identifiant unique pour ce site (sera affiché en majuscules)</p>
-                                    <p v-if="form.errors.code" class="mt-2 text-sm text-red-600">{{ form.errors.code }}</p>
+                                    <p v-if="form.errors.code || stepErrors.code" class="mt-2 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.code || stepErrors.code }}
+                                    </p>
                                 </div>
 
                                 <!-- Description -->
@@ -160,7 +166,7 @@
                         </div>
 
                         <!-- Step 2: Adresse -->
-                        <div v-show="currentStep === 2" class="p-8">
+                        <div v-if="currentStep === 2" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -187,7 +193,10 @@
                                         :class="{ 'border-red-300': form.errors.address }"
                                         placeholder="ex: 123 Rue de Rivoli"
                                     />
-                                    <p v-if="form.errors.address" class="mt-2 text-sm text-red-600">{{ form.errors.address }}</p>
+                                    <p v-if="form.errors.address || stepErrors.address" class="mt-2 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ form.errors.address || stepErrors.address }}
+                                    </p>
                                 </div>
 
                                 <!-- Ville & Code Postal -->
@@ -203,7 +212,10 @@
                                             :class="{ 'border-red-300': form.errors.city }"
                                             placeholder="ex: Paris"
                                         />
-                                        <p v-if="form.errors.city" class="mt-2 text-sm text-red-600">{{ form.errors.city }}</p>
+                                        <p v-if="form.errors.city || stepErrors.city" class="mt-2 text-sm text-red-600 field-error flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                            {{ form.errors.city || stepErrors.city }}
+                                        </p>
                                     </div>
                                     <div>
                                         <label class="block text-sm font-semibold text-gray-700 mb-2">
@@ -216,7 +228,10 @@
                                             :class="{ 'border-red-300': form.errors.postal_code }"
                                             placeholder="ex: 75001"
                                         />
-                                        <p v-if="form.errors.postal_code" class="mt-2 text-sm text-red-600">{{ form.errors.postal_code }}</p>
+                                        <p v-if="form.errors.postal_code || stepErrors.postal_code" class="mt-2 text-sm text-red-600 field-error flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                            {{ form.errors.postal_code || stepErrors.postal_code }}
+                                        </p>
                                     </div>
                                 </div>
 
@@ -276,7 +291,7 @@
                         </div>
 
                         <!-- Step 3: Contact & Récapitulatif -->
-                        <div v-show="currentStep === 3" class="p-8">
+                        <div v-if="currentStep === 3" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -462,6 +477,7 @@ import { useForm, Link } from '@inertiajs/vue3'
 import TenantLayout from '@/Layouts/TenantLayout.vue'
 
 const currentStep = ref(1)
+const stepErrors = ref({})
 
 const steps = [
     { number: 1, title: 'Informations' },
@@ -532,15 +548,50 @@ const statusColor = computed(() => {
     }
 })
 
+const validateStep = (step) => {
+    const errors = {}
+
+    switch (step) {
+        case 1:
+            if (!form.name) errors.name = 'Le nom du site est obligatoire'
+            if (!form.code) errors.code = 'Le code du site est obligatoire'
+            break
+        case 2:
+            if (!form.address) errors.address = 'L\'adresse est obligatoire'
+            if (!form.city) errors.city = 'La ville est obligatoire'
+            if (!form.postal_code) errors.postal_code = 'Le code postal est obligatoire'
+            break
+        case 3:
+            break
+    }
+
+    return errors
+}
+
 const nextStep = () => {
-    if (currentStep.value < 3 && canProceed.value) {
+    const errors = validateStep(currentStep.value)
+    stepErrors.value = errors
+
+    if (Object.keys(errors).length > 0) {
+        setTimeout(() => {
+            const firstErrorField = document.querySelector('.field-error')
+            if (firstErrorField) {
+                firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }, 100)
+        return
+    }
+
+    if (currentStep.value < 3) {
         currentStep.value++
+        stepErrors.value = {}
     }
 }
 
 const prevStep = () => {
     if (currentStep.value > 1) {
         currentStep.value--
+        stepErrors.value = {}
     }
 }
 

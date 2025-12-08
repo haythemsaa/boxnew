@@ -24,6 +24,7 @@ class Message extends Model
         'attachments' => 'array',
         'is_read' => 'boolean',
         'read_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships

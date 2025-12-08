@@ -39,6 +39,7 @@ class Signature extends Model
         'expires_at' => 'datetime',
         'last_reminder_at' => 'datetime',
         'reminder_count' => 'integer',
+        'deleted_at' => 'datetime',
     ];
 
     protected static function boot()

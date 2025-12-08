@@ -61,7 +61,7 @@
                 <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
                     <form @submit.prevent="submit">
                         <!-- Step 1: Informations de base -->
-                        <div v-show="currentStep === 1" class="p-8">
+                        <div v-if="currentStep === 1" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -227,7 +227,7 @@
                         </div>
 
                         <!-- Step 2: Dimensions & Prix -->
-                        <div v-show="currentStep === 2" class="p-8">
+                        <div v-if="currentStep === 2" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -369,7 +369,7 @@
                         </div>
 
                         <!-- Step 3: Équipements -->
-                        <div v-show="currentStep === 3" class="p-8">
+                        <div v-if="currentStep === 3" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -435,7 +435,7 @@
                         </div>
 
                         <!-- Step 4: Récapitulatif -->
-                        <div v-show="currentStep === 4" class="p-8">
+                        <div v-if="currentStep === 4" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -600,6 +600,7 @@ const props = defineProps({
 })
 
 const currentStep = ref(1)
+const stepErrors = ref({})
 
 const steps = [
     { number: 1, title: 'Informations' },
@@ -707,15 +708,46 @@ const activeFeatures = computed(() => {
     return features.filter(f => form[f.key])
 })
 
+const validateStep = (step) => {
+    const errors = {}
+    switch (step) {
+        case 1:
+            if (!form.name) errors.name = 'Le nom du box est obligatoire'
+            if (!form.code) errors.code = 'Le code du box est obligatoire'
+            if (!form.site_id) errors.site_id = 'Veuillez sélectionner un site'
+            break
+        case 2:
+            if (!form.length || form.length <= 0) errors.length = 'La longueur est obligatoire'
+            if (!form.width || form.width <= 0) errors.width = 'La largeur est obligatoire'
+            if (!form.height || form.height <= 0) errors.height = 'La hauteur est obligatoire'
+            if (!form.base_price || form.base_price <= 0) errors.base_price = 'Le prix de base est obligatoire'
+            break
+    }
+    return errors
+}
+
 const nextStep = () => {
-    if (currentStep.value < 4 && canProceed.value) {
+    const errors = validateStep(currentStep.value)
+    stepErrors.value = errors
+    if (Object.keys(errors).length > 0) {
+        setTimeout(() => {
+            const firstErrorField = document.querySelector('.field-error')
+            if (firstErrorField) {
+                firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }, 100)
+        return
+    }
+    if (currentStep.value < 4) {
         currentStep.value++
+        stepErrors.value = {}
     }
 }
 
 const prevStep = () => {
     if (currentStep.value > 1) {
         currentStep.value--
+        stepErrors.value = {}
     }
 }
 

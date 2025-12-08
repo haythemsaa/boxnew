@@ -31,6 +31,7 @@ class Product extends Model
         'track_inventory' => 'boolean',
         'is_active' => 'boolean',
         'metadata' => 'array',
+        'deleted_at' => 'datetime',
     ];
 
     public function tenant(): BelongsTo

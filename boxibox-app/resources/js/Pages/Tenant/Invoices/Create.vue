@@ -10,6 +10,7 @@ const props = defineProps({
 
 const currentStep = ref(1)
 const totalSteps = 4
+const stepErrors = ref({})
 
 const form = useForm({
     customer_id: '',
@@ -143,15 +144,61 @@ const canProceed = computed(() => {
     }
 })
 
+const validateStep = (step) => {
+    const errors = {}
+
+    switch (step) {
+        case 1: // Client
+            if (!form.customer_id) errors.customer_id = 'Veuillez sélectionner un client'
+            break
+        case 2: // Dates
+            if (!form.invoice_date) errors.invoice_date = 'La date de facturation est obligatoire'
+            if (!form.due_date) errors.due_date = 'La date d\'échéance est obligatoire'
+            if (form.invoice_date && form.due_date && new Date(form.due_date) < new Date(form.invoice_date)) {
+                errors.due_date = 'La date d\'échéance doit être après la date de facturation'
+            }
+            break
+        case 3: // Articles
+            if (form.items.length === 0) {
+                errors.items = 'Veuillez ajouter au moins un article'
+            } else {
+                form.items.forEach((item, index) => {
+                    if (!item.description) errors[`item_${index}_description`] = 'La description est obligatoire'
+                    if (!item.quantity || item.quantity <= 0) errors[`item_${index}_quantity`] = 'Quantité invalide'
+                })
+            }
+            break
+        case 4: // Validation
+            break
+    }
+
+    return errors
+}
+
 const nextStep = () => {
-    if (currentStep.value < totalSteps && canProceed.value) {
+    const errors = validateStep(currentStep.value)
+    stepErrors.value = errors
+
+    if (Object.keys(errors).length > 0) {
+        setTimeout(() => {
+            const firstErrorField = document.querySelector('.field-error')
+            if (firstErrorField) {
+                firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }, 100)
+        return
+    }
+
+    if (currentStep.value < totalSteps) {
         currentStep.value++
+        stepErrors.value = {}
     }
 }
 
 const prevStep = () => {
     if (currentStep.value > 1) {
         currentStep.value--
+        stepErrors.value = {}
     }
 }
 
@@ -257,7 +304,7 @@ const statusOptions = [
                 <!-- Form Content -->
                 <form @submit.prevent="submit">
                     <!-- Step 1: Client -->
-                    <div v-show="currentStep === 1" class="space-y-6 animate-fade-in-up">
+                    <div v-if="currentStep === 1" class="space-y-6 animate-fade-in-up">
                         <!-- Invoice Type -->
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-4">Type de document</h3>
@@ -312,7 +359,10 @@ const statusOptions = [
                                     <p class="text-sm text-gray-500">{{ selectedCustomer.email }}</p>
                                 </div>
                             </div>
-                            <div v-if="form.errors.customer_id" class="mt-2 text-sm text-red-600">{{ form.errors.customer_id }}</div>
+                            <p v-if="form.errors.customer_id || stepErrors.customer_id" class="mt-2 text-sm text-red-600 field-error flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                {{ form.errors.customer_id || stepErrors.customer_id }}
+                            </p>
                         </div>
 
                         <!-- Contract (Optional) -->
@@ -342,7 +392,7 @@ const statusOptions = [
                     </div>
 
                     <!-- Step 2: Dates -->
-                    <div v-show="currentStep === 2" class="space-y-6 animate-fade-in-up">
+                    <div v-if="currentStep === 2" class="space-y-6 animate-fade-in-up">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-4">Dates de la facture</h3>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -353,9 +403,13 @@ const statusOptions = [
                                     <input
                                         v-model="form.invoice_date"
                                         type="date"
-                                        required
                                         class="block w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                        :class="{ 'border-red-300 bg-red-50': stepErrors.invoice_date }"
                                     />
+                                    <p v-if="stepErrors.invoice_date" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ stepErrors.invoice_date }}
+                                    </p>
                                 </div>
                                 <div>
                                     <label class="block text-sm font-medium text-gray-700 mb-2">
@@ -364,9 +418,13 @@ const statusOptions = [
                                     <input
                                         v-model="form.due_date"
                                         type="date"
-                                        required
                                         class="block w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                        :class="{ 'border-red-300 bg-red-50': stepErrors.due_date }"
                                     />
+                                    <p v-if="stepErrors.due_date" class="mt-1.5 text-sm text-red-600 field-error flex items-center gap-1">
+                                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                        {{ stepErrors.due_date }}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -415,7 +473,7 @@ const statusOptions = [
                     </div>
 
                     <!-- Step 3: Articles -->
-                    <div v-show="currentStep === 3" class="space-y-6 animate-fade-in-up">
+                    <div v-if="currentStep === 3" class="space-y-6 animate-fade-in-up">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <div class="flex justify-between items-center mb-6">
                                 <h3 class="text-lg font-semibold text-gray-900">Articles de la facture</h3>
@@ -445,10 +503,14 @@ const statusOptions = [
                                             <input
                                                 v-model="item.description"
                                                 type="text"
-                                                required
                                                 placeholder="Description de l'article"
                                                 class="block w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                                :class="{ 'border-red-300 bg-red-50': stepErrors[`item_${index}_description`] }"
                                             />
+                                            <p v-if="stepErrors[`item_${index}_description`]" class="mt-1 text-xs text-red-600 field-error flex items-center gap-1">
+                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                                {{ stepErrors[`item_${index}_description`] }}
+                                            </p>
                                         </div>
 
                                         <div class="col-span-4 sm:col-span-2">
@@ -583,7 +645,7 @@ const statusOptions = [
                     </div>
 
                     <!-- Step 4: Summary -->
-                    <div v-show="currentStep === 4" class="space-y-6 animate-fade-in-up">
+                    <div v-if="currentStep === 4" class="space-y-6 animate-fade-in-up">
                         <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                             <h3 class="text-lg font-semibold text-gray-900 mb-6">Récapitulatif de la facture</h3>
 

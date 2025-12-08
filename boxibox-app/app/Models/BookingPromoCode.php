@@ -37,6 +37,7 @@ class BookingPromoCode extends Model
         'is_active' => 'boolean',
         'first_time_only' => 'boolean',
         'applicable_box_types' => 'array',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships

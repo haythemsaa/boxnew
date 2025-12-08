@@ -42,6 +42,7 @@ class Prospect extends Model
         'last_contact_at' => 'datetime',
         'converted_at' => 'datetime',
         'follow_up_count' => 'integer',
+        'deleted_at' => 'datetime',
     ];
 
     // Relationships

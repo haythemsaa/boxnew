@@ -42,6 +42,7 @@ class SepaMandate extends Model
         'last_collection_at' => 'datetime',
         'collection_count' => 'integer',
         'total_collected' => 'decimal:2',
+        'deleted_at' => 'datetime',
     ];
 
     protected $hidden = [

@@ -14,7 +14,22 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
+            \App\Http\Middleware\SetLocale::class,
             \App\Http\Middleware\HandleInertiaRequests::class,
+        ]);
+
+        // Register Spatie Permission middleware aliases
+        $middleware->alias([
+            'role' => \Spatie\Permission\Middleware\RoleMiddleware::class,
+            'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
+            'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
+        ]);
+
+        // Exclude public booking API routes from CSRF verification
+        $middleware->validateCsrfTokens(except: [
+            'book/api/*',
+            'api/v1/booking/*',
+            'widget/booking/*',
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {

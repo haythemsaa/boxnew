@@ -61,7 +61,7 @@
                 <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
                     <form @submit.prevent="submit">
                         <!-- Step 1: Client & Facture -->
-                        <div v-show="currentStep === 1" class="p-8">
+                        <div v-if="currentStep === 1" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -162,7 +162,7 @@
                         </div>
 
                         <!-- Step 2: Montant & Méthode -->
-                        <div v-show="currentStep === 2" class="p-8">
+                        <div v-if="currentStep === 2" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -293,7 +293,7 @@
                         </div>
 
                         <!-- Step 3: Récapitulatif -->
-                        <div v-show="currentStep === 3" class="p-8">
+                        <div v-if="currentStep === 3" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -476,6 +476,7 @@ const props = defineProps({
 })
 
 const currentStep = ref(1)
+const stepErrors = ref({})
 
 const steps = [
     { number: 1, title: 'Client' },
@@ -591,14 +592,52 @@ const statusColor = computed(() => {
     }
 })
 
+const validateStep = (step) => {
+    stepErrors.value = {}
+
+    if (step === 1) {
+        if (!form.customer_id) {
+            stepErrors.value.customer_id = 'Veuillez sélectionner un client'
+        }
+        if (!form.type) {
+            stepErrors.value.type = 'Veuillez sélectionner un type de transaction'
+        }
+    }
+
+    if (step === 2) {
+        if (!form.amount || form.amount <= 0) {
+            stepErrors.value.amount = 'Le montant doit être supérieur à 0'
+        }
+        if (!form.method) {
+            stepErrors.value.method = 'Veuillez sélectionner une méthode de paiement'
+        }
+        if (!form.status) {
+            stepErrors.value.status = 'Veuillez sélectionner un statut'
+        }
+    }
+
+    return Object.keys(stepErrors.value).length === 0
+}
+
 const nextStep = () => {
-    if (currentStep.value < 3 && canProceed.value) {
-        currentStep.value++
+    if (currentStep.value < 3) {
+        if (validateStep(currentStep.value)) {
+            currentStep.value++
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        } else {
+            const firstErrorField = Object.keys(stepErrors.value)[0]
+            const errorElement = document.querySelector(`[name="${firstErrorField}"], #${firstErrorField}`)
+            if (errorElement) {
+                errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                errorElement.focus()
+            }
+        }
     }
 }
 
 const prevStep = () => {
     if (currentStep.value > 1) {
+        stepErrors.value = {}
         currentStep.value--
     }
 }

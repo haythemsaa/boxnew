@@ -61,7 +61,7 @@
                 <div class="bg-white rounded-2xl shadow-xl shadow-gray-200/50 overflow-hidden">
                     <form @submit.prevent="submit">
                         <!-- Step 1: Facture -->
-                        <div v-show="currentStep === 1" class="p-8">
+                        <div v-if="currentStep === 1" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -112,7 +112,7 @@
                         </div>
 
                         <!-- Step 2: Niveau de relance -->
-                        <div v-show="currentStep === 2" class="p-8">
+                        <div v-if="currentStep === 2" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -157,7 +157,7 @@
                         </div>
 
                         <!-- Step 3: Paramètres d'envoi -->
-                        <div v-show="currentStep === 3" class="p-8">
+                        <div v-if="currentStep === 3" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -234,7 +234,7 @@
                         </div>
 
                         <!-- Step 4: Récapitulatif -->
-                        <div v-show="currentStep === 4" class="p-8">
+                        <div v-if="currentStep === 4" class="p-8">
                             <div class="flex items-center space-x-3 mb-6">
                                 <div class="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
                                     <svg class="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -373,6 +373,7 @@ const props = defineProps({
 })
 
 const currentStep = ref(1)
+const stepErrors = ref({})
 
 const steps = [
     { number: 1, title: 'Facture' },
@@ -438,12 +439,48 @@ const getDaysOverdue = (dueDate) => {
     return diffDays > 0 ? diffDays : 0
 }
 
+const validateStep = (step) => {
+    const errors = {}
+
+    switch (step) {
+        case 1:
+            if (!form.invoice_id) errors.invoice_id = 'Veuillez sélectionner une facture'
+            break
+        case 2:
+            if (!form.level) errors.level = 'Veuillez sélectionner un niveau de relance'
+            break
+        case 3:
+            if (!form.type) errors.type = 'Veuillez sélectionner une méthode d\'envoi'
+            break
+        case 4:
+            // Step 4 is summary, no validation needed
+            break
+    }
+
+    stepErrors.value = errors
+    return Object.keys(errors).length === 0
+}
+
 const nextStep = () => {
-    if (currentStep.value < 4 && canProceed.value) currentStep.value++
+    if (currentStep.value < 4) {
+        if (validateStep(currentStep.value)) {
+            currentStep.value++
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+        } else {
+            const firstError = document.querySelector('.border-red-300, .text-red-600')
+            if (firstError) {
+                firstError.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+        }
+    }
 }
 
 const prevStep = () => {
-    if (currentStep.value > 1) currentStep.value--
+    if (currentStep.value > 1) {
+        stepErrors.value = {}
+        currentStep.value--
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
 }
 
 const submit = () => {

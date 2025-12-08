@@ -23,43 +23,33 @@ class Customer extends Model
         'phone',
         'mobile',
         'birth_date',
-        'birth_place',
         'company_name',
-        'siret',
         'vat_number',
         'id_type',
         'id_number',
-        'id_issue_date',
-        'id_expiry_date',
-        'id_document_path',
         'address',
         'city',
         'postal_code',
         'country',
         'billing_address',
-        'billing_city',
-        'billing_postal_code',
-        'billing_country',
         'credit_score',
         'notes',
         'status',
         'outstanding_balance',
         'total_contracts',
         'total_revenue',
-        'last_payment_date',
-        'preferences',
     ];
 
     protected $casts = [
         'birth_date' => 'date',
-        'id_issue_date' => 'date',
-        'id_expiry_date' => 'date',
-        'last_payment_date' => 'date',
         'credit_score' => 'integer',
         'outstanding_balance' => 'decimal:2',
         'total_revenue' => 'decimal:2',
         'total_contracts' => 'integer',
-        'preferences' => 'array',
+        'id_expiry' => 'date',
+        'same_billing_address' => 'boolean',
+        'gdpr_consent_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 
     protected $hidden = [
@@ -91,6 +81,16 @@ class Customer extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function valetItems(): HasMany
+    {
+        return $this->hasMany(ValetItem::class);
+    }
+
+    public function valetOrders(): HasMany
+    {
+        return $this->hasMany(ValetOrder::class);
     }
 
     // Scopes

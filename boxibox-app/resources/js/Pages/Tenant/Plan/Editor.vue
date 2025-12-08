@@ -16,7 +16,7 @@ const selectedSite = ref(props.currentSite?.id);
 const localElements = ref([...(props.elements || [])].map(el => ({ ...el, id: el.id || generateId() })));
 const selectedElements = ref([]);
 const tool = ref('select');
-const zoom = ref(1);
+const zoom = ref(0.85); // Zoom initial réduit pour voir tout
 const panX = ref(0);
 const panY = ref(0);
 const isDragging = ref(false);
@@ -32,10 +32,33 @@ const showMenu = ref(false);
 const showQuickCreate = ref(false);
 const showAutoNumber = ref(false);
 const showBoxList = ref(false);
+const showBoxPalette = ref(true); // Palette de boxes visible par défaut
 
-// SVG viewBox dimensions
-const svgWidth = 950;
-const svgHeight = 580;
+// Palette de boxes prédéfinis par volume
+const boxTemplates = [
+    { name: '1m³', vol: 1, w: 20, h: 20, color: '#4CAF50' },
+    { name: '2m³', vol: 2, w: 25, h: 22, color: '#4CAF50' },
+    { name: '3m³', vol: 3, w: 28, h: 25, color: '#4CAF50' },
+    { name: '4m³', vol: 4, w: 30, h: 28, color: '#4CAF50' },
+    { name: '5m³', vol: 5, w: 32, h: 30, color: '#4CAF50' },
+    { name: '6m³', vol: 6, w: 35, h: 30, color: '#4CAF50' },
+    { name: '9m³', vol: 9, w: 38, h: 32, color: '#4CAF50' },
+    { name: '12m³', vol: 12, w: 42, h: 35, color: '#4CAF50' },
+    { name: '15m³', vol: 15, w: 45, h: 38, color: '#4CAF50' },
+    { name: '18m³', vol: 18, w: 48, h: 40, color: '#4CAF50' },
+    { name: '25m³', vol: 25, w: 55, h: 45, color: '#4CAF50' },
+    { name: '30m³', vol: 30, w: 60, h: 48, color: '#4CAF50' },
+    { name: '50m³', vol: 50, w: 70, h: 55, color: '#4CAF50' },
+    { name: '75m³', vol: 75, w: 80, h: 65, color: '#4CAF50' },
+    { name: '100m³', vol: 100, w: 90, h: 70, color: '#4CAF50' },
+];
+
+// Template sélectionné pour placement
+const selectedTemplate = ref(null);
+
+// SVG viewBox dimensions - Plus grand pour voir tout
+const svgWidth = 1400;
+const svgHeight = 800;
 
 // Status colors - Exact Buxida colors
 const statusColors = {
@@ -153,6 +176,12 @@ function createElement(type, x, y, w, h) {
     };
 }
 
+// Sélectionner un template de box
+function selectTemplate(template) {
+    selectedTemplate.value = template;
+    tool.value = 'template'; // Mode template
+}
+
 // SVG click handler
 function onSvgMouseDown(e) {
     if (e.target.closest('.element-group')) return;
@@ -163,10 +192,48 @@ function onSvgMouseDown(e) {
         isDragging.value = true;
         dragStart.value = { x: e.clientX, y: e.clientY, px: panX.value, py: panY.value };
         selectedElements.value = [];
+    } else if (tool.value === 'template' && selectedTemplate.value) {
+        // Placer le template sélectionné directement au clic
+        placeTemplateAt(pt.x, pt.y);
     } else {
+        // Mode dessin - créer un élément directement au clic
         isDrawing.value = true;
         drawStart.value = pt;
     }
+}
+
+// Placer un template de box à une position
+function placeTemplateAt(x, y) {
+    const t = selectedTemplate.value;
+    if (!t) return;
+
+    const el = {
+        id: generateId(),
+        type: 'box',
+        x: snap(x - t.w / 2), // Centrer sur le clic
+        y: snap(y - t.h / 2),
+        w: t.w,
+        h: t.h,
+        fill: t.color,
+        z: 100,
+        name: '', // L'utilisateur peut le renommer
+        vol: t.vol,
+        status: 'available',
+        locked: false,
+        visible: true,
+    };
+
+    localElements.value.push(el);
+    selectedElements.value = [el.id];
+    saveHistory();
+}
+
+// Créer un élément au clic (pas en drag)
+function createElementAtClick(x, y) {
+    const el = createElement(tool.value, x, y);
+    localElements.value.push(el);
+    selectedElements.value = [el.id];
+    saveHistory();
 }
 
 function onSvgMouseMove(e) {
@@ -186,10 +253,13 @@ function onSvgMouseUp(e) {
         const w = Math.abs(pt.x - drawStart.value.x);
         const h = Math.abs(pt.y - drawStart.value.y);
 
-        const el = createElement(tool.value, x, y, w > 10 ? w : null, h > 10 ? h : null);
+        // Si l'utilisateur a juste cliqué (pas de drag), utiliser les dimensions par défaut
+        const useDefaultSize = w < 10 && h < 10;
+        const el = createElement(tool.value, useDefaultSize ? drawStart.value.x : x, useDefaultSize ? drawStart.value.y : y, useDefaultSize ? null : w, useDefaultSize ? null : h);
         localElements.value.push(el);
         selectedElements.value = [el.id];
         saveHistory();
+        console.log('Élément créé:', el.type, 'à', el.x, el.y, 'taille', el.w, 'x', el.h);
     }
 
     isDragging.value = false;
@@ -355,24 +425,49 @@ function addBoxFromList(box) {
 }
 
 // Zoom
-function zoomIn() { zoom.value = Math.min(zoom.value * 1.2, 3); }
-function zoomOut() { zoom.value = Math.max(zoom.value / 1.2, 0.3); }
-function resetView() { zoom.value = 1; panX.value = 0; panY.value = 0; }
+function zoomIn() { zoom.value = Math.min(zoom.value * 1.15, 3); }
+function zoomOut() { zoom.value = Math.max(zoom.value / 1.15, 0.2); }
+function resetView() { zoom.value = 0.85; panX.value = 0; panY.value = 0; }
+function fitToScreen() {
+    // Calcul du zoom pour que le canvas rentre dans l'écran
+    const wrapper = document.querySelector('.canvas-wrapper');
+    if (wrapper) {
+        const wrapperWidth = wrapper.clientWidth - 20;
+        const wrapperHeight = wrapper.clientHeight - 20;
+        const scaleX = wrapperWidth / svgWidth;
+        const scaleY = wrapperHeight / svgHeight;
+        zoom.value = Math.min(scaleX, scaleY, 1);
+        panX.value = 0;
+        panY.value = 0;
+    }
+}
 
 function onWheel(e) {
     e.preventDefault();
-    const delta = e.deltaY > 0 ? 0.9 : 1.1;
-    zoom.value = Math.min(Math.max(zoom.value * delta, 0.3), 3);
+    const delta = e.deltaY > 0 ? 0.92 : 1.08;
+    zoom.value = Math.min(Math.max(zoom.value * delta, 0.2), 3);
 }
 
 // Save
 function savePlan() {
+    if (!props.currentSite?.id) {
+        alert('Erreur: Aucun site sélectionné. Veuillez sélectionner un site.');
+        return;
+    }
     isSaving.value = true;
     router.post(route('tenant.plan.save-elements', props.currentSite.id), {
         elements: localElements.value,
     }, {
-        onSuccess: () => { isSaving.value = false; },
-        onError: () => { isSaving.value = false; },
+        preserveScroll: true,
+        onSuccess: () => {
+            isSaving.value = false;
+            alert('Plan sauvegardé avec succès!');
+        },
+        onError: (errors) => {
+            isSaving.value = false;
+            console.error('Erreurs de sauvegarde:', errors);
+            alert('Erreur lors de la sauvegarde du plan.');
+        },
     });
 }
 
@@ -401,6 +496,10 @@ function onKeyDown(e) {
     else if (e.key === 'b') tool.value = 'box';
     else if (e.key === 'w') tool.value = 'wall';
     else if (e.key === 'c') tool.value = 'corridor';
+    else if (e.key === 'f') fitToScreen();
+    else if (e.key === 'r') resetView();
+    else if (e.key === '+' || e.key === '=') zoomIn();
+    else if (e.key === '-') zoomOut();
 }
 
 // Computed
@@ -447,6 +546,8 @@ function getElementFill(el) {
 onMounted(() => {
     saveHistory();
     window.addEventListener('keydown', onKeyDown);
+    // Ajuster automatiquement au chargement
+    setTimeout(() => fitToScreen(), 100);
 });
 
 onUnmounted(() => {
@@ -523,10 +624,11 @@ onUnmounted(() => {
                 </div>
 
                 <div class="zoom-controls">
-                    <button @click="zoomOut" class="zoom-btn">−</button>
+                    <button @click="zoomOut" class="zoom-btn" title="Zoom - (-)">−</button>
                     <span class="zoom-level">{{ Math.round(zoom * 100) }}%</span>
-                    <button @click="zoomIn" class="zoom-btn">+</button>
-                    <button @click="resetView" class="zoom-btn" title="Reset">⟲</button>
+                    <button @click="zoomIn" class="zoom-btn" title="Zoom + (+)">+</button>
+                    <button @click="fitToScreen" class="zoom-btn" title="Ajuster (F)">⊡</button>
+                    <button @click="resetView" class="zoom-btn" title="Reset (R)">⟲</button>
                 </div>
 
                 <button @click="showQuickCreate = true" class="header-btn">Création Rapide</button>
@@ -555,6 +657,57 @@ onUnmounted(() => {
 
         <!-- Main content -->
         <div class="editor-body">
+            <!-- Box Palette - Left sidebar -->
+            <aside class="box-palette">
+                <div class="palette-header">
+                    <h3>📦 Boxes</h3>
+                    <span class="palette-hint">Cliquez pour sélectionner, puis cliquez sur le plan</span>
+                </div>
+                <div class="palette-grid">
+                    <div
+                        v-for="t in boxTemplates"
+                        :key="t.vol"
+                        :class="['palette-item', { selected: selectedTemplate?.vol === t.vol }]"
+                        @click="selectTemplate(t)"
+                        :title="`Box ${t.vol}m³ - Cliquez puis placez sur le plan`"
+                    >
+                        <div class="palette-box" :style="{ width: Math.min(t.w, 50) + 'px', height: Math.min(t.h, 40) + 'px', background: t.color }">
+                            {{ t.vol }}
+                        </div>
+                        <span class="palette-label">{{ t.name }}</span>
+                    </div>
+                </div>
+                <div class="palette-actions">
+                    <button @click="selectedTemplate = null; tool = 'select'" class="palette-btn" v-if="selectedTemplate">
+                        ✕ Annuler sélection
+                    </button>
+                </div>
+                <div class="palette-divider"></div>
+                <div class="palette-section">
+                    <h4>Autres éléments</h4>
+                    <div class="other-tools">
+                        <button @click="tool = 'wall'; selectedTemplate = null" :class="['tool-item', { active: tool === 'wall' }]">
+                            <span class="tool-icon">▬</span> Mur
+                        </button>
+                        <button @click="tool = 'corridor'; selectedTemplate = null" :class="['tool-item', { active: tool === 'corridor' }]">
+                            <span class="tool-icon">▭</span> Couloir
+                        </button>
+                        <button @click="tool = 'door'; selectedTemplate = null" :class="['tool-item', { active: tool === 'door' }]">
+                            <span class="tool-icon">🚪</span> Porte
+                        </button>
+                        <button @click="tool = 'lift'; selectedTemplate = null" :class="['tool-item', { active: tool === 'lift' }]">
+                            <span class="tool-icon">🛗</span> Ascenseur
+                        </button>
+                        <button @click="tool = 'zone'; selectedTemplate = null" :class="['tool-item', { active: tool === 'zone' }]">
+                            <span class="tool-icon">⬜</span> Zone
+                        </button>
+                        <button @click="tool = 'label'; selectedTemplate = null" :class="['tool-item', { active: tool === 'label' }]">
+                            <span class="tool-icon">T</span> Texte
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
             <!-- Properties panel -->
             <aside v-if="selectedElement" class="properties-panel">
                 <h3>Propriétés</h3>
@@ -608,7 +761,7 @@ onUnmounted(() => {
             </aside>
 
             <!-- SVG Canvas -->
-            <div class="canvas-wrapper" @wheel="onWheel">
+            <div :class="['canvas-wrapper', { 'template-mode': tool === 'template', 'select-mode': tool === 'select' }]" @wheel="onWheel">
                 <svg
                     ref="svgRef"
                     :viewBox="`0 0 ${svgWidth} ${svgHeight}`"
@@ -631,7 +784,7 @@ onUnmounted(() => {
                     <rect x="0" y="0" :width="svgWidth" :height="svgHeight" fill="url(#grid)"/>
 
                     <!-- Border -->
-                    <rect x="50" y="85" width="870" height="480" fill="none" stroke="#333" stroke-width="2" rx="3"/>
+                    <rect x="20" y="20" :width="svgWidth - 40" :height="svgHeight - 40" fill="none" stroke="#333" stroke-width="2" rx="3"/>
 
                     <!-- Elements -->
                     <g v-for="el in sortedElements" :key="el.id"
@@ -857,16 +1010,18 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 16px;
+    padding: 6px 10px;
     background: linear-gradient(135deg, #1e3a5f 0%, #2d5a87 100%);
     color: white;
-    gap: 16px;
+    gap: 8px;
     flex-shrink: 0;
+    flex-wrap: wrap;
 }
 .header-left, .header-center, .header-right {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 6px;
+    flex-wrap: wrap;
 }
 .menu-btn {
     background: rgba(255,255,255,0.1);
@@ -875,7 +1030,7 @@ onUnmounted(() => {
     cursor: pointer; font-size: 16px;
 }
 .menu-btn:hover { background: rgba(255,255,255,0.2); }
-.editor-header h1 { font-size: 18px; font-weight: 600; margin: 0; }
+.editor-header h1 { font-size: 14px; font-weight: 600; margin: 0; white-space: nowrap; }
 .site-select {
     padding: 6px 12px; border-radius: 6px;
     border: 1px solid rgba(255,255,255,0.3);
@@ -891,17 +1046,20 @@ onUnmounted(() => {
     padding: 4px; border-radius: 8px;
 }
 .tool-btn {
-    padding: 6px 10px; border: none;
+    padding: 4px 6px; border: none;
     background: transparent;
     color: rgba(255,255,255,0.7);
-    font-size: 11px; border-radius: 4px;
+    font-size: 10px; border-radius: 4px;
     cursor: pointer; transition: all 0.15s;
 }
 .tool-btn:hover { background: rgba(255,255,255,0.1); color: white; }
 .tool-btn.active { background: #4CAF50; color: white; }
 
 /* Stats */
-.stats { display: flex; gap: 12px; font-size: 12px; }
+.stats { display: none; } /* Masquer sur petits écrans */
+@media (min-width: 1200px) {
+    .stats { display: flex; gap: 8px; font-size: 11px; }
+}
 .stat { display: flex; align-items: center; gap: 4px; }
 .dot { width: 10px; height: 10px; border-radius: 50%; }
 .dot.available { background: #4CAF50; }
@@ -936,20 +1094,21 @@ onUnmounted(() => {
 
 /* Header buttons */
 .header-btn {
-    padding: 6px 10px;
+    padding: 4px 8px;
     border: 1px solid rgba(255,255,255,0.3);
     background: rgba(255,255,255,0.1);
-    color: white; border-radius: 6px;
-    cursor: pointer; font-size: 12px;
+    color: white; border-radius: 4px;
+    cursor: pointer; font-size: 11px;
     text-decoration: none;
     transition: all 0.15s;
+    white-space: nowrap;
 }
 .header-btn:hover, .header-btn.active { background: rgba(255,255,255,0.2); }
 .save-btn {
-    padding: 6px 14px; border: none;
+    padding: 4px 10px; border: none;
     background: #4CAF50; color: white;
-    border-radius: 6px; cursor: pointer;
-    font-size: 13px; font-weight: 500;
+    border-radius: 4px; cursor: pointer;
+    font-size: 11px; font-weight: 500;
 }
 .save-btn:hover:not(:disabled) { background: #43A047; }
 .save-btn:disabled { opacity: 0.7; }
@@ -958,14 +1117,14 @@ onUnmounted(() => {
 .legend-bar {
     display: flex;
     justify-content: center;
-    padding: 8px 20px;
+    padding: 4px 10px;
     background: #fff;
     border-bottom: 1px solid #ddd;
 }
 .legend-status {
-    display: flex; gap: 20px; align-items: center;
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
 }
-.status-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+.status-item { display: flex; align-items: center; gap: 4px; font-size: 11px; }
 .status-box {
     width: 20px; height: 14px;
     border-radius: 2px; border: 1px solid #333;
@@ -985,14 +1144,147 @@ onUnmounted(() => {
     position: relative;
 }
 
-/* Properties panel */
-.properties-panel {
-    width: 200px;
+/* Box Palette */
+.box-palette {
+    width: 160px;
     background: #fff;
     border-right: 1px solid #ddd;
-    padding: 16px;
+    display: flex;
+    flex-direction: column;
     overflow-y: auto;
     flex-shrink: 0;
+}
+.palette-header {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
+    background: linear-gradient(135deg, #1e3a5f, #2d5a87);
+    color: white;
+}
+.palette-header h3 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+}
+.palette-hint {
+    display: block;
+    font-size: 10px;
+    opacity: 0.8;
+    margin-top: 4px;
+}
+.palette-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    padding: 10px;
+}
+.palette-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 6px 4px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: #f8f9fa;
+}
+.palette-item:hover {
+    background: #e3f2fd;
+    border-color: #90caf9;
+}
+.palette-item.selected {
+    background: #bbdefb;
+    border-color: #2196F3;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+.palette-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #333;
+    border-radius: 2px;
+    color: white;
+    font-size: 9px;
+    font-weight: bold;
+    min-width: 20px;
+    min-height: 18px;
+}
+.palette-label {
+    font-size: 9px;
+    color: #666;
+    margin-top: 3px;
+    font-weight: 500;
+}
+.palette-actions {
+    padding: 8px;
+}
+.palette-btn {
+    width: 100%;
+    padding: 8px;
+    background: #ef5350;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+}
+.palette-btn:hover {
+    background: #e53935;
+}
+.palette-divider {
+    height: 1px;
+    background: #ddd;
+    margin: 8px 12px;
+}
+.palette-section {
+    padding: 8px 12px;
+}
+.palette-section h4 {
+    margin: 0 0 8px;
+    font-size: 11px;
+    color: #666;
+    text-transform: uppercase;
+}
+.other-tools {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.tool-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: all 0.15s;
+}
+.tool-item:hover {
+    background: #e8e8e8;
+}
+.tool-item.active {
+    background: #2196F3;
+    color: white;
+    border-color: #1976D2;
+}
+.tool-icon {
+    font-size: 14px;
+    width: 18px;
+    text-align: center;
+}
+
+/* Properties panel */
+.properties-panel {
+    width: 180px;
+    background: #fff;
+    border-right: 1px solid #ddd;
+    padding: 12px;
+    overflow-y: auto;
+    flex-shrink: 0;
+    font-size: 12px;
 }
 .properties-panel h3 { margin: 0 0 16px; font-size: 14px; color: #1e3a5f; }
 .prop-group { margin-bottom: 12px; }
@@ -1019,13 +1311,20 @@ onUnmounted(() => {
     align-items: center;
     justify-content: center;
     cursor: crosshair;
+    padding: 5px;
+}
+.canvas-wrapper.template-mode {
+    cursor: copy;
+}
+.canvas-wrapper.select-mode {
+    cursor: default;
 }
 .plan-svg {
     width: 100%;
-    max-width: 1200px;
-    height: auto;
+    height: 100%;
+    max-height: calc(100vh - 100px);
     background: #fff;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
     transform-origin: center center;
 }
 

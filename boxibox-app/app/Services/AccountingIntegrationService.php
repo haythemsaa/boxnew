@@ -106,13 +106,13 @@ class AccountingIntegrationService
         $data = [
             'Line' => [
                 [
-                    'Amount' => $invoice->total_amount,
+                    'Amount' => $invoice->total,
                     'Description' => "Facture {$invoice->invoice_number}",
                     'DetailType' => 'SalesItemLineDetail',
                     'SalesItemLineDetail' => [
                         'ItemRef' => ['value' => '1'],
                         'Qty' => 1,
-                        'UnitPrice' => $invoice->total_amount,
+                        'UnitPrice' => $invoice->total,
                     ],
                 ],
             ],
@@ -160,7 +160,7 @@ class AccountingIntegrationService
             'entry_id' => $entry->id,
             'account_code' => '411000', // Clients
             'account_label' => 'Clients',
-            'debit' => $invoice->total_amount,
+            'debit' => $invoice->total,
             'credit' => 0,
             'partner_reference' => $invoice->customer_id,
             'label' => "Facture {$invoice->invoice_number}",

@@ -1,5 +1,34 @@
 <template>
-    <div class="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 pb-24">
+    <div class="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 pb-24" ref="mainContainer">
+        <!-- Offline Indicator -->
+        <Transition
+            enter-active-class="transition-all duration-300 ease-out"
+            enter-from-class="opacity-0 -translate-y-full"
+            enter-to-class="opacity-100 translate-y-0"
+            leave-active-class="transition-all duration-300 ease-in"
+            leave-from-class="opacity-100 translate-y-0"
+            leave-to-class="opacity-0 -translate-y-full"
+        >
+            <div v-if="isOffline" class="fixed top-0 left-0 right-0 z-[200] bg-gradient-to-r from-amber-500 to-orange-500 text-white text-center py-2 text-sm font-medium flex items-center justify-center shadow-lg">
+                <WifiIcon class="w-4 h-4 mr-2 animate-pulse" />
+                Mode hors-ligne - Certaines fonctions sont limitees
+            </div>
+        </Transition>
+
+        <!-- Pull to Refresh Indicator -->
+        <Transition
+            enter-active-class="transition-all duration-200 ease-out"
+            enter-from-class="opacity-0 scale-75"
+            enter-to-class="opacity-100 scale-100"
+            leave-active-class="transition-all duration-200 ease-in"
+            leave-from-class="opacity-100 scale-100"
+            leave-to-class="opacity-0 scale-75"
+        >
+            <div v-if="pullToRefreshActive" class="fixed top-20 left-1/2 -translate-x-1/2 z-[60] bg-white rounded-full p-3 shadow-xl">
+                <ArrowPathIcon class="w-6 h-6 text-primary-600" :class="{ 'animate-spin': isRefreshing }" />
+            </div>
+        </Transition>
+
         <!-- Status Bar Spacer (for PWA) -->
         <div class="h-safe-area-inset-top bg-primary-600"></div>
 
@@ -338,7 +367,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { Link, router, usePage } from '@inertiajs/vue3'
 import {
     HomeIcon,
@@ -361,6 +390,8 @@ import {
     DocumentDuplicateIcon,
     ShieldCheckIcon,
     ChatBubbleLeftRightIcon,
+    WifiIcon,
+    ArrowPathIcon,
 } from '@heroicons/vue/24/outline'
 import {
     HomeIcon as HomeIconSolid,
@@ -382,6 +413,15 @@ const page = usePage()
 const showNotifications = ref(false)
 const showProfile = ref(false)
 const isLoading = ref(false)
+const isOffline = ref(!navigator.onLine)
+const pullToRefreshActive = ref(false)
+const isRefreshing = ref(false)
+const mainContainer = ref(null)
+
+// Pull to refresh variables
+let startY = 0
+let currentY = 0
+const PULL_THRESHOLD = 80
 
 // Navigation items
 const navItems = [
@@ -461,6 +501,55 @@ const getNotificationIcon = (type) => {
 // Handle loading state
 let removeStartListener, removeFinishListener
 
+// Pull to refresh handlers
+const handleTouchStart = (e) => {
+    if (window.scrollY === 0) {
+        startY = e.touches[0].clientY
+    }
+}
+
+const handleTouchMove = (e) => {
+    if (startY === 0) return
+
+    currentY = e.touches[0].clientY
+    const pullDistance = currentY - startY
+
+    if (pullDistance > 0 && window.scrollY === 0) {
+        pullToRefreshActive.value = pullDistance > PULL_THRESHOLD / 2
+    }
+}
+
+const handleTouchEnd = () => {
+    const pullDistance = currentY - startY
+
+    if (pullDistance > PULL_THRESHOLD && window.scrollY === 0 && !isRefreshing.value) {
+        isRefreshing.value = true
+        pullToRefreshActive.value = true
+
+        // Reload current page
+        router.reload({
+            onFinish: () => {
+                isRefreshing.value = false
+                pullToRefreshActive.value = false
+            }
+        })
+    } else {
+        pullToRefreshActive.value = false
+    }
+
+    startY = 0
+    currentY = 0
+}
+
+// Online/offline handlers
+const handleOnline = () => {
+    isOffline.value = false
+}
+
+const handleOffline = () => {
+    isOffline.value = true
+}
+
 onMounted(() => {
     removeStartListener = router.on('start', () => {
         isLoading.value = true
@@ -468,11 +557,27 @@ onMounted(() => {
     removeFinishListener = router.on('finish', () => {
         isLoading.value = false
     })
+
+    // Add online/offline listeners
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    // Add pull-to-refresh touch listeners
+    document.addEventListener('touchstart', handleTouchStart, { passive: true })
+    document.addEventListener('touchmove', handleTouchMove, { passive: true })
+    document.addEventListener('touchend', handleTouchEnd, { passive: true })
 })
 
 onUnmounted(() => {
     removeStartListener?.()
     removeFinishListener?.()
+
+    window.removeEventListener('online', handleOnline)
+    window.removeEventListener('offline', handleOffline)
+
+    document.removeEventListener('touchstart', handleTouchStart)
+    document.removeEventListener('touchmove', handleTouchMove)
+    document.removeEventListener('touchend', handleTouchEnd)
 })
 </script>
 

@@ -18,7 +18,7 @@ class DynamicPricingService
      */
     public function calculateOptimalPrice(Box $box, array $options = []): float
     {
-        $basePrice = $box->price_per_month;
+        $basePrice = $box->current_price ?? $box->base_price ?? 0;
 
         // Apply all pricing strategies
         $occupancyMultiplier = $this->getOccupancyMultiplier($box->site);
@@ -151,13 +151,21 @@ class DynamicPricingService
     protected function applyPromotions(float $price, Box $box, array $options): float
     {
         $activePromotions = PricingRule::where('is_active', true)
-            ->where('starts_at', '<=', Carbon::now())
-            ->where('ends_at', '>=', Carbon::now())
+            ->where(function ($q) {
+                $q->whereNull('valid_from')->orWhere('valid_from', '<=', Carbon::now());
+            })
+            ->where(function ($q) {
+                $q->whereNull('valid_until')->orWhere('valid_until', '>=', Carbon::now());
+            })
             ->get();
 
         foreach ($activePromotions as $promo) {
             if ($this->promotionApplies($promo, $box, $options)) {
-                $price = $price * (1 - $promo->discount_percentage / 100);
+                if ($promo->adjustment_type === 'percentage') {
+                    $price = $price * (1 - $promo->adjustment_value / 100);
+                } else {
+                    $price = $price - $promo->adjustment_value;
+                }
             }
         }
 
@@ -174,18 +182,21 @@ class DynamicPricingService
      */
     protected function promotionApplies(PricingRule $promo, Box $box, array $options): bool
     {
-        // Check box type
-        if ($promo->box_type && $box->type !== $promo->box_type) {
-            return false;
-        }
-
         // Check site
         if ($promo->site_id && $box->site_id !== $promo->site_id) {
             return false;
         }
 
-        // Check customer type
-        if ($promo->customer_type && ($options['customer_type'] ?? null) !== $promo->customer_type) {
+        // Check conditions from JSON field
+        $conditions = is_array($promo->conditions) ? $promo->conditions : json_decode($promo->conditions, true) ?? [];
+
+        // Check box type from conditions
+        if (!empty($conditions['box_type']) && $box->type !== $conditions['box_type']) {
+            return false;
+        }
+
+        // Check customer type from conditions
+        if (!empty($conditions['customer_type']) && ($options['customer_type'] ?? null) !== $conditions['customer_type']) {
             return false;
         }
 
@@ -256,7 +267,9 @@ class DynamicPricingService
     {
         return Box::where('site_id', $site->id)
             ->where('status', 'occupied')
-            ->sum('price_per_month');
+            ->sum('current_price') ?: Box::where('site_id', $site->id)
+                ->where('status', 'occupied')
+                ->sum('base_price');
     }
 
     /**

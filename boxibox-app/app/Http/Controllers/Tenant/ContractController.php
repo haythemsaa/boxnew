@@ -98,14 +98,33 @@ class ContractController extends Controller
         $boxes = Box::where('tenant_id', $tenantId)
             ->where('status', 'available')
             ->with(['site', 'building', 'floor'])
-            ->select('id', 'number', 'site_id', 'building_id', 'floor_id', 'base_price')
+            ->select('id', 'number', 'name', 'site_id', 'building_id', 'floor_id', 'base_price', 'length', 'width', 'height', 'status')
             ->orderBy('number')
             ->get();
+
+        // Pre-select box if box_id is passed in query string
+        $selectedBoxId = $request->query('box_id');
+        $selectedBox = null;
+        $selectedSiteId = null;
+
+        if ($selectedBoxId) {
+            $selectedBox = Box::where('tenant_id', $tenantId)
+                ->where('id', $selectedBoxId)
+                ->with(['site', 'building', 'floor'])
+                ->first();
+
+            if ($selectedBox) {
+                $selectedSiteId = $selectedBox->site_id;
+            }
+        }
 
         return Inertia::render('Tenant/Contracts/Create', [
             'sites' => $sites,
             'customers' => $customers,
             'boxes' => $boxes,
+            'selectedBoxId' => $selectedBoxId ? (int) $selectedBoxId : null,
+            'selectedSiteId' => $selectedSiteId,
+            'selectedBox' => $selectedBox,
         ]);
     }
 
@@ -131,7 +150,7 @@ class ContractController extends Controller
         $boxes = Box::where('tenant_id', $tenantId)
             ->where('status', 'available')
             ->with(['site:id,name', 'building:id,name', 'floor:id,name,floor_number'])
-            ->select('id', 'number', 'site_id', 'building_id', 'floor_id', 'base_price', 'volume', 'length', 'width', 'height')
+            ->select('id', 'number', 'site_id', 'building_id', 'floor_id', 'base_price', 'volume', 'length', 'width', 'height', 'status')
             ->orderBy('number')
             ->get();
 
@@ -394,7 +413,7 @@ class ContractController extends Controller
      */
     public function saveSignatures(Request $request, Contract $contract): RedirectResponse
     {
-        $this->authorize('update_contracts');
+        $this->authorize('edit_contracts');
 
         // Ensure tenant can only update their own contracts
         if ($contract->tenant_id !== $request->user()->tenant_id) {
@@ -459,29 +478,67 @@ class ContractController extends Controller
      * @param string $signatureData Base64-encoded PNG data
      * @param int $contractId
      * @param string $type customer|staff
-     * @return string Path to saved file
+     * @return string|null Path to saved file or null if validation fails
      */
-    private function saveSignatureImage(string $signatureData, int $contractId, string $type): string
+    private function saveSignatureImage(string $signatureData, int $contractId, string $type): ?string
     {
-        // Remove data URL prefix if present
-        $signatureData = str_replace('data:image/png;base64,', '', $signatureData);
+        // Validate type parameter
+        if (!in_array($type, ['customer', 'staff'])) {
+            \Log::warning("Invalid signature type: {$type}");
+            return null;
+        }
+
+        // Remove data URL prefix if present (support multiple image formats)
+        $signatureData = preg_replace('/^data:image\/(png|jpeg|jpg);base64,/', '', $signatureData);
+
+        // Validate base64 string
+        if (!preg_match('/^[a-zA-Z0-9\/\r\n+]*={0,2}$/', $signatureData)) {
+            \Log::warning("Invalid base64 signature data for contract {$contractId}");
+            return null;
+        }
 
         // Decode base64
-        $imageContent = base64_decode($signatureData);
+        $imageContent = base64_decode($signatureData, true);
+        if ($imageContent === false) {
+            \Log::warning("Failed to decode base64 signature for contract {$contractId}");
+            return null;
+        }
 
-        // Create filename with timestamp
+        // Validate file size (max 500KB)
+        $maxSize = 500 * 1024;
+        if (strlen($imageContent) > $maxSize) {
+            \Log::warning("Signature too large for contract {$contractId}: " . strlen($imageContent) . " bytes");
+            return null;
+        }
+
+        // Validate MIME type using finfo
+        $finfo = new \finfo(FILEINFO_MIME_TYPE);
+        $mimeType = $finfo->buffer($imageContent);
+        $allowedMimes = ['image/png', 'image/jpeg', 'image/jpg'];
+        if (!in_array($mimeType, $allowedMimes)) {
+            \Log::warning("Invalid signature MIME type for contract {$contractId}: {$mimeType}");
+            return null;
+        }
+
+        // Create secure filename with timestamp
+        $extension = $mimeType === 'image/png' ? 'png' : 'jpg';
         $filename = sprintf(
-            'signatures/%d/%s_%s_%d.png',
+            'signatures/%d/%s_%s_%s.%s',
             $contractId,
             $type,
             date('YmdHis'),
-            random_int(1000, 9999)
+            bin2hex(random_bytes(8)),
+            $extension
         );
 
-        // Store in public disk
-        \Storage::disk('public')->put($filename, $imageContent);
-
-        return $filename;
+        try {
+            // Store in private disk for security (not publicly accessible)
+            \Storage::disk('local')->put($filename, $imageContent);
+            return $filename;
+        } catch (\Exception $e) {
+            \Log::error("Failed to save signature for contract {$contractId}: " . $e->getMessage());
+            return null;
+        }
     }
 
     /**
@@ -489,7 +546,7 @@ class ContractController extends Controller
      */
     public function terminate(Request $request, Contract $contract): RedirectResponse
     {
-        $this->authorize('update_contracts');
+        $this->authorize('edit_contracts');
 
         // Ensure tenant can only update their own contracts
         if ($contract->tenant_id !== $request->user()->tenant_id) {
@@ -557,7 +614,7 @@ class ContractController extends Controller
      */
     public function renew(Request $request, Contract $contract): RedirectResponse
     {
-        $this->authorize('update_contracts');
+        $this->authorize('edit_contracts');
 
         // Ensure tenant can only update their own contracts
         if ($contract->tenant_id !== $request->user()->tenant_id) {

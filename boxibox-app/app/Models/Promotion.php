@@ -34,6 +34,9 @@ class Promotion extends Model
         'end_date' => 'date',
         'is_active' => 'boolean',
         'applicable_to' => 'array',
+        'deleted_at' => 'datetime',
+        'is_combinable' => 'boolean',
+        'requires_code' => 'boolean',
     ];
 
     public function tenant(): BelongsTo

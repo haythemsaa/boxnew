@@ -75,26 +75,36 @@ class BulkInvoiceController extends Controller
 
         $contracts = Contract::where('tenant_id', $tenantId)
             ->whereIn('id', $validated['contract_ids'])
-            ->with(['customer', 'box'])
+            ->with(['customer', 'box', 'site'])
             ->get();
 
         $preview = $contracts->map(function ($contract) use ($validated) {
-            $subtotal = $contract->monthly_price;
+            $subtotal = $contract->monthly_price ?? 0;
             $taxRate = $contract->tax_rate ?? 20;
             $taxAmount = $subtotal * ($taxRate / 100);
             $total = $subtotal + $taxAmount;
 
+            // Get customer name safely
+            $customerName = '-';
+            if ($contract->customer) {
+                $customerName = $contract->customer->full_name ??
+                    ($contract->customer->first_name . ' ' . $contract->customer->last_name);
+            }
+
             return [
                 'contract_id' => $contract->id,
-                'contract_number' => $contract->contract_number,
-                'customer_name' => $contract->customer->full_name,
-                'box_code' => $contract->box ? $contract->box->code : 'N/A',
+                'contract_number' => $contract->contract_number ?? '-',
+                'customer_name' => $customerName,
+                'customer_email' => $contract->customer?->email ?? '-',
+                'box_code' => $contract->box?->code ?? 'N/A',
+                'box_size' => $contract->box?->size ?? '-',
+                'site_name' => $contract->site?->name ?? '-',
                 'period_start' => $validated['period_start'],
                 'period_end' => $validated['period_end'],
-                'subtotal' => $subtotal,
+                'subtotal' => round($subtotal, 2),
                 'tax_rate' => $taxRate,
-                'tax_amount' => $taxAmount,
-                'total' => $total,
+                'tax_amount' => round($taxAmount, 2),
+                'total' => round($total, 2),
             ];
         });
 
@@ -142,29 +152,40 @@ class BulkInvoiceController extends Controller
                 continue;
             }
 
-            $subtotal = $contract->monthly_price;
+            $subtotal = $contract->monthly_price ?? 0;
             $taxRate = $contract->tax_rate ?? 20;
             $taxAmount = $subtotal * ($taxRate / 100);
             $total = $subtotal + $taxAmount;
+
+            // Build invoice items
+            $boxCode = $contract->box?->code ?? 'N/A';
+            $boxSize = $contract->box?->size ?? '';
+            $items = [
+                [
+                    'description' => "Location box {$boxCode}" . ($boxSize ? " ({$boxSize} m²)" : ''),
+                    'quantity' => 1,
+                    'unit_price' => $subtotal,
+                    'total' => $subtotal,
+                ],
+            ];
 
             $invoice = Invoice::create([
                 'tenant_id' => $tenantId,
                 'customer_id' => $contract->customer_id,
                 'contract_id' => $contract->id,
-                'site_id' => $contract->site_id,
                 'type' => 'invoice',
                 'status' => 'sent',
                 'invoice_date' => $validated['invoice_date'],
                 'due_date' => Carbon::parse($validated['invoice_date'])->addDays($validated['due_days']),
                 'period_start' => $validated['period_start'],
                 'period_end' => $validated['period_end'],
+                'items' => $items,
                 'subtotal' => $subtotal,
                 'tax_rate' => $taxRate,
                 'tax_amount' => $taxAmount,
                 'total' => $total,
                 'paid_amount' => 0,
-                'remaining_amount' => $total,
-                'notes' => 'Facture générée automatiquement - Location box ' . ($contract->box ? $contract->box->code : ''),
+                'notes' => "Facture générée automatiquement - Location box {$boxCode}",
             ]);
 
             $invoicesCreated++;

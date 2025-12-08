@@ -41,6 +41,8 @@ class RolesPermissionsSeeder extends Seeder
             'create_customers',
             'edit_customers',
             'delete_customers',
+            'merge_customers',
+            'export_customers',
 
             // Lead Management
             'view_leads',
@@ -48,12 +50,21 @@ class RolesPermissionsSeeder extends Seeder
             'edit_leads',
             'delete_leads',
 
+            // Prospect Management
+            'view_prospects',
+            'create_prospects',
+            'edit_prospects',
+            'delete_prospects',
+            'convert_prospects',
+
             // Contract Management
             'view_contracts',
             'create_contracts',
             'edit_contracts',
             'delete_contracts',
             'sign_contracts',
+            'terminate_contracts',
+            'renew_contracts',
 
             // Invoice Management
             'view_invoices',
@@ -61,6 +72,7 @@ class RolesPermissionsSeeder extends Seeder
             'edit_invoices',
             'delete_invoices',
             'send_invoices',
+            'update_invoices',
 
             // Payment Management
             'view_payments',
@@ -72,6 +84,7 @@ class RolesPermissionsSeeder extends Seeder
             'view_messages',
             'send_messages',
             'delete_messages',
+            'send_bulk_messages',
 
             // Notification Management
             'view_notifications',
@@ -113,12 +126,13 @@ class RolesPermissionsSeeder extends Seeder
         $tenantAdmin->givePermissionTo([
             'view_sites', 'create_sites', 'edit_sites', 'delete_sites',
             'view_boxes', 'create_boxes', 'edit_boxes', 'delete_boxes',
-            'view_customers', 'create_customers', 'edit_customers', 'delete_customers',
+            'view_customers', 'create_customers', 'edit_customers', 'delete_customers', 'merge_customers', 'export_customers',
             'view_leads', 'create_leads', 'edit_leads', 'delete_leads',
-            'view_contracts', 'create_contracts', 'edit_contracts', 'delete_contracts', 'sign_contracts',
-            'view_invoices', 'create_invoices', 'edit_invoices', 'delete_invoices', 'send_invoices',
+            'view_prospects', 'create_prospects', 'edit_prospects', 'delete_prospects', 'convert_prospects',
+            'view_contracts', 'create_contracts', 'edit_contracts', 'delete_contracts', 'sign_contracts', 'terminate_contracts', 'renew_contracts',
+            'view_invoices', 'create_invoices', 'edit_invoices', 'delete_invoices', 'send_invoices', 'update_invoices',
             'view_payments', 'create_payments', 'process_payments', 'refund_payments',
-            'view_messages', 'send_messages', 'delete_messages',
+            'view_messages', 'send_messages', 'delete_messages', 'send_bulk_messages',
             'view_notifications', 'send_notifications',
             'view_floor_plans', 'create_floor_plans', 'edit_floor_plans', 'delete_floor_plans',
             'view_pricing_rules', 'create_pricing_rules', 'edit_pricing_rules', 'delete_pricing_rules',
@@ -131,6 +145,7 @@ class RolesPermissionsSeeder extends Seeder
             'view_sites', 'view_boxes', 'edit_boxes',
             'view_customers', 'create_customers', 'edit_customers',
             'view_leads', 'create_leads', 'edit_leads',
+            'view_prospects', 'create_prospects', 'edit_prospects',
             'view_contracts', 'create_contracts', 'edit_contracts',
             'view_invoices', 'create_invoices',
             'view_payments', 'create_payments',

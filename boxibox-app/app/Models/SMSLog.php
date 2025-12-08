@@ -14,14 +14,11 @@ class SMSLog extends Model
 
     protected $fillable = [
         'tenant_id',
-        'campaign_id',
         'customer_id',
-        'to',
         'message',
-        'status', // sent, failed, delivered, undelivered
-        'provider', // twilio, vonage, aws-sns
-        'provider_id', // SID from provider
-        'type', // payment_reminder, promotion, welcome, etc.
+        'status',
+        'provider',
+        'type',
         'cost',
         'error_message',
         'metadata',
@@ -42,14 +39,6 @@ class SMSLog extends Model
     public function tenant(): BelongsTo
     {
         return $this->belongsTo(Tenant::class);
-    }
-
-    /**
-     * Get the campaign
-     */
-    public function campaign(): BelongsTo
-    {
-        return $this->belongsTo(SMSCampaign::class, 'campaign_id');
     }
 
     /**

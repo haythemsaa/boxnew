@@ -167,6 +167,23 @@ const convertToContract = () => {
                                 </p>
                             </div>
                         </div>
+                        <!-- Secondary Contact -->
+                        <div v-if="booking.customer.secondary_contact_name || booking.customer.secondary_contact_phone" class="mt-4 pt-4 border-t border-gray-100">
+                            <h3 class="text-sm font-medium text-gray-500 mb-2">Contact secondaire</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div v-if="booking.customer.secondary_contact_name">
+                                    <p class="text-sm text-gray-500">Nom</p>
+                                    <p class="font-medium text-gray-900">{{ booking.customer.secondary_contact_name }}</p>
+                                </div>
+                                <div v-if="booking.customer.secondary_contact_phone">
+                                    <p class="text-sm text-gray-500">Téléphone</p>
+                                    <p class="font-medium text-gray-900 flex items-center">
+                                        <PhoneIcon class="h-4 w-4 mr-1 text-gray-400" />
+                                        {{ booking.customer.secondary_contact_phone }}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Box Info -->
@@ -257,11 +274,11 @@ const convertToContract = () => {
                         </div>
                     </div>
 
-                    <!-- Dates -->
+                    <!-- Dates & Duration -->
                     <div class="bg-white rounded-2xl shadow-xl p-6">
                         <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                             <CalendarDaysIcon class="h-5 w-5 mr-2 text-teal-600" />
-                            Dates
+                            Durée de location
                         </h2>
                         <div class="space-y-3">
                             <div class="flex justify-between">
@@ -273,10 +290,72 @@ const convertToContract = () => {
                                 <span class="font-medium">{{ booking.end_date }}</span>
                             </div>
                             <div class="flex justify-between">
-                                <span class="text-gray-600">Type</span>
-                                <span class="font-medium">{{ booking.rental_type === 'month_to_month' ? 'Mois par mois' : 'Durée fixe' }}</span>
+                                <span class="text-gray-600">Type de location</span>
+                                <span class="font-medium">{{ booking.duration_type === 'fixed_term' ? 'Durée déterminée' : 'Mois par mois' }}</span>
+                            </div>
+                            <div v-if="booking.planned_duration_months" class="flex justify-between">
+                                <span class="text-gray-600">Durée prévue</span>
+                                <span class="font-medium">{{ booking.planned_duration_months }} mois</span>
+                            </div>
+                            <div v-if="booking.planned_end_date" class="flex justify-between">
+                                <span class="text-gray-600">Fin prévue</span>
+                                <span class="font-medium">{{ booking.planned_end_date }}</span>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Special Needs -->
+                    <div v-if="booking.special_needs" class="bg-white rounded-2xl shadow-xl p-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Besoins spécifiques</h2>
+                        <div class="flex flex-wrap gap-2">
+                            <span v-if="booking.special_needs.needs_24h_access" class="px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm">
+                                Accès 24h/24
+                            </span>
+                            <span v-if="booking.special_needs.needs_climate_control" class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                                Climatisation
+                            </span>
+                            <span v-if="booking.special_needs.needs_electricity" class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
+                                Électricité
+                            </span>
+                            <span v-if="booking.special_needs.needs_insurance" class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
+                                Assurance
+                            </span>
+                            <span v-if="booking.special_needs.needs_moving_help" class="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm">
+                                Aide déménagement
+                            </span>
+                            <span v-if="!booking.special_needs.needs_24h_access && !booking.special_needs.needs_climate_control && !booking.special_needs.needs_electricity && !booking.special_needs.needs_insurance && !booking.special_needs.needs_moving_help" class="text-gray-500 text-sm">
+                                Aucun besoin spécifique
+                            </span>
+                        </div>
+                        <div v-if="booking.special_needs.preferred_time_slot && booking.special_needs.preferred_time_slot !== 'flexible'" class="mt-3 pt-3 border-t">
+                            <span class="text-gray-600 text-sm">Créneau préféré:</span>
+                            <span class="ml-2 font-medium text-sm">
+                                {{ booking.special_needs.preferred_time_slot === 'morning' ? 'Matin (8h-12h)' : booking.special_needs.preferred_time_slot === 'afternoon' ? 'Après-midi (14h-18h)' : 'Soir (18h-20h)' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Storage Info -->
+                    <div v-if="booking.storage_contents || booking.estimated_value" class="bg-white rounded-2xl shadow-xl p-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Informations stockage</h2>
+                        <div class="space-y-3">
+                            <div v-if="booking.storage_contents">
+                                <p class="text-sm text-gray-500">Contenu à stocker</p>
+                                <p class="font-medium text-gray-900">{{ booking.storage_contents }}</p>
+                            </div>
+                            <div v-if="booking.estimated_value">
+                                <p class="text-sm text-gray-500">Valeur estimée</p>
+                                <p class="font-medium text-gray-900">
+                                    {{ booking.estimated_value === 'under_1000' ? 'Moins de 1 000 €' : booking.estimated_value === '1000_5000' ? '1 000 € - 5 000 €' : booking.estimated_value === '5000_10000' ? '5 000 € - 10 000 €' : 'Plus de 10 000 €' }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Special Requests -->
+                    <div v-if="booking.special_requests" class="bg-white rounded-2xl shadow-xl p-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4">Demandes spéciales</h2>
+                        <p class="text-gray-700 whitespace-pre-line">{{ booking.special_requests }}</p>
                     </div>
 
                     <!-- Source -->

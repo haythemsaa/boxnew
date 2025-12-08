@@ -62,9 +62,8 @@ class EmailSequenceEnrollment extends Model
     ];
 
     protected $casts = [
-        'next_send_at' => 'datetime',
-        'enrolled_at' => 'datetime',
-        'completed_at' => 'datetime',
+        'steps' => 'array',
+        'is_active' => 'boolean',
     ];
 
     public function emailSequence(): BelongsTo

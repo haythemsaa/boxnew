@@ -5,6 +5,25 @@ import { createApp, h } from 'vue';
 import { createInertiaApp } from '@inertiajs/vue3';
 import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { ZiggyVue } from 'ziggy-js';
+import { createI18n } from 'vue-i18n';
+
+// Import translations
+import fr from '../../lang/fr.json';
+import en from '../../lang/en.json';
+import nl from '../../lang/nl.json';
+
+// Create i18n instance
+const i18n = createI18n({
+    legacy: false,
+    globalInjection: true,
+    locale: document.documentElement.lang || 'fr',
+    fallbackLocale: 'fr',
+    messages: {
+        fr,
+        en,
+        nl
+    }
+});
 
 // Import global UI components
 import Toast from './Components/UI/Toast.vue';
@@ -39,7 +58,8 @@ createInertiaApp({
     setup({ el, App, props, plugin }) {
         const app = createApp({ render: () => h(App, props) })
             .use(plugin)
-            .use(ZiggyVue);
+            .use(ZiggyVue)
+            .use(i18n);
 
         // Register global UI components
         app.component('UiToast', Toast);

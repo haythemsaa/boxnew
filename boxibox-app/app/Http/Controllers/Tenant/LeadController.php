@@ -21,6 +21,7 @@ class LeadController extends Controller
      */
     public function index(Request $request)
     {
+        $this->authorize('viewAny', Lead::class);
         $tenantId = $request->user()->tenant_id;
 
         $leads = Lead::where('tenant_id', $tenantId)
@@ -44,6 +45,7 @@ class LeadController extends Controller
      */
     public function create(Request $request)
     {
+        $this->authorize('create', Lead::class);
         $tenantId = $request->user()->tenant_id;
 
         return Inertia::render('Tenant/CRM/Leads/Create', [
@@ -57,7 +59,7 @@ class LeadController extends Controller
      */
     public function show(Request $request, Lead $lead)
     {
-        $this->authorize('view_leads');
+        $this->authorize('view', $lead);
 
         $lead->load(['site', 'assignedTo']);
 
@@ -73,7 +75,7 @@ class LeadController extends Controller
      */
     public function edit(Request $request, Lead $lead)
     {
-        $this->authorize('edit_leads');
+        $this->authorize('update', $lead);
 
         $tenantId = $request->user()->tenant_id;
 
@@ -89,25 +91,35 @@ class LeadController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Lead::class);
+
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
             'email' => 'required|email|unique:leads,email',
             'phone' => 'nullable|string|max:20',
             'company' => 'nullable|string|max:255',
+            'type' => 'nullable|in:individual,company',
             'source' => 'nullable|in:website,phone,referral,walk-in,google_ads,facebook',
+            'site_id' => 'nullable|exists:sites,id',
+            'assigned_to' => 'nullable|exists:users,id',
             'box_type_interest' => 'nullable|string',
             'budget_min' => 'nullable|numeric',
             'budget_max' => 'nullable|numeric',
             'move_in_date' => 'nullable|date',
+            'priority' => 'nullable|in:low,medium,high,urgent',
             'notes' => 'nullable|string',
         ]);
 
         $validated['tenant_id'] = $request->user()->tenant_id;
 
+        // Set defaults if not provided
+        $validated['type'] = $validated['type'] ?? 'individual';
+        $validated['priority'] = $validated['priority'] ?? 'medium';
+
         $lead = $this->crmService->createLead($validated);
 
-        return redirect()->back()->with('success', 'Lead created successfully!');
+        return redirect()->route('tenant.crm.leads.index')->with('success', 'Lead créé avec succès!');
     }
 
     /**
