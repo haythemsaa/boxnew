@@ -109,6 +109,13 @@ class RolesPermissionsSeeder extends Seeder
             // Settings
             'manage_settings',
             'view_reports',
+
+            // User Management (Tenant)
+            'view_users',
+            'create_users',
+            'edit_users',
+            'delete_users',
+            'manage_user_roles',
         ];
 
         foreach ($permissions as $permission) {
@@ -139,6 +146,24 @@ class RolesPermissionsSeeder extends Seeder
             'manage_settings', 'view_reports',
         ]);
 
+        // Tenant Manager - Management access without settings
+        $tenantManager = Role::create(['name' => 'tenant_manager']);
+        $tenantManager->givePermissionTo([
+            'view_sites', 'edit_sites',
+            'view_boxes', 'create_boxes', 'edit_boxes',
+            'view_customers', 'create_customers', 'edit_customers', 'merge_customers', 'export_customers',
+            'view_leads', 'create_leads', 'edit_leads', 'delete_leads',
+            'view_prospects', 'create_prospects', 'edit_prospects', 'delete_prospects', 'convert_prospects',
+            'view_contracts', 'create_contracts', 'edit_contracts', 'sign_contracts', 'terminate_contracts', 'renew_contracts',
+            'view_invoices', 'create_invoices', 'edit_invoices', 'send_invoices',
+            'view_payments', 'create_payments', 'process_payments',
+            'view_messages', 'send_messages', 'send_bulk_messages',
+            'view_notifications', 'send_notifications',
+            'view_floor_plans', 'edit_floor_plans',
+            'view_pricing_rules',
+            'view_reports',
+        ]);
+
         // Tenant Staff - Limited tenant access
         $tenantStaff = Role::create(['name' => 'tenant_staff']);
         $tenantStaff->givePermissionTo([
@@ -151,6 +176,36 @@ class RolesPermissionsSeeder extends Seeder
             'view_payments', 'create_payments',
             'view_messages', 'send_messages',
             'view_floor_plans',
+        ]);
+
+        // Tenant Accountant - Financial access
+        $tenantAccountant = Role::create(['name' => 'tenant_accountant']);
+        $tenantAccountant->givePermissionTo([
+            'view_sites',
+            'view_boxes',
+            'view_customers', 'export_customers',
+            'view_contracts',
+            'view_invoices', 'create_invoices', 'edit_invoices', 'send_invoices', 'update_invoices',
+            'view_payments', 'create_payments', 'process_payments', 'refund_payments',
+            'view_reports',
+        ]);
+
+        // Tenant Viewer - Read-only access
+        $tenantViewer = Role::create(['name' => 'tenant_viewer']);
+        $tenantViewer->givePermissionTo([
+            'view_sites',
+            'view_boxes',
+            'view_customers',
+            'view_leads',
+            'view_prospects',
+            'view_contracts',
+            'view_invoices',
+            'view_payments',
+            'view_messages',
+            'view_notifications',
+            'view_floor_plans',
+            'view_pricing_rules',
+            'view_reports',
         ]);
 
         // Client - Customer portal access

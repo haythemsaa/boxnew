@@ -27,6 +27,9 @@ class BookingController extends Controller
 
         // Get available boxes with filters
         $query = Box::where('status', 'available')
+            ->whereHas('site', function ($q) {
+                $q->where('is_active', true);
+            })
             ->with(['site']);
 
         // Filter by site
@@ -34,9 +37,23 @@ class BookingController extends Controller
             $query->where('site_id', $request->input('site_id'));
         }
 
-        // Filter by size category
+        // Filter by size (based on volume ranges)
         if ($request->filled('size_category')) {
-            $query->where('size_category', $request->input('size_category'));
+            $sizeCategory = $request->input('size_category');
+            switch ($sizeCategory) {
+                case 'small':
+                    $query->where('volume', '<=', 5);
+                    break;
+                case 'medium':
+                    $query->where('volume', '>', 5)->where('volume', '<=', 15);
+                    break;
+                case 'large':
+                    $query->where('volume', '>', 15)->where('volume', '<=', 25);
+                    break;
+                case 'extra_large':
+                    $query->where('volume', '>', 25);
+                    break;
+            }
         }
 
         // Filter by price range

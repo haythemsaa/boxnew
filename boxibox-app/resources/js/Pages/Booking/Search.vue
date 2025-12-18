@@ -1,25 +1,25 @@
 <template>
-    <GuestLayout title="Book Your Storage Space">
+    <GuestLayout title="Réserver un Box de Stockage">
         <!-- Hero Section -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-12 mb-8">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <h1 class="text-4xl font-bold mb-4">Find Your Perfect Storage Space</h1>
-                <p class="text-xl">Secure, affordable, and convenient storage solutions</p>
+                <h1 class="text-4xl font-bold mb-4">Trouvez Votre Espace de Stockage Idéal</h1>
+                <p class="text-xl">Solutions de stockage sécurisées, abordables et pratiques</p>
             </div>
         </div>
 
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
             <!-- Filters -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
-                <h2 class="text-lg font-semibold text-gray-900 mb-4">Filter Storage Units</h2>
+                <h2 class="text-lg font-semibold text-gray-900 mb-4">Filtrer les Box</h2>
                 <form @submit.prevent="search" class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Site</label>
                         <select
                             v-model="filterForm.site_id"
                             class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         >
-                            <option value="">All Locations</option>
+                            <option value="">Tous les sites</option>
                             <option v-for="site in sites" :key="site.id" :value="site.id">
                                 {{ site.name }} - {{ site.city }}
                             </option>
@@ -27,39 +27,39 @@
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Size</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Taille</label>
                         <select
                             v-model="filterForm.size_category"
-                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-500"
+                            class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         >
-                            <option value="">All Sizes</option>
-                            <option value="small">Small</option>
-                            <option value="medium">Medium</option>
-                            <option value="large">Large</option>
-                            <option value="extra_large">Extra Large</option>
+                            <option value="">Toutes tailles</option>
+                            <option value="small">Petit (≤5 m³)</option>
+                            <option value="medium">Moyen (5-15 m³)</option>
+                            <option value="large">Grand (15-25 m³)</option>
+                            <option value="extra_large">Très Grand (>25 m³)</option>
                         </select>
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Max Price</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Prix Max</label>
                         <input
                             v-model="filterForm.max_price"
                             type="number"
-                            placeholder="€/month"
+                            placeholder="€/mois"
                             class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         />
                     </div>
 
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Sort By</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Trier par</label>
                         <select
                             v-model="filterForm.sort_by"
                             class="w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                         >
-                            <option value="price_asc">Price: Low to High</option>
-                            <option value="price_desc">Price: High to Low</option>
-                            <option value="size_asc">Size: Small to Large</option>
-                            <option value="size_desc">Size: Large to Small</option>
+                            <option value="price_asc">Prix croissant</option>
+                            <option value="price_desc">Prix décroissant</option>
+                            <option value="size_asc">Taille croissante</option>
+                            <option value="size_desc">Taille décroissante</option>
                         </select>
                     </div>
 
@@ -68,7 +68,7 @@
                             type="submit"
                             class="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                         >
-                            Search
+                            Rechercher
                         </button>
                     </div>
                 </form>
@@ -77,8 +77,8 @@
             <!-- Results -->
             <div class="mb-6">
                 <h2 class="text-2xl font-bold text-gray-900">
-                    Available Storage Units
-                    <span class="text-gray-500 text-lg">({{ boxes.total }} found)</span>
+                    Box Disponibles
+                    <span class="text-gray-500 text-lg">({{ boxes.total }} trouvés)</span>
                 </h2>
             </div>
 
@@ -92,12 +92,12 @@
                     <div class="p-6">
                         <div class="flex justify-between items-start mb-4">
                             <div>
-                                <h3 class="text-xl font-bold text-gray-900">{{ box.name }}</h3>
+                                <h3 class="text-xl font-bold text-gray-900">Box {{ box.number }}</h3>
                                 <p class="text-sm text-gray-600">{{ box.site.name }}</p>
                                 <p class="text-xs text-gray-500">{{ box.site.city }}</p>
                             </div>
                             <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                                Available
+                                Disponible
                             </span>
                         </div>
 
@@ -112,11 +112,11 @@
                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                 </svg>
-                                {{ box.volume.toFixed(2) }} m³
+                                {{ formatVolume(box.volume) }} m³
                             </div>
                             <div class="flex items-center text-sm">
                                 <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
-                                    {{ formatSizeCategory(box.size_category) }}
+                                    {{ getSizeLabel(box.volume) }}
                                 </span>
                             </div>
                         </div>
@@ -124,14 +124,14 @@
                         <div class="border-t pt-4">
                             <div class="flex justify-between items-center">
                                 <div>
-                                    <p class="text-3xl font-bold text-blue-600">€{{ box.current_price }}</p>
-                                    <p class="text-sm text-gray-500">/month</p>
+                                    <p class="text-3xl font-bold text-blue-600">{{ box.current_price }} €</p>
+                                    <p class="text-sm text-gray-500">/mois</p>
                                 </div>
                                 <Link
                                     :href="route('booking.show', box.id)"
                                     class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                                 >
-                                    View Details
+                                    Voir Détails
                                 </Link>
                             </div>
                         </div>
@@ -144,8 +144,8 @@
                 <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
                 </svg>
-                <h3 class="mt-2 text-sm font-medium text-gray-900">No storage units found</h3>
-                <p class="mt-1 text-sm text-gray-500">Try adjusting your search filters</p>
+                <h3 class="mt-2 text-sm font-medium text-gray-900">Aucun box disponible</h3>
+                <p class="mt-1 text-sm text-gray-500">Essayez de modifier vos critères de recherche</p>
             </div>
         </div>
     </GuestLayout>
@@ -176,12 +176,26 @@ const search = () => {
     });
 };
 
+const formatVolume = (volume) => {
+    if (volume === null || volume === undefined) return '0.00';
+    return parseFloat(volume).toFixed(2);
+};
+
+const getSizeLabel = (volume) => {
+    if (!volume) return 'N/A';
+    const v = parseFloat(volume);
+    if (v <= 5) return 'Petit';
+    if (v <= 15) return 'Moyen';
+    if (v <= 25) return 'Grand';
+    return 'Très Grand';
+};
+
 const formatSizeCategory = (category) => {
     const map = {
-        small: 'Small',
-        medium: 'Medium',
-        large: 'Large',
-        extra_large: 'Extra Large',
+        small: 'Petit',
+        medium: 'Moyen',
+        large: 'Grand',
+        extra_large: 'Très Grand',
     };
     return map[category] || category;
 };

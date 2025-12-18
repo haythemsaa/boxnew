@@ -206,7 +206,7 @@ class GdprController extends Controller
                 'invoice_number', 'total', 'status', 'due_date', 'paid_at'
             ])),
             'payments' => $customer->payments->map(fn($p) => $p->only([
-                'payment_date', 'amount', 'payment_method', 'reference'
+                'paid_at', 'amount', 'payment_method', 'reference'
             ])),
             'consents' => GdprConsent::where('customer_id', $customer->id)->get()->map(fn($c) => $c->only([
                 'consent_type', 'is_granted', 'granted_at', 'withdrawn_at'

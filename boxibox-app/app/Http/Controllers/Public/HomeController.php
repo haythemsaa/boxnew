@@ -81,57 +81,31 @@ class HomeController extends Controller
             ],
         ];
 
-        $pricing = [
-            [
-                'name' => 'Starter',
-                'price' => 49,
-                'period' => 'mois',
-                'description' => 'Parfait pour démarrer',
-                'features' => [
-                    '1 site',
-                    'Jusqu\'à 50 boxes',
-                    'Gestion clients & contrats',
-                    'Facturation basique',
-                    'Support email',
-                ],
-                'cta' => 'Commencer gratuitement',
-                'popular' => false,
-            ],
-            [
-                'name' => 'Growth',
-                'price' => 149,
-                'period' => 'mois',
-                'description' => 'Pour les entreprises en croissance',
-                'features' => [
-                    'Jusqu\'à 3 sites',
-                    'Jusqu\'à 200 boxes',
-                    'CRM & Marketing',
-                    'Analytics avancés',
-                    'Paiements automatiques',
-                    'API accès',
-                    'Support prioritaire',
-                ],
-                'cta' => 'Essai gratuit 14 jours',
-                'popular' => true,
-            ],
-            [
-                'name' => 'Pro',
-                'price' => 299,
-                'period' => 'mois',
-                'description' => 'Pour les opérateurs multi-sites',
-                'features' => [
-                    'Jusqu\'à 10 sites',
-                    'Jusqu\'à 1000 boxes',
-                    'Tout Growth +',
-                    'Dynamic pricing',
-                    'Smart locks integration',
-                    'White-label portal',
-                    'Support dédié',
-                ],
-                'cta' => 'Contacter les ventes',
-                'popular' => false,
-            ],
-        ];
+        // Load pricing from database - show first 3 plans for home page
+        $pricing = \App\Models\SubscriptionPlan::where('is_active', true)
+            ->orderBy('sort_order')
+            ->limit(3)
+            ->get()
+            ->map(function ($plan) {
+                $features = [];
+                $features[] = ($plan->max_sites ? $plan->max_sites : 'Illimité') . ' site(s)';
+                $features[] = 'Jusqu\'à ' . ($plan->max_boxes ? number_format($plan->max_boxes, 0, '', ' ') : 'illimité') . ' boxes';
+                $features[] = 'Gestion clients & contrats';
+                $features[] = ($plan->emails_per_month ? number_format($plan->emails_per_month, 0, '', ' ') : 'Illimité') . ' emails/mois';
+                if ($plan->api_access) $features[] = 'Accès API';
+                if ($plan->whitelabel) $features[] = 'Marque blanche';
+
+                return [
+                    'name' => $plan->name,
+                    'price' => (int) $plan->monthly_price,
+                    'period' => 'mois',
+                    'description' => $plan->description ?? 'Plan ' . $plan->name,
+                    'features' => $features,
+                    'cta' => $plan->is_popular ? 'Essai gratuit 14 jours' : 'Commencer',
+                    'popular' => (bool) $plan->is_popular,
+                ];
+            })
+            ->toArray();
 
         return Inertia::render('Public/Home', [
             'stats' => $stats,
@@ -307,7 +281,73 @@ class HomeController extends Controller
      */
     public function pricing()
     {
-        return Inertia::render('Public/Pricing');
+        $plans = \App\Models\SubscriptionPlan::where('is_active', true)
+            ->orderBy('sort_order')
+            ->get()
+            ->map(function ($plan) {
+                // Get module names for display
+                $moduleNames = $plan->included_modules
+                    ? \App\Models\Module::whereIn('id', $plan->included_modules)
+                        ->pluck('name')
+                        ->toArray()
+                    : [];
+
+                return [
+                    'id' => $plan->id,
+                    'code' => $plan->code,
+                    'name' => $plan->name,
+                    'description' => $plan->description,
+                    'badge_color' => $plan->badge_color,
+                    'monthly_price' => (float) $plan->monthly_price,
+                    'yearly_price' => (float) $plan->yearly_price,
+                    'yearly_discount' => (float) $plan->yearly_discount,
+                    'max_sites' => $plan->max_sites,
+                    'max_boxes' => $plan->max_boxes,
+                    'max_users' => $plan->max_users,
+                    'max_customers' => $plan->max_customers,
+                    'emails_per_month' => $plan->emails_per_month,
+                    'sms_per_month' => $plan->sms_per_month,
+                    'api_access' => (bool) $plan->api_access,
+                    'whitelabel' => (bool) $plan->whitelabel,
+                    'includes_support' => (bool) $plan->includes_support,
+                    'support_level' => $plan->support_level,
+                    'is_popular' => (bool) $plan->is_popular,
+                    'modules' => $moduleNames,
+                    'modules_count' => count($moduleNames),
+                ];
+            });
+
+        $faqs = [
+            [
+                'question' => 'Puis-je changer de plan à tout moment ?',
+                'answer' => 'Oui, vous pouvez upgrader votre plan à tout moment. Le changement prend effet immédiatement et vous ne payez que la différence au prorata.',
+            ],
+            [
+                'question' => 'Y a-t-il des frais cachés ?',
+                'answer' => 'Non, tous nos prix sont transparents. Le prix affiché inclut toutes les fonctionnalités du plan. Les seuls coûts supplémentaires sont les crédits email/SMS au-delà de votre quota inclus.',
+            ],
+            [
+                'question' => 'Comment fonctionne l\'essai gratuit ?',
+                'answer' => 'Vous bénéficiez de 14 jours d\'essai gratuit avec accès complet à toutes les fonctionnalités. Aucune carte bancaire requise pour commencer.',
+            ],
+            [
+                'question' => 'Mes données sont-elles sécurisées ?',
+                'answer' => 'Absolument. Nous utilisons le chiffrement SSL/TLS, stockons vos données sur des serveurs européens certifiés ISO 27001, et sommes conformes au RGPD.',
+            ],
+            [
+                'question' => 'Quel support est inclus ?',
+                'answer' => 'Tous les plans incluent un support par email. Les plans Professional et supérieurs bénéficient d\'un support prioritaire, et Enterprise a un account manager dédié.',
+            ],
+            [
+                'question' => 'Proposez-vous une migration depuis un autre logiciel ?',
+                'answer' => 'Oui, notre équipe peut vous accompagner gratuitement pour migrer vos données depuis la plupart des solutions du marché.',
+            ],
+        ];
+
+        return Inertia::render('Public/Pricing', [
+            'plans' => $plans,
+            'faqs' => $faqs,
+        ]);
     }
 
     /**

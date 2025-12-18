@@ -15,6 +15,7 @@ class SMSCampaign extends Model
 
     protected $fillable = [
         'tenant_id',
+        'created_by',
         'name',
         'message',
         'segment',

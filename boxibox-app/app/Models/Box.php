@@ -53,6 +53,13 @@ class Box extends Model
         'deleted_at' => 'datetime',
     ];
 
+    /**
+     * Attributes to append to JSON serialization
+     * - code: alias for number (frontend compatibility)
+     * - size_m2: calculated from length * width
+     */
+    protected $appends = ['code', 'size_m2'];
+
     // Relationships
     public function tenant(): BelongsTo
     {
@@ -136,9 +143,27 @@ class Box extends Model
         return $this->length * $this->width;
     }
 
+    public function getSizeM2Attribute(): float
+    {
+        return round($this->length * $this->width, 2);
+    }
+
+    public function getAreaAttribute(): float
+    {
+        return $this->size_m2;
+    }
+
     public function getPriceAttribute(): float
     {
         return $this->current_price ?? $this->base_price ?? 0;
+    }
+
+    /**
+     * Get the code attribute (alias for number for frontend compatibility)
+     */
+    public function getCodeAttribute(): ?string
+    {
+        return $this->number;
     }
 
     // Helper Methods

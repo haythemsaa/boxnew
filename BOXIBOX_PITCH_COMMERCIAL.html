@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoxiBox - Pitch Commercial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+        * { font-family: 'Inter', sans-serif; }
+
+        .slide {
+            width: 1280px;
+            height: 720px;
+            page-break-after: always;
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media print {
+            .slide { page-break-after: always; }
+            .no-print { display: none; }
+        }
+
+        .gradient-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .gradient-dark { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+        .gradient-success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); }
+        .gradient-danger { background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%); }
+        .gradient-warning { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+        .gradient-info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+        .gradient-orange { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+        .gradient-blue { background: linear-gradient(135deg, #0061ff 0%, #60efff 100%); }
+
+        .text-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .card-shadow { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
+        .glow { box-shadow: 0 0 60px rgba(102, 126, 234, 0.4); }
+
+        .animate-float {
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .pattern-dots {
+            background-image: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+    </style>
+</head>
+<body class="bg-gray-900">
+
+    <!-- Navigation -->
+    <div class="no-print fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-white/10 backdrop-blur-lg rounded-full px-6 py-3 flex items-center gap-4">
+        <button onclick="prevSlide()" class="text-white hover:text-purple-400 transition">
+            <i class="ri-arrow-left-line text-xl"></i>
+        </button>
+        <span class="text-white font-medium" id="slideCounter">1 / 20</span>
+        <button onclick="nextSlide()" class="text-white hover:text-purple-400 transition">
+            <i class="ri-arrow-right-line text-xl"></i>
+        </button>
+        <span class="text-gray-400 mx-2">|</span>
+        <button onclick="window.print()" class="text-white hover:text-green-400 transition flex items-center gap-2">
+            <i class="ri-printer-line"></i> Imprimer PDF
+        </button>
+    </div>
+
+    <div class="flex flex-col items-center py-20 gap-10" id="slides">
+
+        <!-- SLIDE 1: Cover -->
+        <div class="slide gradient-dark rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute inset-0 pattern-dots"></div>
+            <div class="absolute top-0 right-0 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl"></div>
+
+            <div class="relative z-10 h-full flex flex-col items-center justify-center text-center px-20">
+                <div class="mb-8 animate-float">
+                    <div class="w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl">
+                        <i class="ri-archive-stack-fill text-6xl text-white"></i>
+                    </div>
+                </div>
+                <h1 class="text-7xl font-black text-white mb-6">BoxiBox</h1>
+                <p class="text-3xl text-purple-300 font-light mb-8">Le Logiciel de Self-Stockage</p>
+                <p class="text-5xl font-bold text-gradient mb-12">Nouvelle Generation</p>
+                <div class="flex items-center gap-6 text-gray-400">
+                    <span class="flex items-center gap-2"><i class="ri-robot-2-line text-purple-400"></i> Intelligence Artificielle</span>
+                    <span class="text-gray-600">|</span>
+                    <span class="flex items-center gap-2"><i class="ri-time-line text-blue-400"></i> Self-Service 24/7</span>
+                    <span class="text-gray-600">|</span>
+                    <span class="flex items-center gap-2"><i class="ri-line-chart-line text-green-400"></i> +40-70% Revenus</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 2: Le Probleme -->
+        <div class="slide bg-white rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 gradient-danger"></div>
+
+            <div class="p-16 h-full">
+                <div class="flex items-center gap-4 mb-10">
+                    <div class="w-16 h-16 bg-red-100 rounded-2xl flex items-center justify-center">
+                        <i class="ri-error-warning-line text-3xl text-red-500"></i>
+                    </div>
+                    <h2 class="text-4xl font-bold text-gray-800">Le Probleme Aujourd'hui</h2>
+                </div>
+
+                <div class="grid grid-cols-2 gap-8">
+                    <div class="bg-red-50 rounded-2xl p-8 border-l-4 border-red-500">
+                        <h3 class="text-2xl font-bold text-red-700 mb-4"><i class="ri-money-euro-circle-line mr-2"></i>Revenus Limites</h3>
+                        <ul class="space-y-3 text-gray-700">
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-red-500 mt-1"></i>Tarifs fixes, pas d'optimisation</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-red-500 mt-1"></i>Leads non qualifies = temps perdu</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-red-500 mt-1"></i>Reservations par telephone seulement</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-red-500 mt-1"></i>Pas de vente additionnelle automatisee</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-orange-50 rounded-2xl p-8 border-l-4 border-orange-500">
+                        <h3 class="text-2xl font-bold text-orange-700 mb-4"><i class="ri-team-line mr-2"></i>Couts Eleves</h3>
+                        <ul class="space-y-3 text-gray-700">
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-orange-500 mt-1"></i>Personnel necessaire 24/7</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-orange-500 mt-1"></i>Relances manuelles chronophages</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-orange-500 mt-1"></i>Emails et SMS envoyes a la main</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-orange-500 mt-1"></i>Impayes difficiles a recuperer</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-yellow-50 rounded-2xl p-8 border-l-4 border-yellow-500">
+                        <h3 class="text-2xl font-bold text-yellow-700 mb-4"><i class="ri-user-unfollow-line mr-2"></i>Clients Frustres</h3>
+                        <ul class="space-y-3 text-gray-700">
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-yellow-600 mt-1"></i>Acces limite aux horaires d'ouverture</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-yellow-600 mt-1"></i>Pas de portail en libre-service</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-yellow-600 mt-1"></i>Communication lente et reactive</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-yellow-600 mt-1"></i>Experience client mediocre</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-purple-50 rounded-2xl p-8 border-l-4 border-purple-500">
+                        <h3 class="text-2xl font-bold text-purple-700 mb-4"><i class="ri-bar-chart-grouped-line mr-2"></i>Manque de Visibilite</h3>
+                        <ul class="space-y-3 text-gray-700">
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-purple-500 mt-1"></i>Pas de previsions fiables</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-purple-500 mt-1"></i>Decisions basees sur l'intuition</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-purple-500 mt-1"></i>Churn imprevisible</li>
+                            <li class="flex items-start gap-3"><i class="ri-close-circle-fill text-purple-500 mt-1"></i>Pas de benchmark concurrence</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 3: La Solution -->
+        <div class="slide gradient-primary rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute inset-0 pattern-dots"></div>
+            <div class="absolute -right-32 -top-32 w-96 h-96 bg-white/10 rounded-full"></div>
+            <div class="absolute -left-32 -bottom-32 w-96 h-96 bg-white/10 rounded-full"></div>
+
+            <div class="relative z-10 h-full flex flex-col items-center justify-center text-center px-20">
+                <div class="bg-white/20 backdrop-blur-sm rounded-full px-6 py-2 mb-8">
+                    <span class="text-white font-medium">LA SOLUTION</span>
+                </div>
+                <h2 class="text-6xl font-black text-white mb-8">BoxiBox change tout.</h2>
+                <p class="text-2xl text-white/80 max-w-4xl mb-12">
+                    Une plateforme intelligente tout-en-un qui combine <strong>gestion</strong>, <strong>IA</strong>,
+                    <strong>automatisation</strong> et <strong>self-service</strong> pour transformer votre activite.
+                </p>
+
+                <div class="grid grid-cols-3 gap-8">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-center">
+                        <div class="text-5xl font-black text-white mb-2">+40-70%</div>
+                        <div class="text-white/80">Revenus</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-center">
+                        <div class="text-5xl font-black text-white mb-2">-35%</div>
+                        <div class="text-white/80">Couts</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 text-center">
+                        <div class="text-5xl font-black text-white mb-2">24/7</div>
+                        <div class="text-white/80">Self-Service</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 4: Les 6 Piliers -->
+        <div class="slide bg-gray-50 rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 gradient-primary"></div>
+
+            <div class="p-16 h-full">
+                <h2 class="text-4xl font-bold text-gray-800 text-center mb-12">Les 6 Piliers de BoxiBox</h2>
+
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition group">
+                        <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="ri-dashboard-3-line text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">1. Gestion Complete</h3>
+                        <p class="text-gray-600 text-sm">Dashboard, sites, boxes, plans interactifs, reservations</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition group">
+                        <div class="w-14 h-14 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="ri-robot-2-line text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">2. CRM & IA</h3>
+                        <p class="text-gray-600 text-sm">Lead scoring IA, prediction churn, segmentation automatique</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition group">
+                        <div class="w-14 h-14 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="ri-calendar-check-line text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">3. Reservation Online</h3>
+                        <p class="text-gray-600 text-sm">Widget, calculateur, checkout, signature electronique</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition group">
+                        <div class="w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="ri-money-euro-circle-line text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">4. Facturation Auto</h3>
+                        <p class="text-gray-600 text-sm">Stripe, SEPA, smart retry, relances automatiques</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition group">
+                        <div class="w-14 h-14 bg-gradient-to-br from-red-500 to-rose-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="ri-shield-keyhole-line text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">5. Acces & Securite</h3>
+                        <p class="text-gray-600 text-sm">Self-service 24/7, smart locks, IoT, codes acces</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 shadow-lg hover:shadow-xl transition group">
+                        <div class="w-14 h-14 bg-gradient-to-br from-indigo-500 to-violet-500 rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition">
+                            <i class="ri-megaphone-line text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-2">6. Marketing Auto</h3>
+                        <p class="text-gray-600 text-sm">Email, SMS, chatbot IA, fidelite, notifications</p>
+                    </div>
+                </div>
+
+                <div class="mt-10 text-center">
+                    <p class="text-gray-500 text-lg">Decouvrons chaque pilier en detail...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 5: Dashboard -->
+        <div class="slide bg-white rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-blue-500 to-cyan-500"></div>
+
+            <div class="p-16 h-full flex">
+                <div class="w-1/2 pr-10">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <i class="ri-dashboard-3-line text-2xl text-blue-600"></i>
+                        </div>
+                        <span class="text-blue-600 font-semibold">PILIER 1</span>
+                    </div>
+                    <h2 class="text-4xl font-bold text-gray-800 mb-6">Dashboard & Gestion</h2>
+
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                            <i class="ri-eye-line text-2xl text-blue-500 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Vue temps reel</h4>
+                                <p class="text-gray-600 text-sm">Occupation, revenus, impayes, alertes en un coup d'oeil</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                            <i class="ri-building-2-line text-2xl text-blue-500 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Multi-sites</h4>
+                                <p class="text-gray-600 text-sm">Gerez 1 ou 100 sites depuis une seule interface</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                            <i class="ri-map-2-line text-2xl text-blue-500 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Plan interactif PRO</h4>
+                                <p class="text-gray-600 text-sm">Visualisation 2D/3D, clic sur box = infos completes</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                            <i class="ri-archive-2-line text-2xl text-blue-500 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Gestion boxes</h4>
+                                <p class="text-gray-600 text-sm">Inventaire, statuts, photos 360, historique complet</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-1/2 bg-gradient-to-br from-blue-50 to-cyan-50 rounded-2xl p-6 flex items-center justify-center">
+                    <div class="bg-white rounded-xl shadow-2xl p-4 w-full">
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="font-bold text-gray-800">Dashboard BoxiBox</span>
+                            <span class="text-xs text-gray-500">Aujourd'hui</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="bg-green-50 rounded-lg p-3">
+                                <div class="text-2xl font-bold text-green-600">87%</div>
+                                <div class="text-xs text-gray-500">Occupation</div>
+                            </div>
+                            <div class="bg-blue-50 rounded-lg p-3">
+                                <div class="text-2xl font-bold text-blue-600">12 450 EUR</div>
+                                <div class="text-xs text-gray-500">Revenus mois</div>
+                            </div>
+                            <div class="bg-amber-50 rounded-lg p-3">
+                                <div class="text-2xl font-bold text-amber-600">5</div>
+                                <div class="text-xs text-gray-500">Reservations</div>
+                            </div>
+                            <div class="bg-red-50 rounded-lg p-3">
+                                <div class="text-2xl font-bold text-red-600">3</div>
+                                <div class="text-xs text-gray-500">Impayes</div>
+                            </div>
+                        </div>
+                        <div class="h-20 bg-gradient-to-r from-blue-100 to-green-100 rounded-lg flex items-end p-2">
+                            <div class="flex-1 bg-blue-400 rounded h-8 mx-0.5"></div>
+                            <div class="flex-1 bg-blue-500 rounded h-12 mx-0.5"></div>
+                            <div class="flex-1 bg-blue-400 rounded h-10 mx-0.5"></div>
+                            <div class="flex-1 bg-green-500 rounded h-16 mx-0.5"></div>
+                            <div class="flex-1 bg-green-400 rounded h-14 mx-0.5"></div>
+                            <div class="flex-1 bg-green-500 rounded h-18 mx-0.5"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 6: AI Lead Scoring -->
+        <div class="slide gradient-dark rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute inset-0 pattern-dots"></div>
+            <div class="absolute top-0 right-0 w-80 h-80 bg-purple-500/30 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-80 h-80 bg-pink-500/30 rounded-full blur-3xl"></div>
+
+            <div class="relative z-10 p-16 h-full flex">
+                <div class="w-1/2 pr-10">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="px-4 py-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full">
+                            <span class="text-white font-bold text-sm">EXCLUSIVITE BOXIBOX</span>
+                        </div>
+                    </div>
+                    <h2 class="text-5xl font-bold text-white mb-6">AI Lead Scoring</h2>
+                    <p class="text-xl text-gray-300 mb-8">
+                        Sachez EXACTEMENT quels prospects vont signer, et lesquels perdent votre temps.
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
+                            <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-white font-bold">92</div>
+                            <div>
+                                <span class="text-white font-bold">Very Hot</span>
+                                <span class="text-gray-400 ml-2">- Contacter en priorite</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
+                            <div class="w-12 h-12 bg-gradient-to-br from-orange-400 to-amber-500 rounded-full flex items-center justify-center text-white font-bold">68</div>
+                            <div>
+                                <span class="text-white font-bold">Hot</span>
+                                <span class="text-gray-400 ml-2">- Fort potentiel</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
+                            <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold">45</div>
+                            <div>
+                                <span class="text-white font-bold">Warm</span>
+                                <span class="text-gray-400 ml-2">- A suivre</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-1/2 flex items-center justify-center">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8 border border-white/20">
+                        <div class="text-center mb-6">
+                            <div class="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500">+40%</div>
+                            <div class="text-xl text-white mt-2">de conversion</div>
+                        </div>
+                        <p class="text-gray-300 text-center">
+                            Car vos commerciaux se concentrent<br>sur les BONS leads
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 7: Reservation Online -->
+        <div class="slide bg-white rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-green-500 to-emerald-500"></div>
+
+            <div class="p-16 h-full flex">
+                <div class="w-1/2 pr-10">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
+                            <i class="ri-calendar-check-line text-2xl text-green-600"></i>
+                        </div>
+                        <span class="text-green-600 font-semibold">PILIER 3</span>
+                    </div>
+                    <h2 class="text-4xl font-bold text-gray-800 mb-6">Reservation en Ligne 24/7</h2>
+
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                            <i class="ri-code-s-slash-line text-2xl text-green-500 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Widget integrable</h4>
+                                <p class="text-gray-600 text-sm">S'integre sur votre site web en 5 minutes</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                            <i class="ri-calculator-line text-2xl text-green-500 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Calculateur de taille</h4>
+                                <p class="text-gray-600 text-sm">Guide le client vers la bonne taille = +55% conversion</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                            <i class="ri-bank-card-line text-2xl text-green-500 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Paiement en ligne</h4>
+                                <p class="text-gray-600 text-sm">Stripe integre, checkout securise</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                            <i class="ri-file-edit-line text-2xl text-green-500 mt-1"></i>
+                            <div>
+                                <h4 class="font-bold text-gray-800">Signature electronique</h4>
+                                <p class="text-gray-600 text-sm">Contrat signe en 2 clics, codes envoyes automatiquement</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-1/2 flex items-center justify-center">
+                    <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-8 text-center text-white">
+                        <div class="text-8xl font-black mb-4">70%</div>
+                        <div class="text-2xl font-semibold mb-2">des reservations</div>
+                        <div class="text-green-100">se font en ligne</div>
+                        <div class="mt-6 pt-6 border-t border-white/20">
+                            <div class="text-3xl font-bold">0</div>
+                            <div class="text-green-100">intervention humaine</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 8: Facturation & Paiements -->
+        <div class="slide bg-white rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-amber-500 to-orange-500"></div>
+
+            <div class="p-16 h-full">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center">
+                        <i class="ri-money-euro-circle-line text-2xl text-amber-600"></i>
+                    </div>
+                    <span class="text-amber-600 font-semibold">PILIER 4</span>
+                </div>
+                <h2 class="text-4xl font-bold text-gray-800 mb-8">Facturation & Paiements Automatises</h2>
+
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="bg-gray-50 rounded-2xl p-6">
+                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
+                            <i class="ri-file-list-3-line text-2xl text-blue-600"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">Facturation Auto</h3>
+                        <ul class="space-y-2 text-gray-600 text-sm">
+                            <li class="flex items-center gap-2"><i class="ri-check-line text-green-500"></i>Generation mensuelle auto</li>
+                            <li class="flex items-center gap-2"><i class="ri-check-line text-green-500"></i>Numerotation chronologique</li>
+                            <li class="flex items-center gap-2"><i class="ri-check-line text-green-500"></i>Export PDF brande</li>
+                            <li class="flex items-center gap-2"><i class="ri-check-line text-green-500"></i>FEC pour comptabilite</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-2xl p-6">
+                        <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
+                            <i class="ri-bank-card-2-line text-2xl text-purple-600"></i>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-800 mb-3">Multi-Paiements</h3>
+                        <ul class="space-y-2 text-gray-600 text-sm">
+                            <li class="flex items-center gap-2"><i class="ri-check-line text-green-500"></i>Carte bancaire (Stripe)</li>
+                            <li class="flex items-center gap-2"><i class="ri-check-line text-green-500"></i>Prelevement SEPA</li>
+                            <li class="flex items-center gap-2"><i class="ri-check-line text-green-500"></i>GoCardless integre</li>
+                            <li class="flex items-center gap-2"><i class="ri-check-line text-green-500"></i>Paiement partiel accepte</li>
+                        </ul>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-6 text-white">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mb-4">
+                            <i class="ri-refresh-line text-2xl text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold mb-3">Smart Payment Retry</h3>
+                        <p class="text-amber-100 text-sm mb-4">Paiement echoue ? BoxiBox reessaie intelligemment.</p>
+                        <div class="bg-white/20 rounded-xl p-4 text-center">
+                            <div class="text-3xl font-black">+25%</div>
+                            <div class="text-amber-100 text-sm">impayes recuperes</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 bg-red-50 rounded-xl p-6 flex items-center gap-6">
+                    <div class="w-16 h-16 bg-red-100 rounded-xl flex items-center justify-center">
+                        <i class="ri-alarm-warning-line text-3xl text-red-500"></i>
+                    </div>
+                    <div>
+                        <h4 class="text-xl font-bold text-gray-800">Relances Automatiques</h4>
+                        <p class="text-gray-600">J+3 Email > J+7 SMS > J+15 Appel > J+30 Mise en demeure</p>
+                    </div>
+                    <div class="ml-auto text-right">
+                        <div class="text-2xl font-bold text-red-600">-60%</div>
+                        <div class="text-gray-500 text-sm">temps relances</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 9: Self-Service 24/7 -->
+        <div class="slide gradient-info rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute inset-0 pattern-dots"></div>
+
+            <div class="relative z-10 p-16 h-full flex">
+                <div class="w-1/2 pr-10">
+                    <div class="flex items-center gap-3 mb-6">
+                        <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <i class="ri-key-2-line text-2xl text-white"></i>
+                        </div>
+                        <span class="text-white/80 font-semibold">PILIER 5</span>
+                    </div>
+                    <h2 class="text-5xl font-bold text-white mb-6">Self-Service 24/7</h2>
+                    <p class="text-xl text-white/80 mb-8">
+                        Vos clients accdent a leur box 24h/24, 7j/7, sans personnel sur place.
+                    </p>
+
+                    <div class="space-y-4">
+                        <div class="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
+                            <i class="ri-qr-code-line text-2xl text-white"></i>
+                            <span class="text-white">Codes d'acces numeriques uniques</span>
+                        </div>
+                        <div class="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
+                            <i class="ri-user-add-line text-2xl text-white"></i>
+                            <span class="text-white">Codes temporaires pour invites</span>
+                        </div>
+                        <div class="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
+                            <i class="ri-lock-unlock-line text-2xl text-white"></i>
+                            <span class="text-white">Smart locks connectees</span>
+                        </div>
+                        <div class="flex items-center gap-4 p-4 bg-white/10 backdrop-blur-sm rounded-xl">
+                            <i class="ri-sensor-line text-2xl text-white"></i>
+                            <span class="text-white">IoT: temperature, humidite, mouvement</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-1/2 flex items-center justify-center">
+                    <div class="text-center">
+                        <div class="text-9xl font-black text-white mb-4">-40%</div>
+                        <div class="text-3xl text-white/80">couts salariaux</div>
+                        <div class="mt-8 bg-white/10 backdrop-blur-sm rounded-2xl p-6">
+                            <div class="text-xl text-white mb-2">Zero personnel de nuit</div>
+                            <div class="text-white/60">= economies massives</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 10: Marketing Automation -->
+        <div class="slide bg-white rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-indigo-500 to-violet-500"></div>
+
+            <div class="p-16 h-full">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
+                        <i class="ri-megaphone-line text-2xl text-indigo-600"></i>
+                    </div>
+                    <span class="text-indigo-600 font-semibold">PILIER 6</span>
+                </div>
+                <h2 class="text-4xl font-bold text-gray-800 mb-8">Marketing & Fidelisation Automatises</h2>
+
+                <div class="grid grid-cols-4 gap-4">
+                    <div class="bg-gradient-to-br from-blue-500 to-cyan-500 rounded-2xl p-5 text-white">
+                        <i class="ri-mail-line text-3xl mb-3"></i>
+                        <h3 class="font-bold mb-2">Email Auto</h3>
+                        <p class="text-white/80 text-sm mb-3">Sequences declenchees par trigger</p>
+                        <div class="text-2xl font-black">+60%</div>
+                        <div class="text-white/60 text-xs">taux ouverture</div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-green-500 to-emerald-500 rounded-2xl p-5 text-white">
+                        <i class="ri-message-2-line text-3xl mb-3"></i>
+                        <h3 class="font-bold mb-2">SMS</h3>
+                        <p class="text-white/80 text-sm mb-3">Rappels et urgences</p>
+                        <div class="text-2xl font-black">98%</div>
+                        <div class="text-white/60 text-xs">taux lecture</div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl p-5 text-white">
+                        <i class="ri-robot-line text-3xl mb-3"></i>
+                        <h3 class="font-bold mb-2">Chatbot IA</h3>
+                        <p class="text-white/80 text-sm mb-3">Repond 24/7 aux questions</p>
+                        <div class="text-2xl font-black">70%</div>
+                        <div class="text-white/60 text-xs">auto-traite</div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-amber-500 to-orange-500 rounded-2xl p-5 text-white">
+                        <i class="ri-gift-line text-3xl mb-3"></i>
+                        <h3 class="font-bold mb-2">Fidelite</h3>
+                        <p class="text-white/80 text-sm mb-3">Points, niveaux, parrainage</p>
+                        <div class="text-2xl font-black">+45%</div>
+                        <div class="text-white/60 text-xs">retention</div>
+                    </div>
+                </div>
+
+                <div class="mt-8 grid grid-cols-2 gap-6">
+                    <div class="bg-gray-50 rounded-xl p-6 flex items-center gap-4">
+                        <div class="w-14 h-14 bg-indigo-100 rounded-xl flex items-center justify-center">
+                            <i class="ri-notification-3-line text-2xl text-indigo-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800">Push Notifications</h4>
+                            <p class="text-gray-600 text-sm">+85% click rate vs email</p>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 rounded-xl p-6 flex items-center gap-4">
+                        <div class="w-14 h-14 bg-yellow-100 rounded-xl flex items-center justify-center">
+                            <i class="ri-star-line text-2xl text-yellow-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800">Avis Clients</h4>
+                            <p class="text-gray-600 text-sm">Collecte et affichage automatise</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 11: Portail Client -->
+        <div class="slide gradient-success rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute inset-0 pattern-dots"></div>
+
+            <div class="relative z-10 p-16 h-full">
+                <h2 class="text-4xl font-bold text-white text-center mb-10">Portail Client - Experience Premium</h2>
+
+                <div class="grid grid-cols-4 gap-4 mb-10">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                        <i class="ri-dashboard-line text-3xl text-white mb-2"></i>
+                        <div class="text-white font-medium">Dashboard</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                        <i class="ri-file-text-line text-3xl text-white mb-2"></i>
+                        <div class="text-white font-medium">Contrats</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                        <i class="ri-bill-line text-3xl text-white mb-2"></i>
+                        <div class="text-white font-medium">Factures</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                        <i class="ri-bank-card-line text-3xl text-white mb-2"></i>
+                        <div class="text-white font-medium">Paiements</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                        <i class="ri-key-line text-3xl text-white mb-2"></i>
+                        <div class="text-white font-medium">Codes Acces</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                        <i class="ri-arrow-up-down-line text-3xl text-white mb-2"></i>
+                        <div class="text-white font-medium">Changer Box</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                        <i class="ri-customer-service-2-line text-3xl text-white mb-2"></i>
+                        <div class="text-white font-medium">Support Chat</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center">
+                        <i class="ri-shield-check-line text-3xl text-white mb-2"></i>
+                        <div class="text-white font-medium">Assurance</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-3 gap-8">
+                    <div class="bg-white rounded-2xl p-6 text-center">
+                        <div class="text-5xl font-black text-green-600 mb-2">+35</div>
+                        <div class="text-gray-600">points NPS</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 text-center">
+                        <div class="text-5xl font-black text-green-600 mb-2">-28%</div>
+                        <div class="text-gray-600">churn rate</div>
+                    </div>
+                    <div class="bg-white rounded-2xl p-6 text-center">
+                        <div class="text-5xl font-black text-green-600 mb-2">60%</div>
+                        <div class="text-gray-600">clients actifs</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 12: Analytics & IA -->
+        <div class="slide bg-white rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 gradient-primary"></div>
+
+            <div class="p-16 h-full">
+                <h2 class="text-4xl font-bold text-gray-800 text-center mb-10">Analytics & Intelligence Artificielle</h2>
+
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="bg-gray-50 rounded-2xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                                <i class="ri-line-chart-line text-xl text-blue-600"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800">Previsions Revenus</h3>
+                        </div>
+                        <p class="text-gray-600 text-sm mb-4">IA predit vos revenus sur 6 mois avec 95% de precision</p>
+                        <div class="bg-blue-100 rounded-lg p-3 text-center">
+                            <span class="text-blue-700 font-bold">Cash-flow previsible</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-2xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+                                <i class="ri-user-unfollow-line text-xl text-red-600"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800">Prediction Churn</h3>
+                        </div>
+                        <p class="text-gray-600 text-sm mb-4">Sachez 30 jours a l'avance qui va partir</p>
+                        <div class="bg-red-100 rounded-lg p-3 text-center">
+                            <span class="text-red-700 font-bold">-30% de departs</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-2xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                                <i class="ri-price-tag-3-line text-xl text-green-600"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800">Tarification Dynamique</h3>
+                        </div>
+                        <p class="text-gray-600 text-sm mb-4">Prix ajustes automatiquement selon la demande</p>
+                        <div class="bg-green-100 rounded-lg p-3 text-center">
+                            <span class="text-green-700 font-bold">+25-40% revenus</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-2xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                                <i class="ri-pie-chart-line text-xl text-purple-600"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800">KPIs Self-Storage</h3>
+                        </div>
+                        <p class="text-gray-600 text-sm">RevPAR, taux rotation, duree moyenne, LTV client...</p>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-2xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                                <i class="ri-group-line text-xl text-amber-600"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800">Segmentation Clients</h3>
+                        </div>
+                        <p class="text-gray-600 text-sm">RFM automatique, ciblage marketing +50% ROI</p>
+                    </div>
+
+                    <div class="bg-gray-50 rounded-2xl p-6">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center">
+                                <i class="ri-file-chart-line text-xl text-cyan-600"></i>
+                            </div>
+                            <h3 class="font-bold text-gray-800">Rent Roll</h3>
+                        </div>
+                        <p class="text-gray-600 text-sm">Rapport pour banquiers et investisseurs, export 1 clic</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 13: Comparaison Buxida vs BoxiBox -->
+        <div class="slide bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute inset-0 pattern-dots"></div>
+
+            <div class="relative z-10 p-10 h-full">
+                <div class="flex items-center justify-center gap-4 mb-6">
+                    <div class="bg-white rounded-xl px-4 py-2">
+                        <span class="font-bold text-gray-800">BUXIDA</span>
+                        <span class="text-gray-500 text-sm ml-2">150-199 EUR/mois</span>
+                    </div>
+                    <span class="text-white text-3xl font-bold">VS</span>
+                    <div class="bg-purple-600 rounded-xl px-4 py-2">
+                        <span class="font-bold text-white">BoxiBox</span>
+                        <span class="text-purple-200 text-sm ml-2">Nouvelle generation</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Buxida Column -->
+                    <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-5">
+                        <h3 class="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                            <i class="ri-close-circle-line text-red-300"></i> Ce que Buxida NE FAIT PAS
+                        </h3>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-center gap-2 text-white/80 bg-white/5 rounded-lg px-3 py-2">
+                                <i class="ri-close-line text-red-400"></i> AI Lead Scoring (prioriser les prospects)
+                            </div>
+                            <div class="flex items-center gap-2 text-white/80 bg-white/5 rounded-lg px-3 py-2">
+                                <i class="ri-close-line text-red-400"></i> Prediction de churn (anticiper les departs)
+                            </div>
+                            <div class="flex items-center gap-2 text-white/80 bg-white/5 rounded-lg px-3 py-2">
+                                <i class="ri-close-line text-red-400"></i> Tarification dynamique ML (optimiser les prix)
+                            </div>
+                            <div class="flex items-center gap-2 text-white/80 bg-white/5 rounded-lg px-3 py-2">
+                                <i class="ri-close-line text-red-400"></i> Chatbot IA 24/7 (repondre automatiquement)
+                            </div>
+                            <div class="flex items-center gap-2 text-white/80 bg-white/5 rounded-lg px-3 py-2">
+                                <i class="ri-close-line text-red-400"></i> Smart Payment Retry (recuperer les impayes)
+                            </div>
+                            <div class="flex items-center gap-2 text-white/80 bg-white/5 rounded-lg px-3 py-2">
+                                <i class="ri-close-line text-red-400"></i> Email/SMS automation avancee
+                            </div>
+                            <div class="flex items-center gap-2 text-white/80 bg-white/5 rounded-lg px-3 py-2">
+                                <i class="ri-close-line text-red-400"></i> Programme fidelite & parrainage
+                            </div>
+                            <div class="flex items-center gap-2 text-white/80 bg-white/5 rounded-lg px-3 py-2">
+                                <i class="ri-close-line text-red-400"></i> Self-service 24/7 & Smart Locks
+                            </div>
+                            <div class="flex items-center gap-2 text-white/80 bg-white/5 rounded-lg px-3 py-2">
+                                <i class="ri-close-line text-red-400"></i> Galerie 360 & visites virtuelles
+                            </div>
+                            <div class="flex items-center gap-2 text-white/80 bg-white/5 rounded-lg px-3 py-2">
+                                <i class="ri-close-line text-red-400"></i> Analytics predictifs & KPIs avances
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BoxiBox Column -->
+                    <div class="bg-white rounded-2xl p-5">
+                        <h3 class="text-xl font-bold text-purple-700 mb-4 flex items-center gap-2">
+                            <i class="ri-check-double-line text-green-500"></i> BoxiBox fait TOUT ca + plus
+                        </h3>
+                        <div class="space-y-2 text-sm">
+                            <div class="flex items-center gap-2 text-gray-700 bg-green-50 rounded-lg px-3 py-2">
+                                <i class="ri-check-line text-green-500"></i> <strong>IA Lead Scoring</strong> = +40% conversion
+                            </div>
+                            <div class="flex items-center gap-2 text-gray-700 bg-green-50 rounded-lg px-3 py-2">
+                                <i class="ri-check-line text-green-500"></i> <strong>Prediction churn</strong> = -30% departs
+                            </div>
+                            <div class="flex items-center gap-2 text-gray-700 bg-green-50 rounded-lg px-3 py-2">
+                                <i class="ri-check-line text-green-500"></i> <strong>Pricing dynamique</strong> = +25-40% revenus
+                            </div>
+                            <div class="flex items-center gap-2 text-gray-700 bg-green-50 rounded-lg px-3 py-2">
+                                <i class="ri-check-line text-green-500"></i> <strong>Chatbot IA</strong> = 70% auto-traite
+                            </div>
+                            <div class="flex items-center gap-2 text-gray-700 bg-green-50 rounded-lg px-3 py-2">
+                                <i class="ri-check-line text-green-500"></i> <strong>Smart Retry</strong> = +25% impayes recuperes
+                            </div>
+                            <div class="flex items-center gap-2 text-gray-700 bg-green-50 rounded-lg px-3 py-2">
+                                <i class="ri-check-line text-green-500"></i> <strong>Email/SMS Auto</strong> = +60% open rate
+                            </div>
+                            <div class="flex items-center gap-2 text-gray-700 bg-green-50 rounded-lg px-3 py-2">
+                                <i class="ri-check-line text-green-500"></i> <strong>Fidelite</strong> = +45% retention
+                            </div>
+                            <div class="flex items-center gap-2 text-gray-700 bg-green-50 rounded-lg px-3 py-2">
+                                <i class="ri-check-line text-green-500"></i> <strong>Self-service 24/7</strong> = -40% staff
+                            </div>
+                            <div class="flex items-center gap-2 text-gray-700 bg-green-50 rounded-lg px-3 py-2">
+                                <i class="ri-check-line text-green-500"></i> <strong>Galerie 360</strong> = +35% conversion
+                            </div>
+                            <div class="flex items-center gap-2 text-gray-700 bg-green-50 rounded-lg px-3 py-2">
+                                <i class="ri-check-line text-green-500"></i> <strong>Analytics IA</strong> = decisions data-driven
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 text-center">
+                    <span class="text-white/80 text-lg">Buxida = gestion basique | </span>
+                    <span class="text-white font-bold text-lg">BoxiBox = plateforme intelligente complete</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 13b: Tableau Comparatif Detaille -->
+        <div class="slide bg-gray-900 rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute inset-0 pattern-dots"></div>
+
+            <div class="relative z-10 p-8 h-full">
+                <h2 class="text-3xl font-bold text-white text-center mb-6">Tableau Comparatif Detaille</h2>
+
+                <div class="bg-white rounded-2xl overflow-hidden text-xs">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="p-3 text-left text-gray-800 font-bold">Fonctionnalite</th>
+                                <th class="p-3 text-center text-orange-600 font-bold">BUXIDA</th>
+                                <th class="p-3 text-center text-gray-500">SiteLink</th>
+                                <th class="p-3 text-center text-gray-500">Storeganise</th>
+                                <th class="p-3 text-center bg-purple-100 text-purple-700 font-bold">BoxiBox</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="border-t bg-gray-50">
+                                <td class="p-2 font-bold text-gray-600" colspan="5">GESTION DE BASE</td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">Dashboard & Plan interactif</td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i> PRO</td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">Contrats & Facturation</td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i></td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">SEPA & Export comptable</td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i> + GoCardless</td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">Portail client basique</td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i> COMPLET</td>
+                            </tr>
+                            <tr class="border-t bg-gray-50">
+                                <td class="p-2 font-bold text-gray-600" colspan="5">INTELLIGENCE ARTIFICIELLE</td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">AI Lead Scoring</td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i></td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">Prediction Churn</td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i></td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">Tarification Dynamique ML</td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i></td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">Chatbot IA 24/7</td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i></td>
+                            </tr>
+                            <tr class="border-t bg-gray-50">
+                                <td class="p-2 font-bold text-gray-600" colspan="5">AUTOMATISATION & MARKETING</td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">Smart Payment Retry</td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i></td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">Email Automation Avancee</td>
+                                <td class="p-2 text-center text-orange-500">Basique</td>
+                                <td class="p-2 text-center text-orange-500">Basique</td>
+                                <td class="p-2 text-center text-orange-500">Basique</td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i></td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">Programme Fidelite complet</td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-orange-500">Basique</td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i></td>
+                            </tr>
+                            <tr class="border-t bg-gray-50">
+                                <td class="p-2 font-bold text-gray-600" colspan="5">ACCES & EXPERIENCE</td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">Self-Service 24/7 & Smart Locks</td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-orange-500">Limité</td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i> COMPLET</td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">Galerie 360 & Visites Virtuelles</td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i></td>
+                            </tr>
+                            <tr class="border-t">
+                                <td class="p-2">API Ouverte Complete</td>
+                                <td class="p-2 text-center text-red-500"><i class="ri-close-line"></i></td>
+                                <td class="p-2 text-center text-orange-500">Limitée</td>
+                                <td class="p-2 text-center text-green-500"><i class="ri-check-line"></i></td>
+                                <td class="p-2 text-center bg-purple-50 text-green-500"><i class="ri-check-line font-bold"></i></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="mt-4 text-center">
+                    <span class="text-gray-400">BoxiBox = </span>
+                    <span class="text-white font-bold">Buxida + IA + Automation + Self-Service + Marketing</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 14: ROI -->
+        <div class="slide gradient-success rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute inset-0 pattern-dots"></div>
+
+            <div class="relative z-10 p-16 h-full">
+                <h2 class="text-4xl font-bold text-white text-center mb-10">Retour sur Investissement</h2>
+                <p class="text-xl text-white/80 text-center mb-10">Exemple pour un site de 100 boxes a 100 EUR/mois moyen</p>
+
+                <div class="grid grid-cols-2 gap-10">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-2xl p-8">
+                        <h3 class="text-2xl font-bold text-white mb-6 flex items-center gap-3">
+                            <i class="ri-arrow-left-line"></i> AVANT BoxiBox
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="flex justify-between text-white/80">
+                                <span>Revenus (75% occ.)</span>
+                                <span class="font-bold">7 500 EUR/mois</span>
+                            </div>
+                            <div class="flex justify-between text-white/80">
+                                <span>Staff (2 pers.)</span>
+                                <span class="font-bold text-red-300">-5 000 EUR/mois</span>
+                            </div>
+                            <div class="flex justify-between text-white/80">
+                                <span>Impayes (8%)</span>
+                                <span class="font-bold text-red-300">-600 EUR/mois</span>
+                            </div>
+                            <div class="border-t border-white/20 pt-4 flex justify-between">
+                                <span class="text-white font-bold">NET</span>
+                                <span class="text-2xl font-bold text-white">1 900 EUR/mois</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-8">
+                        <h3 class="text-2xl font-bold text-green-600 mb-6 flex items-center gap-3">
+                            <i class="ri-arrow-right-line"></i> APRES BoxiBox
+                        </h3>
+                        <div class="space-y-4">
+                            <div class="flex justify-between text-gray-700">
+                                <span>Revenus (88% occ. + pricing)</span>
+                                <span class="font-bold text-green-600">10 120 EUR/mois</span>
+                            </div>
+                            <div class="flex justify-between text-gray-700">
+                                <span>Staff (1 pers. self-service)</span>
+                                <span class="font-bold">-2 500 EUR/mois</span>
+                            </div>
+                            <div class="flex justify-between text-gray-700">
+                                <span>Impayes (3%)</span>
+                                <span class="font-bold">-300 EUR/mois</span>
+                            </div>
+                            <div class="border-t border-gray-200 pt-4 flex justify-between">
+                                <span class="text-gray-800 font-bold">NET</span>
+                                <span class="text-2xl font-bold text-green-600">7 320 EUR/mois</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-10 bg-white rounded-2xl p-8 text-center">
+                    <div class="text-5xl font-black text-green-600 mb-2">+5 420 EUR/mois</div>
+                    <div class="text-xl text-gray-600">de benefice supplementaire</div>
+                    <div class="mt-4 text-gray-500">ROI: Le logiciel est rentabilise en <span class="font-bold text-green-600">moins de 2 mois</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 15: Services Additionnels -->
+        <div class="slide bg-white rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 gradient-orange"></div>
+
+            <div class="p-16 h-full">
+                <h2 class="text-4xl font-bold text-gray-800 text-center mb-10">Services a Valeur Ajoutee</h2>
+
+                <div class="grid grid-cols-3 gap-6">
+                    <div class="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-6 text-white">
+                        <i class="ri-shield-check-line text-4xl mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">Assurances</h3>
+                        <p class="text-white/80 text-sm mb-4">Marketplace assurances integree, souscription en 1 clic</p>
+                        <div class="bg-white/20 rounded-lg p-3 text-center">
+                            <span class="font-bold">+20% revenus</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl p-6 text-white">
+                        <i class="ri-vidicon-line text-4xl mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">Visio Agent</h3>
+                        <p class="text-white/80 text-sm mb-4">Visites virtuelles en direct, signature a distance</p>
+                        <div class="bg-white/20 rounded-lg p-3 text-center">
+                            <span class="font-bold">Experience premium</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl p-6 text-white">
+                        <i class="ri-truck-line text-4xl mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">Service Valet</h3>
+                        <p class="text-white/80 text-sm mb-4">Pickup & delivery, gestion des objets stockes</p>
+                        <div class="bg-white/20 rounded-lg p-3 text-center">
+                            <span class="font-bold">+15% upsell</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-6 text-white">
+                        <i class="ri-qr-scan-2-line text-4xl mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">Move-In Sans Contact</h3>
+                        <p class="text-white/80 text-sm mb-4">Check-in QR code, signature photo, 0-contact</p>
+                        <div class="bg-white/20 rounded-lg p-3 text-center">
+                            <span class="font-bold">COVID-proof</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-cyan-500 to-blue-600 rounded-2xl p-6 text-white">
+                        <i class="ri-panorama-line text-4xl mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">Galerie 360</h3>
+                        <p class="text-white/80 text-sm mb-4">Photos 360, visites virtuelles, showcase boxes</p>
+                        <div class="bg-white/20 rounded-lg p-3 text-center">
+                            <span class="font-bold">+35% conversion</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl p-6 text-white">
+                        <i class="ri-code-s-slash-line text-4xl mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">API Ouverte</h3>
+                        <p class="text-white/80 text-sm mb-4">Integration avec votre ERP, CRM, site web existant</p>
+                        <div class="bg-white/20 rounded-lg p-3 text-center">
+                            <span class="font-bold">Ecosysteme ouvert</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 16: Conformite -->
+        <div class="slide bg-gray-50 rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-2 gradient-info"></div>
+
+            <div class="p-16 h-full">
+                <h2 class="text-4xl font-bold text-gray-800 text-center mb-10">Conformite & Securite</h2>
+
+                <div class="grid grid-cols-4 gap-6">
+                    <div class="bg-white rounded-2xl p-6 text-center shadow-lg">
+                        <div class="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="ri-shield-user-line text-3xl text-blue-600"></i>
+                        </div>
+                        <h3 class="font-bold text-gray-800 mb-2">RGPD</h3>
+                        <p class="text-gray-600 text-sm">Export, suppression, consentements</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 text-center shadow-lg">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="ri-bank-card-line text-3xl text-green-600"></i>
+                        </div>
+                        <h3 class="font-bold text-gray-800 mb-2">PCI-DSS</h3>
+                        <p class="text-gray-600 text-sm">Paiements securises via Stripe</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 text-center shadow-lg">
+                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="ri-file-list-3-line text-3xl text-purple-600"></i>
+                        </div>
+                        <h3 class="font-bold text-gray-800 mb-2">FEC France</h3>
+                        <p class="text-gray-600 text-sm">Export comptable conforme DGFIP</p>
+                    </div>
+
+                    <div class="bg-white rounded-2xl p-6 text-center shadow-lg">
+                        <div class="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="ri-server-line text-3xl text-amber-600"></i>
+                        </div>
+                        <h3 class="font-bold text-gray-800 mb-2">Hebergement EU</h3>
+                        <p class="text-gray-600 text-sm">Serveurs en Europe, backups quotidiens</p>
+                    </div>
+                </div>
+
+                <div class="mt-10 bg-white rounded-2xl p-8 flex items-center justify-between shadow-lg">
+                    <div class="flex items-center gap-6">
+                        <div class="w-14 h-14 bg-green-100 rounded-xl flex items-center justify-center">
+                            <i class="ri-leaf-line text-2xl text-green-600"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-gray-800 text-xl">RSE & Durabilite</h4>
+                            <p class="text-gray-600">Suivi consommation energie, CO2, objectifs durabilite</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="text-sm text-gray-500">Certifications possibles</div>
+                        <div class="text-lg font-bold text-green-600">ISO 14001 ready</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 17: Deploiement -->
+        <div class="slide gradient-primary rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute inset-0 pattern-dots"></div>
+
+            <div class="relative z-10 p-16 h-full">
+                <h2 class="text-4xl font-bold text-white text-center mb-12">Deploiement & Accompagnement</h2>
+
+                <div class="flex items-center justify-center gap-4">
+                    <div class="bg-white rounded-2xl p-6 text-center w-56">
+                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-2xl font-black text-purple-600">1</span>
+                        </div>
+                        <h3 class="font-bold text-gray-800 mb-2">Semaine 1</h3>
+                        <p class="text-gray-600 text-sm">Configuration initiale Import de vos donnees</p>
+                    </div>
+
+                    <i class="ri-arrow-right-line text-4xl text-white/50"></i>
+
+                    <div class="bg-white rounded-2xl p-6 text-center w-56">
+                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-2xl font-black text-purple-600">2</span>
+                        </div>
+                        <h3 class="font-bold text-gray-800 mb-2">Semaine 2</h3>
+                        <p class="text-gray-600 text-sm">Formation equipe (2h visio)</p>
+                    </div>
+
+                    <i class="ri-arrow-right-line text-4xl text-white/50"></i>
+
+                    <div class="bg-white rounded-2xl p-6 text-center w-56">
+                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span class="text-2xl font-black text-purple-600">3</span>
+                        </div>
+                        <h3 class="font-bold text-gray-800 mb-2">Semaine 3</h3>
+                        <p class="text-gray-600 text-sm">Go-live avec support prioritaire</p>
+                    </div>
+
+                    <i class="ri-arrow-right-line text-4xl text-white/50"></i>
+
+                    <div class="bg-white rounded-2xl p-6 text-center w-56">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="ri-check-line text-2xl text-green-600"></i>
+                        </div>
+                        <h3 class="font-bold text-gray-800 mb-2">Ensuite</h3>
+                        <p class="text-gray-600 text-sm">Support continu Mises a jour gratuites</p>
+                    </div>
+                </div>
+
+                <div class="mt-12 grid grid-cols-3 gap-6">
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
+                        <i class="ri-headphone-line text-3xl text-white mb-2"></i>
+                        <div class="text-white font-bold">Support prioritaire</div>
+                        <div class="text-white/60 text-sm">Reponse < 4h</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
+                        <i class="ri-refresh-line text-3xl text-white mb-2"></i>
+                        <div class="text-white font-bold">Mises a jour</div>
+                        <div class="text-white/60 text-sm">Incluses a vie</div>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 text-center">
+                        <i class="ri-book-open-line text-3xl text-white mb-2"></i>
+                        <div class="text-white font-bold">Documentation</div>
+                        <div class="text-white/60 text-sm">Complete + videos</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 18: Les 3 Promesses -->
+        <div class="slide gradient-dark rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute inset-0 pattern-dots"></div>
+            <div class="absolute top-0 right-0 w-96 h-96 bg-green-500/20 rounded-full blur-3xl"></div>
+            <div class="absolute bottom-0 left-0 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl"></div>
+
+            <div class="relative z-10 h-full flex flex-col items-center justify-center px-20">
+                <h2 class="text-4xl font-bold text-white mb-12">Les 3 Promesses BoxiBox</h2>
+
+                <div class="grid grid-cols-3 gap-8 w-full max-w-5xl">
+                    <div class="bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl p-8 text-center text-white">
+                        <div class="text-6xl font-black mb-4">+40-70%</div>
+                        <div class="text-xl font-semibold mb-2">Revenus</div>
+                        <p class="text-green-100 text-sm">IA, tarification dynamique, optimisation conversions</p>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl p-8 text-center text-white">
+                        <div class="text-6xl font-black mb-4">-35%</div>
+                        <div class="text-xl font-semibold mb-2">Couts</div>
+                        <p class="text-blue-100 text-sm">Self-service 24/7, automatisation, impayes reduits</p>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl p-8 text-center text-white">
+                        <div class="text-6xl font-black mb-4">5 STAR</div>
+                        <div class="text-xl font-semibold mb-2">Experience</div>
+                        <p class="text-purple-100 text-sm">Portail client, acces 24/7, chatbot, fidelite</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SLIDE 19: Citation -->
+        <div class="slide bg-white rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-purple-50 to-blue-50"></div>
+
+            <div class="relative z-10 h-full flex flex-col items-center justify-center px-20">
+                <i class="ri-double-quotes-l text-9xl text-purple-200 mb-6"></i>
+                <blockquote class="text-4xl font-light text-gray-700 text-center max-w-4xl mb-8 leading-relaxed">
+                    BoxiBox, c'est comme avoir un <span class="font-bold text-purple-600">directeur commercial</span>,
+                    un <span class="font-bold text-blue-600">comptable</span>,
+                    un <span class="font-bold text-green-600">responsable marketing</span>,
+                    et un <span class="font-bold text-amber-600">agent d'accueil 24/7</span>...
+                    <br><br>
+                    dans un seul logiciel alimente par l'IA.
+                </blockquote>
+            </div>
+        </div>
+
+        <!-- SLIDE 20: Call to Action -->
+        <div class="slide gradient-primary rounded-2xl card-shadow relative overflow-hidden">
+            <div class="absolute inset-0 pattern-dots"></div>
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-white/5 rounded-full"></div>
+
+            <div class="relative z-10 h-full flex flex-col items-center justify-center text-center px-20">
+                <div class="mb-8">
+                    <div class="w-24 h-24 bg-white rounded-3xl flex items-center justify-center shadow-2xl mx-auto">
+                        <i class="ri-archive-stack-fill text-5xl text-purple-600"></i>
+                    </div>
+                </div>
+
+                <h2 class="text-5xl font-black text-white mb-6">Pret a transformer votre activite ?</h2>
+                <p class="text-2xl text-white/80 mb-12">Rejoignez la nouvelle generation du self-stockage</p>
+
+                <div class="flex gap-6 mb-12">
+                    <div class="bg-white rounded-xl px-8 py-4 text-center">
+                        <div class="text-sm text-gray-500 mb-1">Etape 1</div>
+                        <div class="font-bold text-gray-800">Demo live 30 min</div>
+                    </div>
+                    <div class="text-white text-2xl flex items-center">→</div>
+                    <div class="bg-white rounded-xl px-8 py-4 text-center">
+                        <div class="text-sm text-gray-500 mb-1">Etape 2</div>
+                        <div class="font-bold text-gray-800">Essai 30 jours gratuit</div>
+                    </div>
+                    <div class="text-white text-2xl flex items-center">→</div>
+                    <div class="bg-white rounded-xl px-8 py-4 text-center">
+                        <div class="text-sm text-gray-500 mb-1">Etape 3</div>
+                        <div class="font-bold text-gray-800">Migration assistee</div>
+                    </div>
+                </div>
+
+                <div class="text-white/60 text-lg">
+                    <strong class="text-white">BoxiBox</strong> - Le Self-Stockage Intelligent
+                </div>
+                <div class="mt-4 text-white/40">
+                    "Moins de travail, plus de revenus, clients satisfaits."
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+
+        function updateCounter() {
+            document.getElementById('slideCounter').textContent = `${currentSlide + 1} / ${slides.length}`;
+        }
+
+        function scrollToSlide(index) {
+            slides[index].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function nextSlide() {
+            if (currentSlide < slides.length - 1) {
+                currentSlide++;
+                scrollToSlide(currentSlide);
+                updateCounter();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 0) {
+                currentSlide--;
+                scrollToSlide(currentSlide);
+                updateCounter();
+            }
+        }
+
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') {
+                e.preventDefault();
+                nextSlide();
+            } else if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                prevSlide();
+            }
+        });
+
+        // Intersection Observer for current slide tracking
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    currentSlide = Array.from(slides).indexOf(entry.target);
+                    updateCounter();
+                }
+            });
+        }, { threshold: 0.5 });
+
+        slides.forEach(slide => observer.observe(slide));
+    </script>
+</body>
+</html>

@@ -56,19 +56,41 @@
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <h3 class="font-semibold text-gray-900">Gérer le calculateur</h3>
-                        <p class="text-sm text-gray-500">Configurez les catégories, articles et widgets d'intégration</p>
+                        <h3 class="font-semibold text-gray-900">Gerer le calculateur</h3>
+                        <p class="text-sm text-gray-500">Configurez les categories, articles et widgets d'integration</p>
                     </div>
-                    <div class="flex gap-3">
+                    <div class="flex flex-wrap gap-3">
+                        <Link :href="route('tenant.calculator.vehicle-simulator')" class="btn-primary bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700">
+                            <TruckIcon class="w-4 h-4 mr-2" />
+                            Simulateur Vehicule 3D
+                        </Link>
                         <Link :href="route('tenant.calculator.categories')" class="btn-secondary">
                             <TagIcon class="w-4 h-4 mr-2" />
-                            Catégories & Articles
+                            Categories & Articles
                         </Link>
                         <Link :href="route('tenant.calculator.widgets')" class="btn-primary">
                             <CodeBracketIcon class="w-4 h-4 mr-2" />
                             Widgets
                         </Link>
                     </div>
+                </div>
+            </div>
+
+            <!-- Vehicle Simulator Promo -->
+            <div class="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl shadow-lg p-6 text-white">
+                <div class="flex flex-col md:flex-row items-center gap-6">
+                    <div class="p-4 bg-white/10 rounded-2xl">
+                        <TruckIcon class="w-12 h-12 text-white" />
+                    </div>
+                    <div class="flex-1 text-center md:text-left">
+                        <h3 class="text-xl font-bold">Nouveau: Simulateur de Chargement 3D</h3>
+                        <p class="text-purple-100 mt-1">
+                            Aidez vos clients a estimer leur besoin de stockage en visualisant le chargement d'un vehicule en 3D
+                        </p>
+                    </div>
+                    <Link :href="route('tenant.calculator.vehicle-simulator')" class="bg-white text-purple-600 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-colors whitespace-nowrap">
+                        Essayer maintenant
+                    </Link>
                 </div>
             </div>
 
@@ -165,6 +187,7 @@ import {
     TagIcon,
     CodeBracketIcon,
     ClipboardDocumentIcon,
+    TruckIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({

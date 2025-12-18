@@ -1,0 +1,1763 @@
+angular.module('BUXIDA').controller('DashboardController', ['$rootScope', '$scope', 'settings','$window','$location', '$http','phpCookies','BUXIDASERVICES','$translate','ngDialog', function($rootScope, $scope, settings,$window,$location,$http,phpCookies,BUXIDASERVICES,$translate,ngDialog)
+{
+    $scope.$on('$viewContentLoaded', function() 
+    {   
+        $translate('Evolution_du_chiffre_daffaires').then(function (headline) {
+          $scope.Evolution_du_chiffre_daffaires = headline;
+        }, function (translationId) {
+          $scope.Evolution_du_chiffre_daffaires = translationId;
+        });
+        var vchart_1;
+        var vchart_1_b;
+        var vchart_2;
+        var vchart_3;
+        $scope.admin = false;
+		$scope.affichedispo = false;
+		$scope.affichesignatures = false;
+		$scope.affichemandat = false;
+		$scope.affichenew = false;
+		if ($rootScope.soc.C_email == "fabien@ubicx.com") {
+			$scope.affichenew = true;
+		}
+        $scope.Nbbox = 0;
+        $scope.Nbocc = 0;
+        $scope.Nbdedite = 0;
+        $scope.Nbsurface = 0;
+        $scope.Nbvolume = 0;
+        $scope.Nbcontrat = 0;
+        $scope.Nbcli = 0;
+        $scope.Nbpsurface = 0;
+        $scope.Nbpnb = 0;
+        $scope.Nbca = 0;
+        $scope.Nbassur = 0;
+        $scope.Nbout = 0;
+        $scope.Nblibre = 0;
+        $scope.Nbcatot = 0;
+        $scope.factmois = 0;
+        $scope.nbfactmois = 0;
+        $scope.avoirmois = 0;
+        $scope.nbavoirmois = 0;
+        $scope.regmois = 0;
+        $scope.nbregmois = 0;
+        $scope.camois = 0;
+        $scope.tarifth = 0;
+        $scope.totalhtfroun = 0;
+        $scope.Nblitige = 0;
+        $scope.assuranceincluse = 0;
+        $scope.assuranceadd = 0;
+        $scope.BP1bcharge = false;
+        if (($rootScope.soc.C_currency == 'EUR') || ($rootScope.soc.C_currency == '') )
+        {
+           $scope.C_currency = '€'; 
+        }
+        else
+        {
+            $scope.C_currency = $rootScope.soc.C_currency;     
+        }
+
+        function renderIcons() {
+        
+            // Move icon
+            if (!this.series[0].icon) {
+                this.series[0].icon = this.renderer.path(['M', -8, 0, 'L', 8, 0, 'M', 0, -8, 'L', 8, 0, 0, 8])
+                    .attr({
+                        'stroke': '#303030',
+                        'stroke-linecap': 'round',
+                        'stroke-linejoin': 'round',
+                        'stroke-width': 2,
+                        'zIndex': 10
+                    })
+                    .add(this.series[2].group);
+            }
+            this.series[0].icon.translate(
+                this.chartWidth / 2 - 10,
+                this.plotHeight / 2 - this.series[0].points[0].shapeArgs.innerR -
+                    (this.series[0].points[0].shapeArgs.r - this.series[0].points[0].shapeArgs.innerR) / 2
+            );
+        
+            // Exercise icon
+            if (!this.series[1].icon) {
+                this.series[1].icon = this.renderer.path(
+                    ['M', -8, 0, 'L', 8, 0, 'M', 0, -8, 'L', 8, 0, 0, 8,
+                        'M', 8, -8, 'L', 16, 0, 8, 8]
+                    )
+                    .attr({
+                        'stroke': '#ffffff',
+                        'stroke-linecap': 'round',
+                        'stroke-linejoin': 'round',
+                        'stroke-width': 2,
+                        'zIndex': 10
+                    })
+                    .add(this.series[2].group);
+            }
+            this.series[1].icon.translate(
+                this.chartWidth / 2 - 10,
+                this.plotHeight / 2 - this.series[1].points[0].shapeArgs.innerR -
+                    (this.series[1].points[0].shapeArgs.r - this.series[1].points[0].shapeArgs.innerR) / 2
+            );
+        
+            // Stand icon
+            if (!this.series[2].icon) {
+                this.series[2].icon = this.renderer.path(['M', 0, 8, 'L', 0, -8, 'M', -8, 0, 'L', 0, -8, 8, 0])
+                    .attr({
+                        'stroke': '#303030',
+                        'stroke-linecap': 'round',
+                        'stroke-linejoin': 'round',
+                        'stroke-width': 2,
+                        'zIndex': 10
+                    })
+                    .add(this.series[2].group);
+            }
+        
+            this.series[2].icon.translate(
+                this.chartWidth / 2 - 10,
+                this.plotHeight / 2 - this.series[2].points[0].shapeArgs.innerR -
+                    (this.series[2].points[0].shapeArgs.r - this.series[2].points[0].shapeArgs.innerR) / 2
+            );
+        }
+        
+        $("#chart_1").height('300');
+        $("#chart_1b").height('300');
+        $("#chart_1C").height('300');
+        var currentYear = (new Date).getFullYear();
+        $('#yearselect1').yearselect({
+            start: 2000,
+            order: 'desc',
+            selected: currentYear
+
+        });
+        $('#yearselect1b').yearselect({
+            start: 2000,
+            order: 'desc',
+            selected: currentYear
+
+        });
+        $('#yearselect2').yearselect({
+            start: 2000,
+            order: 'desc',
+            selected: currentYear
+
+        });
+        $('#yearselect3').yearselect({
+            start: 2000,
+            order: 'desc',
+            selected: currentYear
+
+        });
+        $scope.affdispo = function()
+        {
+            if ($scope.affichedispo) {
+				$scope.affichedispo = false;
+			} else {
+				$scope.affichedispo = true;
+				$scope.affichesignatures = false;
+				$scope.affichemandat = false;
+				var tableemplacement = $('#TB_EMPLACEMENT');
+				var oTableemplacement = tableemplacement.dataTable({
+					ajax: "php/table.TB_EMPLACEMENT_DISPO.php?ui="+$rootScope.soc.UI,
+					columns: [
+						{ "mData": "C_libelle"}, 
+						{ "mData": "C_famille"}, 
+						{ "mData": "I_tailleM2"},
+						{ "mData": "I_tailleM3"},
+						{ "mData": "I_hauteur"},
+						{ "mData": "I_prixTTC"},
+						{ "mData": "nbbox"},
+						{ "mData": "nbboxoccupe"},
+						{ "mData": "nbboxreserve"},
+						{ "mData": "nbboxlibre"}
+					],
+					language: {
+						url: '/admin/js/fr_FR.json'
+					},
+					order: [
+						[9, 'desc']
+					],
+					lengthMenu: [
+						[10, 15, 20, -1],
+						[10, 15, 20, "tout"] 
+					],
+					pageLength: 10,
+					colReorder: true,
+					stateSave:  true,
+					destroy:true,
+					dom: "<'row' <'col-md-11'B>><'row'<'col-md-6 col-sm-12'l><'col-md-6 col-sm-12'f>r><'table-scrollable't><'row'<'col-md-5 col-sm-12'i>><'row'<'col-md-5 col-sm-12'><'col-md-7 col-sm-12'p>>",
+					createdRow: function ( row, data, index ) {
+						if ( data.nbboxlibre != "0" ) {
+							$('td', row).eq(0).addClass('bg-blue-sharp bg-font-blue-sharp');
+							$('td', row).eq(9).addClass('bg-blue-sharp bg-font-blue-sharp');
+						}
+					},
+					buttons: [
+					{
+						extend: "colvis",
+						text: "Choix des colonnes",
+						className: "btn blue"
+					}
+					],
+				});
+			}
+        };
+        $scope.affsignature = function()
+        {
+            if ($scope.affichesignatures) {
+				$scope.affichesignatures = false;
+			} else {
+				$scope.affichesignatures = true;
+				$scope.affichedispo = false;
+				$scope.affichemandat = false;
+				var tablesignatures = $('#TB_SIGNATURES');
+				var oTablesignatures = tablesignatures.dataTable({
+					ajax: "php/table.TB_SIGNATUREALL.php?ui="+$rootScope.soc.UI,
+					columns: [
+						{ "mData": "C_date"}, 
+						{ "mData": "C_numcontrat"}, 
+						{ "mData": "C_rum"},
+						{ "mData": "C_email"},
+						{ "mData": "C_client"},
+						{ "mData": "C_etat"},
+						{ "mData": "expire_status"},
+						{ "mData": "jours_restants"}
+					],
+					language: {
+						url: '/admin/js/fr_FR.json'
+					},
+					order: [
+						[0, 'desc']
+					],
+					columnDefs: [
+						{ type: 'date-eu', targets: 0 }
+					],
+					lengthMenu: [
+						[10, 15, 20, -1],
+						[10, 15, 20, "tout"] 
+					],
+					pageLength: 10,
+					colReorder: true,
+					stateSave:  true,
+					select: true,
+					destroy:true,
+					dom: "<'row' <'col-md-11'B>><'row'<'col-md-6 col-sm-12'l><'col-md-6 col-sm-12'f>r><'table-scrollable't><'row'<'col-md-5 col-sm-12'i>><'row'<'col-md-5 col-sm-12'><'col-md-7 col-sm-12'p>>",
+					buttons: [
+						{ 
+							extend: "selectedSingle",
+							text: "Fiche client",
+							className: 'btn blue' ,
+							action: function (e, dt, node, config)
+							{
+								if(dt.rows( { selected: true } ).count() === 1)
+								{
+									var selrows = dt.rows( { selected: true } ).data();
+									$rootScope.client = {
+										C_nom:selrows[0].C_nom,
+										C_prenom:selrows[0].C_prenom,
+										C_email:selrows[0].C_email,
+										C_tel:selrows[0].C_tel,
+										C_UI:selrows[0].C_UIC,
+										B_ACTIF:selrows[0].I_contratencours};
+									window.location = "#/profile/contrats"; 
+								}
+							}
+						},
+						{
+							extend: "selectedSingle",
+							text: "Envoyer un rappel",
+							className: 'btn blue',
+
+							action: function (e, dt, node, config)
+							{
+								if(dt.rows( { selected: true } ).count() === 1)
+								{
+									var selrows = dt.rows( { selected: true } ).data();                         
+									if ((selrows[0].status == "pending") || (selrows[0].status == "ready")) {
+									  	var ID_procedure=selrows[0].ID_procedure; 
+										$http({
+											url : "php/signature.php",
+											method: "POST",
+											headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+											data: { id:'4',ID_procedure:ID_procedure}
+										})
+											.success(function (data, status, headers, config)
+											{
+												if(data.res == "1")
+												{
+													var table = $('#TB_SIGNATURES').DataTable();
+													table.ajax.reload( function ( json ) {
+														$('#TB_SIGNATURES').val( json.lastInput );
+													} );
+													var $toast = toastr['success']('Le rappel à bien été envoyé par e-mail', 'Envoi de relance');
+												} else {
+													var $toast = toastr['error']('Erreur de traitemant', 'Envoi de relance');
+												}
+											})
+											.error(function (data, status, headers, config)
+											{
+												var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+											});
+									}
+									else
+									{
+									  var $toast = toastr['warning']('Envoi impossible', 'Envoi de relance');
+									}
+								}
+							}
+						}
+					],
+				});
+			}
+        };
+        $scope.affmandat = function()
+        {
+            if ($scope.affichemandat) {
+				$scope.affichemandat = false;
+			} else {
+				$scope.affichemandat = true;
+				$scope.affichedispo = false;
+				$scope.affichesignatures = false;
+				var tablemandats = $('#TB_MANDAT');
+				var oTablemandats= tablemandats.dataTable({
+					ajax: "php/table.TB_MANDATAVALIDER.php?ui="+$rootScope.soc.UI,
+					columns: [
+						{ "mData": "dtsepa"},
+						{ "mData": "C_rum"},
+						{ "mData": "C_DEBITEUR"}
+					],
+					language: {
+						url: '/admin/js/fr_FR.json'
+					},
+					order: [
+						[0, 'desc']
+					],
+					columnDefs: [
+						{ type: 'date-eu', targets: 0 }
+					],
+					lengthMenu: [
+						[10, 15, 20, -1],
+						[10, 15, 20, "tout"] 
+					],
+					pageLength: 10,
+					colReorder: true,
+					stateSave:  true,
+					select: true,
+					destroy:true,
+					dom: "<'row' <'col-md-11'B>><'row'<'col-md-6 col-sm-12'l><'col-md-6 col-sm-12'f>r><'table-scrollable't><'row'<'col-md-5 col-sm-12'i>><'row'<'col-md-5 col-sm-12'><'col-md-7 col-sm-12'p>>",
+					buttons: [
+						{ 
+							extend: "selectedSingle",
+							text: "Fiche client",
+							className: 'btn blue' ,
+							action: function (e, dt, node, config)
+							{
+								if(dt.rows( { selected: true } ).count() === 1)
+								{
+									var selrows = dt.rows( { selected: true } ).data();
+									$rootScope.client = {
+										C_nom:selrows[0].C_nom,
+										C_prenom:selrows[0].C_prenom,
+										C_email:selrows[0].C_email,
+										C_tel:selrows[0].C_tel,
+										C_UI:selrows[0].C_UIC,
+										B_ACTIF:selrows[0].I_contratencours};
+									window.location = "#/profile/mandats"; 
+								}
+							}
+						}
+					],
+				});
+			}
+        };
+        $scope.reninit = function()
+        {
+            phpCookies.set("P0",'0');
+            phpCookies.set("P1",'0');
+            phpCookies.set("P1b",'0');
+            phpCookies.set("tbEvolution_des_locations",'0');
+            phpCookies.set("tbRotation_des_boxes",'0');
+            phpCookies.set("tblisteresa",'0');
+            phpCookies.set("tbProstects",'0');
+            phpCookies.set("tbRepartition",'0');
+            phpCookies.set("tbSante_du_site",'0');
+            phpCookies.set("tbDerniers_documents",'0');
+            phpCookies.set("tbReglement_en_retard",'0');
+            phpCookies.set("stepassurancea",'0');
+            phpCookies.set("stepassuranceb",'0');
+            $window.location.reload();
+        };
+        if (phpCookies.get('P0') == '1')
+        {
+            var portlet = $("#P0");
+
+            if ($('body').hasClass('page-portlet-fullscreen')) {
+                $('body').removeClass('page-portlet-fullscreen');
+            }
+
+            portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+            portlet.remove();
+        }
+
+        if (($rootScope.soc.IT == '1') || ($rootScope.soc.IT == '2'))
+        {
+            $scope.admin = true;
+        }
+
+
+        $http({
+            url : "php/client.php",
+            method: "POST",
+            headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+            data : {id:'45', CUI:$rootScope.soc.C_UIU}
+        })
+        .success(function (data, status, headers, config)
+        {
+            if ((data.I_type == '1') || (data.I_type== '2'))
+            {
+                $scope.admin = true;
+
+                if (phpCookies.get('tbRotation_des_boxes') == '1')
+                {
+                    var portlet = $("#tbRotation_des_boxes");
+
+                    if ($('body').hasClass('page-portlet-fullscreen')) {
+                        $('body').removeClass('page-portlet-fullscreen');
+                    }
+
+                    portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+                    portlet.remove();
+                }
+                else
+                {
+                    drawChart5();
+                }
+                
+                if (phpCookies.get('tbEvolution_des_locations') == '1')
+                {
+                    var portlet = $("#tbEvolution_des_locations");
+
+                    if ($('body').hasClass('page-portlet-fullscreen')) {
+                        $('body').removeClass('page-portlet-fullscreen');
+                    }
+
+                    portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+                    portlet.remove();
+                }
+                else
+                {
+                    drawChart2();
+                }
+                if (phpCookies.get('P1') == '1')
+                {
+                    var portlet = $("#P1");
+
+                    if ($('body').hasClass('page-portlet-fullscreen')) {
+                        $('body').removeClass('page-portlet-fullscreen');
+                    }
+
+                    portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+                    portlet.remove();
+                }
+                else
+                {
+                    drawChart1();    
+                }
+                if (phpCookies.get('P1b') == '1')
+                {
+                    var portlet = $("#P1b");
+
+                    if ($('body').hasClass('page-portlet-fullscreen')) {
+                        $('body').removeClass('page-portlet-fullscreen');
+                    }
+
+                    portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+                    portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+                    portlet.remove();
+                }
+                else
+                {
+                    drawChart1b();    
+                }
+                majvartbac($rootScope,$scope,$http);
+            }
+        })
+        .error(function (data, status, headers, config)
+        {
+            var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+        });
+
+
+        function drawChart1() 
+        {
+            var typeca = $("#I_typesca").val();
+            $http({
+                url : "php/tb.php",
+                method: "POST",
+                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                data : {id:'3', UI:$rootScope.soc.UI,currentYear:currentYear,t:typeca}
+            })
+            .success(function (data, status, headers, config) 
+            {
+                vchart_1 = Highcharts.chart('chart_1', {
+                    credits: {
+                        enabled: false
+                    },
+                    scrollablePlotArea: {
+                        minWidth: 600,
+                        scrollPositionX: 1
+                    },
+                    lang: {
+                        downloadXLS:"Exporter sous Excel"
+                    },
+                    exporting: {
+                        buttons: {
+                            contextButton: {
+                                menuItems: ['downloadXLS']
+                            }
+                        }
+                    },
+                    chart: {
+                        type: 'spline'
+
+                    },
+                    plotOptions: {
+                        series: {
+                            marker: {
+                                enabled: false
+                            }
+                        }
+                    },
+                    title: {
+                        text: $scope.Evolution_du_chiffre_daffaires
+                    },
+                    subtitle: {
+                        text: 'Année ' + currentYear
+                    },
+                    xAxis: {
+                        categories: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+                    },
+                    yAxis: {
+                        title: {
+                            text: 'Montant en ' + $scope.C_currency + ' ' + typeca
+                        }
+                    },
+                    tooltip: {
+                         style: {
+                            fontWeight: 'bold',
+                           fontSize: 13,
+                        },
+                        shared: true,
+                        crosshairs: true,
+                        valueSuffix: ' ' + $scope.C_currency
+                    },
+                    responsive: {
+                        rules: [{
+                            condition: {
+                                maxWidth: 500
+                            },
+                            chartOptions: {
+                                legend: {
+                                    align: 'center',
+                                    verticalAlign: 'bottom',
+                                    layout: 'horizontal'
+                                },
+                                yAxis: {
+                                    labels: {
+                                        enabled: false
+                                    },
+                                    title: {
+                                        text: null
+                                    }
+                                },
+                                title: {
+                                    text: null
+                                },
+                                subtitle: {
+                                    text: null
+                                },
+                                credits: {
+                                    enabled: false
+                                },
+                                exporting: {
+                                    enabled: false
+                                }
+                            }
+                        }]
+                    },
+                    series: [{
+                        name: "Chiffre d'affaires " + currentYear,
+                        data: data.C1,
+                        lineWidth: 5,
+                        marker: {
+                            radius: 4
+                        },
+                        dataLabels: {
+                            enabled: true,
+                            borderRadius: 2,
+                            y: -10,
+                            shape: 'callout'
+                        }
+                    }, {
+                        name: "Chiffre d'affaires N -1",
+                        data: data.C2
+                    },{
+                        name: 'Régl. N',
+                        data: data.R1,
+                        visible: false
+                    }, {
+                        name: 'Régl. N -1',
+                        data: data.R2,
+                        visible: false
+                    }]
+                });
+            })
+            .error(function (data, status, headers, config) 
+            {
+                var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+            });
+            
+
+        }
+      
+        function drawChart1b() 
+        {
+            $scope.BP1bcharge = true;
+            var typeca = $("#I_typescab").val();
+            var b_repdetail = "0";
+            if ($('#b_repdetail').is(':checked') )
+            {
+                b_repdetail = "1";
+            }
+            var b_allart = "0";
+            if ($('#b_allart').is(':checked') )
+            {
+                b_allart = "1";
+            }
+            $http({
+                url : "php/tb.php",
+                method: "POST",
+                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                data : {id:'3b', UI:$rootScope.soc.UI,currentYear:currentYear,t:typeca, d:b_repdetail, ballart:b_allart}
+            })
+            .success(function (data, status, headers, config) 
+            {
+               $scope.BP1bcharge = false;
+               vchart_1_b = Highcharts.chart('chart_1_b', {
+                    credits: {
+                        enabled: false
+                    },
+                    lang: {
+                        downloadXLS:"Exporter sous Excel"
+                    },
+                    exporting: {
+                        buttons: {
+                            contextButton: {
+                                menuItems: ['downloadXLS']
+                            }
+                        }
+                    },
+                    chart: {
+                        type: 'area'
+                    },
+                    title: {
+                        text: $scope.Evolution_du_chiffre_daffaires
+                    },
+                    subtitle: {
+                        text: 'Année ' + currentYear
+                    },
+                    xAxis: {
+                        categories: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+                    },
+                    yAxis: {
+                        title: {
+                            text: 'CA'
+                        },
+                    },
+                    tooltip: {
+						headerFormat: '<span style="font-size:13px"><b>{point.key}</b></span><br>',
+						shared: false,
+						useHTML: true
+					},
+                    plotOptions: {
+                        column: {
+                            stacking: 'normal',
+                            dataLabels: {
+                                enabled: true,
+                                color: (Highcharts.theme && Highcharts.theme.dataLabelsColor) || 'white'
+                            }
+                        }
+                    },
+                    series: data
+                });  
+            })
+            .error(function (data, status, headers, config) 
+            {
+                var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+            });
+            
+
+        }
+         
+        function drawChart2() //'Evolution des contrats
+        {
+            var type = $("#I_types").val();
+            var b_emplacement = "0";
+            if ($('#b_emplacement').is(':checked') )
+            {
+                b_emplacement = "1";
+            }
+            var b_famille = "0";
+            if ($('#b_famille').is(':checked') )
+            {
+                b_famille = "1";
+            }
+			var b_contrateuro = "0";
+            if ($('#b_contrateuro').is(':checked') )
+            {
+                b_contrateuro = "1";
+            } else if ($('#b_contrateuro2').is(':checked') )
+            {
+                b_contrateuro = "2";
+            }
+				
+            $http({
+                url : "php/tb.php",
+                method: "POST",
+                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                data : {id:'6', UI:$rootScope.soc.UI,currentYear:currentYear,t:type,be:b_emplacement,bf:b_famille,beuro:b_contrateuro}
+            })
+            .success(function (data, status, headers, config)
+            {
+                vchart_2 = Highcharts.chart('chart_1b', {
+                    credits: {
+                        enabled: false
+                    },
+                    lang: {
+                        downloadXLS:"Exporter sous Excel"
+                    },
+                    exporting: {
+                        buttons: {
+                            contextButton: {
+                                menuItems: ['downloadXLS']
+                            }
+                        }
+                    },
+                    chart: {
+                        type: 'column'
+                    },
+                    title: {
+                        text: 'Evolution des contrats'
+                    },
+                    subtitle: {
+                        text: 'Année ' + currentYear
+                    },
+                    xAxis: {
+                        categories: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+                    },
+                    yAxis: {
+                        min: 0,
+                        title: {
+                            text: 'Nombre de contrat ou montant'
+                        },
+                        stackLabels: {
+							style: {
+								color: '#000048',
+								fontSize: '12px',
+								textOutline: '0'
+							},
+							enabled: true
+                        }        
+                    },
+                    tooltip: {
+                        headerFormat: '<span style="font-size:10px"> {point.x}</span><table><br>',
+						pointFormat: '<tr><td style="padding:0">{series.name}: </td>' +
+						  '<td style="padding:0"><b>{point.y}</b></td></tr>' +
+						  '<tr><td style="padding:0">détail: </td>' +
+						  '<td style="padding:0"><b>{point.name}</b></td></tr>',
+						footerFormat: '</table>',
+						shared: false,
+						useHTML: true
+                    },
+                    plotOptions: {
+                        column: {
+                            stacking: 'normal',
+                            dataLabels: {
+                                enabled: true,
+                                color: (Highcharts.theme && Highcharts.theme.dataLabelsColor) || 'white'
+                            }
+                        },
+						series: {
+							cursor: 'pointer',
+							point: {
+								events: {
+									click: function () {
+										$scope.ngmessage = this.detail;
+										dialogModal = ngDialog.open({
+											template: 'views/ngd-message.html',
+											className: 'ngdialog-theme-default',
+											scope: $scope
+										});
+									}
+								}
+							}
+						}
+                    },
+                    series: data
+                });    
+            })
+            .error(function (data, status, headers, config)
+            {
+                var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+            });
+            
+            
+        }
+        
+        function drawChart3() 
+        {
+
+            var options3 = {};
+            $http({
+                url : "php/tb.php",
+                method: "POST",
+                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                data : {id:'5', UI:$rootScope.soc.UI}
+            })
+            .success(function (data, status, headers, config)
+            {
+                Highcharts.chart('piechart1', {
+                    chart: {
+                        plotBackgroundColor: null,
+                        plotBorderWidth: null,
+                        plotShadow: false,
+                        type: 'pie'
+                    },
+                    title: {
+                        text: null
+                    },
+                        credits: {
+                            enabled: false
+                        },
+                    exporting: {
+                        enabled: false
+                    },
+                    tooltip: {
+                         style: {
+                            fontWeight: 'bold',
+                           fontSize: 13,
+                        },
+                        pointFormat: '{series.name}: <b>{point.percentage:.1f}%</b>'
+                    },
+                    plotOptions: {
+                        pie: {
+                            allowPointSelect: true,
+                            cursor: 'pointer',
+                            dataLabels: {
+                                enabled: true,
+                                format: '<b>{point.name}</b>: {point.percentage:.1f} %',
+                                style: {
+                                    color: (Highcharts.theme && Highcharts.theme.contrastTextColor) || 'black'
+                                }
+                            }
+                        }
+                    },
+                     series: [{
+                        name: 'Occupation',
+                        colorByPoint: true,
+                        data: data
+                    }]
+                });
+            })
+            .error(function (data, status, headers, config)
+            {
+                var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+            });
+        }
+        
+        function drawChart4() 
+        {
+            $http({
+                url : "php/tb.php",
+                method: "POST",
+                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                data : {id:'7', UI:$rootScope.soc.UI}
+            })
+            .success(function (data, status, headers, config)
+            {
+                Highcharts.chart('piechart2', {
+                    
+                        chart: {
+                            type: 'solidgauge',
+                            height: '100%'
+                        },
+                        credits: {
+                            enabled: false
+                        },
+                        title: {
+                            text: null
+                        },
+                        exporting: {
+                            enabled: false
+                        },
+                        tooltip: {
+                            borderWidth: 0,
+                            backgroundColor: 'none',
+                            shadow: false,
+                            style: {
+                                fontSize: '14px',
+                                color: 'black'
+                            },
+                            pointFormat: '{series.name}<br><span style="font-size:2em; color: {point.color}; font-weight: bold">{point.y}%</span>',
+                            positioner: function (labelWidth) {
+                                return {
+                                    x: (this.chart.chartWidth - labelWidth) / 2 ,
+                                    y: (this.chart.plotHeight / 2) - 25
+                                };
+                            }
+                        },
+                    
+                       pane: {
+                        startAngle: 0,
+                        endAngle: 360,
+                        background: [{ // Track for Move
+                            outerRadius: '112%',
+                            innerRadius: '88%',
+                            backgroundColor: Highcharts.color(Highcharts.getOptions().colors[0])
+                                .setOpacity(0.3)
+                                .get(),
+                            borderWidth: 0
+                        }, { // Track for Exercise
+                            outerRadius: '87%',
+                            innerRadius: '63%',
+                            backgroundColor: Highcharts.color(Highcharts.getOptions().colors[1])
+                                .setOpacity(0.3)
+                                .get(),
+                            borderWidth: 0
+                        }, { // Track for Stand
+                            outerRadius: '62%',
+                            innerRadius: '38%',
+                            backgroundColor: Highcharts.color(Highcharts.getOptions().colors[2])
+                                .setOpacity(0.3)
+                                .get(),
+                            borderWidth: 0
+                        }]
+                        },
+                    
+                        yAxis: {
+                            min: 0,
+                            max: 100,
+                            lineWidth: 0,
+                            tickPositions: []
+                        },
+                    
+                        plotOptions: {
+                            solidgauge: {
+                                dataLabels: {
+                                    enabled: false
+                                },
+                                linecap: 'round',
+                                stickyTracking: false,
+                                rounded: true
+                            }
+                        },
+                    
+                        series: [{
+                            name: 'Occup.',
+                            data: [{
+                                color: data.occcolor,
+                                radius: '112%',
+                                innerRadius: '88%',
+                                y: data.occ
+                            }]
+                        }, {
+                            name: 'Nb Fact Réglée',
+                            data: [{
+                                color: data.reglcolor,
+                                radius: '87%',
+                                innerRadius: '63%',
+                                y: data.regl
+                            }]
+                        }, {
+                            name: 'Diff. CA N-1',
+                            data: [{
+                                color: data.cacolor,
+                                radius: '62%',
+                                innerRadius: '38%',
+                                y: data.ca
+                            }]
+                        }]
+                    });
+            })
+            .error(function (data, status, headers, config)
+            {
+                var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+            });
+        }
+        
+        function drawChart5() 
+        {
+            var b_emplacement5 = "0";
+            if ($('#b_emplacement5').is(':checked') )
+            {
+                b_emplacement5 = "1";
+            }
+            var b_famille5 = "0";
+            if ($('#b_famille5').is(':checked') )
+            {
+                b_famille5 = "1";
+            }
+            $http({
+                url : "php/tb.php",
+                method: "POST",
+                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                data : {id:'8', UI:$rootScope.soc.UI,currentYear:currentYear,be:b_emplacement5,bf:b_famille5}
+            })
+            .success(function (data, status, headers, config)
+            {
+                vchart_3 = Highcharts.chart('chart_1c', {
+                    title: {
+                        text: 'Rotation des boxes (Entrées - sorties dans le mois)'
+                    },
+                    lang: {
+                        downloadXLS:"Exporter sous Excel"
+                    },
+                    exporting: {
+                        buttons: {
+                            contextButton: {
+                                menuItems: ['downloadXLS']
+                            }
+                        }
+                    },
+                    tooltip: {
+						headerFormat: '<span style="font-size:13px"><b>{point.key}</b></span><br>',
+						shared: true,
+						useHTML: true
+					},
+                    subtitle: {
+                        text: 'Année ' + currentYear
+                    },
+                    xAxis: {
+                        categories: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
+                    },
+                    yAxis: {
+                        title: {
+                            text: 'Nombre de contrat'
+                        }
+                    },
+                    series: data
+                });    
+            })
+            .error(function (data, status, headers, config)
+            {
+                var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+            });
+            
+            
+        }
+        
+        $scope.refrech3 = function(name)
+        {
+            if($("#chart_1").height() == '300')
+            {
+                $("#chart_1").height('100%');
+            }
+            else
+            {
+                $("#chart_1").height('300');
+            }
+            drawChart1();
+        };
+        $scope.refrech3b = function(name)
+        {
+            if($("#chart_1_b").height() == '300')
+            {
+                $("#chart_1_b").height('100%');
+            }
+            else
+            {
+                $("#chart_1_b").height('300');
+            }
+            drawChart1b();
+        };
+        $scope.refrech4 = function(name)
+        {
+
+            if($("#chart_1b").height() == '300')
+            {
+                $("#chart_1b").height('100%');
+            }
+            else
+            {
+                $("#chart_1b").height('300');
+            }
+            drawChart2();
+        };
+        $scope.refrech5 = function(name)
+        {
+
+            if($("#chart_1c").height() == '300')
+            {
+                $("#chart_1c").height('100%');
+            }
+            else
+            {
+                $("#chart_1c").height('300');
+            }
+            drawChart5();
+        };
+        $scope.closep = function(name)
+        {
+            phpCookies.set(name,'1');
+        };
+        $('#yearselect1').on('change', function()
+        {
+            currentYear =$('#yearselect1').val();
+            drawChart1();
+        })
+        $('#yearselect1b').on('change', function()
+        {
+            currentYear =$('#yearselect1b').val();
+            drawChart1b();
+        })
+        $('#b_repdetail').on('change', function()
+        {
+            drawChart1b();
+        })
+        $('#b_allart').on('change', function()
+        {
+            drawChart1b();
+        })
+        $('#I_typesca').on('change', function()
+        {
+            currentYear =$('#yearselect1').val();
+            drawChart1();
+        })
+        $('#I_typescab').on('change', function()
+        {
+            currentYear =$('#yearselect1b').val();
+            drawChart1b();
+        })
+        $('#yearselect2').on('change', function()
+        {
+            currentYear =$('#yearselect2').val();
+            drawChart2();
+        })
+        $('#I_types').on('change', function()
+        {
+            currentYear =$('#yearselect2').val();
+            drawChart2();
+        })
+        $('#b_emplacement').on('change', function()
+        {
+            currentYear =$('#yearselect2').val();
+            drawChart2();
+        })
+        $('#b_standard').on('change', function()
+        {
+            currentYear =$('#yearselect2').val();
+            drawChart2();
+        })
+        $('#b_famille').on('change', function()
+        {
+            currentYear =$('#yearselect2').val();
+            drawChart2();
+        })
+        $('#b_contrateuro').on('change', function()
+        {
+			$('#b_contrateuro2').attr('checked',false);
+			$.uniform.update('#b_contrateuro2');
+            currentYear =$('#yearselect2').val();
+            drawChart2();
+        })
+        $('#b_contrateuro2').on('change', function()
+        {
+			$('#b_contrateuro').attr('checked',false);
+			$.uniform.update('#b_contrateuro');
+            currentYear =$('#yearselect2').val();
+            drawChart2();
+        })
+		
+        $('#yearselect3').on('change', function()
+        {
+            currentYear =$('#yearselect3').val();
+            drawChart5();
+        })
+		
+        $('#b_standard5').on('change', function()
+        {
+            currentYear =$('#yearselect3').val();
+            drawChart5();
+        })
+		
+        $('#b_emplacement5').on('change', function()
+        {
+            currentYear =$('#yearselect3').val();
+            drawChart5();
+        })
+		
+        $('#b_famille5').on('change', function()
+        {
+            currentYear =$('#yearselect3').val();
+            drawChart5();
+        })
+		
+        var dataCA = [];
+        var dataREG = [];
+        $scope.chargetb1 = function() //liste resa
+        {
+          var tableresa = $('#table_resa');
+          tableresa.dataTable({
+            ajax: "php/table.TB_CONTRATLISTRESA.php?ui="+$rootScope.soc.UI,
+            columns: [
+              { "mData": "D_maj","title": $scope.date},
+              { "mData": "D_entree","title": $scope.Date_debut},
+              { "mData": "C_client","title": $scope.Clients},
+              { "mData": "C_emp","title": $scope.type},
+              { "mData": "C_numbox","title": $scope.N_Box}
+            ],
+            columnDefs: [
+              { type: 'date-eu', targets: 0 },{ type: 'date-eu', targets: 1 }
+            ],
+            order: [
+              [0, 'date-eu-desc']
+            ],
+            language: {
+              url:$rootScope.tablgn
+            },
+            pageLength: 5,
+            responsive: true
+            }); 
+            $('#table_resa tbody').on( 'dblclick', 'tr', function () 
+            {
+                var aData = tableresa.fnGetData( this );
+
+                $rootScope.client = {
+                    C_nom:aData.C_nom,
+                    C_prenom:aData.C_prenom,
+                    C_email:aData.C_email,
+                    C_tel:aData.C_tel,
+                    C_UI:aData.C_UI,
+                    B_ACTIF:'0'};
+                window.location = "#/profile/contrats"; 
+            } );
+        };      
+        
+        $scope.chargetb2 = function() // facture en retard
+        {
+            var table2 = $('#table_facture').dataTable({
+                ajax: "php/table.TB_FACTUREAPAYER.php?ui="+$rootScope.soc.UI,
+                columns: [
+                    { "mData": "ECHEANCEfacture","title": $scope.date},
+                    { "mData": "C_nunfact","title": $scope.N_facture},
+                    { "mData": "C_CLI","title": $scope.client},
+                    { "mData": "I_TTC","title": $scope.ttc},
+                    { "mData": "I_REG","title": $scope.regle},
+                    { "mData": "I_RESTE","title": $scope.Reste_du},
+                    { "mData": "C_typereglement","title": $scope.Mode_de_reglement}
+                ],
+                language: {
+                    url:$rootScope.tablgn
+                },
+                columnDefs: [
+                    { type: 'date-eu', targets: 0 },{ type: 'num-fmt', targets: 3 },{ type: 'num-fmt', targets: 4 },{ type: 'num-fmt', targets: 5 }
+                ],
+                order: [
+                    [0, 'date-eu-desc']
+                ],
+                pageLength: 5,
+                select: true,
+                select: {
+                    style: 'single',
+                    select: 'single',
+                    info: false
+                },
+                responsive: true,
+                colReorder: true,
+                buttons: [
+                    {
+                        extend: "selectedSingle",
+                        text: "Saisir un réglement",
+                        className: 'btn dark btn-outline',
+                        action: function (e, dt, node, config)
+                        {
+                            if(dt.rows( { selected: true } ).count() === 1)
+                            {
+                                var selrows = dt.rows( { selected: true } ).data();
+                                BUXIDASERVICES.goadadreg($rootScope,$scope,$http,selrows[0].I_RESTE,selrows[0].C_UI,selrows[0].ID_modereglement,selrows[0].C_typereglement,selrows[0].CLI_UI);
+                            }
+
+                        }
+                    },
+                    {
+                        extend: "csv",
+                        text: "CSV",
+                        className: "btn green btn-outline "
+                    }
+                ],
+                dom: "<'row' <'col-md-11'B>><'row'<'col-md-6 col-sm-12'l><'col-md-6 col-sm-12'f>r><'table-scrollable't><'row'<'col-md-5 col-sm-12'i>><'row'<'col-md-5 col-sm-12'><'col-md-7 col-sm-12'p>>"
+
+            });
+
+            $('#table_facture tbody').on( 'dblclick', 'tr', function ()
+            {
+                var aData = table2.fnGetData( this );
+
+                var tmpurl = 'https://www.buxida.com/admin/fichiers/' + $rootScope.soc.UI + '/factures/' + aData.C_UI + '.pdf';
+                window.open(tmpurl, '_blank');
+            } );
+        };
+         
+        $scope.chargetb3 = function() // dernier doc
+        {
+          var tabledoc = $('#table_fichier');
+          tabledoc.dataTable({
+            ajax: "php/table.TB_FICHIERS.php?ui="+$rootScope.soc.UI,
+            columns: [
+              { "mData": "DATE","title": $scope.date},
+              { "mData": "detail","title": $scope.detail},
+              { "mData": "type","title": $scope.Type}
+            ],
+            columnDefs: [
+              { type: 'date-eu', targets: 0 }
+            ],
+            order: [
+              [0, 'date-eu-desc']
+            ],
+            language: {
+              url:$rootScope.tablgn
+            },
+            pageLength: 5,
+            responsive: true
+            }); 
+            $('#table_fichier tbody').on( 'dblclick', 'tr', function () 
+            {
+                var aData = tabledoc.fnGetData( this );
+
+                $rootScope.client = {
+                    C_nom:aData.C_nom,
+                    C_prenom:aData.C_prenom,
+                    C_email:aData.C_email,
+                    C_tel:aData.C_tel,
+                    C_UI:aData.C_UI,
+                    B_ACTIF:'1'};
+                window.location = "#/profile/contrats"; 
+            } );
+        };
+      
+        $scope.chargetb4 = function() // prostect
+        {
+          var table = $('#TB_DENANDERESADEVIS');
+          table.dataTable({
+            ajax: "php/table.TB_DENANDERESADEVIS.php?ui="+$rootScope.soc.UI,
+            columns: [
+              { "mData": "DATE","title": $scope.date},
+              { "mData": "C_email","title": $scope.C_email},
+              { "mData": "C_tel","title": $scope.C_tel},
+              { "mData": "C_CLI","title": $scope.C_CLI},
+              { "mData": "Type","title": $scope.Type},
+              { "mData": "Etat","title": $scope.Etat},
+              { "mData": "C_ref","title": $scope.Reference}
+            ],
+            columnDefs: [
+              { type: 'date-eu', targets: 0 }
+            ],
+            order: [
+              [0, 'date-eu-desc']
+            ],
+            language: {
+              url:$rootScope.tablgn
+            },
+            pageLength: 5,
+            responsive: true
+            }); 
+        };      
+      
+        $scope.Assurance_bientot_terminee = function() // Assurance_bientot_terminee
+        {
+          var table = $('#table_assurance');
+          table.dataTable({
+            ajax: "php/table.TB_ASSURANCE.php?T=1",
+            columns: [
+              { "mData": "Dcontratassurance","title": $scope.date},
+              { "mData": "C_client","title": $scope.client},
+              { "mData": "C_numbox","title": $scope.contrat}
+            ],
+            columnDefs: [
+              { type: 'date-eu', targets: 0 }
+            ],
+            order: [
+              [0, 'date-eu-desc']
+            ],
+            language: {
+              url:$rootScope.tablgn
+            },
+            pageLength: 5,
+            responsive: true
+            }); 
+        }; 
+      
+        $scope.Assurance_terminee = function() // Assurance_bientot_terminee
+        {
+          var table = $('#table_assuranceb');
+          table.dataTable({
+            ajax: "php/table.TB_ASSURANCE.php?T=0",
+            columns: [
+              { "mData": "Dcontratassurance","title": $scope.date},
+              { "mData": "C_client","title": $scope.client},
+              { "mData": "C_numbox","title": $scope.contrat}
+            ],
+            columnDefs: [
+              { type: 'date-eu', targets: 0 }
+            ],
+            order: [
+              [0, 'date-eu-desc']
+            ],
+            language: {
+              url:$rootScope.tablgn
+            },
+            pageLength: 5,
+            responsive: true
+            }); 
+        }; 
+      
+      
+        $scope.Contrat_terminee = function() // Contrat_bientot_terminee
+        {
+          var table = $('#table_contratfinb');
+          table.dataTable({
+            ajax: "php/table.TB_ASSURANCE.php?T=0",
+            columns: [
+              { "mData": "Dcontratassurance","title": $scope.date},
+              { "mData": "C_client","title": $scope.client},
+              { "mData": "C_numbox","title": $scope.contrat}
+            ],
+            columnDefs: [
+              { type: 'date-eu', targets: 0 }
+            ],
+            order: [
+              [0, 'date-eu-desc']
+            ],
+            language: {
+              url:$rootScope.tablgn
+            },
+            pageLength: 5,
+            responsive: true
+            }); 
+        }; 
+      
+      
+        $.fn.modal.defaults.spinner = $.fn.modalmanager.defaults.spinner =
+            '<div class="loading-spinner" style="width: 200px; margin-left: -100px;">' +
+            '<div class="progress progress-striped active">' +
+            '<div class="progress-bar" style="width: 100%;"></div>' +
+            '</div>' +
+            '</div>';
+        $.fn.modalmanager.defaults.resize = true;
+        
+        
+        if (phpCookies.get('tblisteresa') == '1') // ress 
+        {
+            var portlet = $("#tblisteresa");
+
+            if ($('body').hasClass('page-portlet-fullscreen')) {
+                $('body').removeClass('page-portlet-fullscreen');
+            }
+
+            portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+            portlet.remove();
+        }
+        else
+        {
+            //var table = $('#table_fichier');
+            $translate(['Date', 'detail', 'Type']).then(function (translations) {
+              $scope.date = translations.Date;
+              $scope.detail = translations.detail;
+              $scope.Type = translations.Type;
+              $scope.chargetb1();
+            }, function (translationIds) {
+              $scope.date = translationIds.Date;
+              $scope.detail = translationIds.detail;
+              $scope.Type = translationIds.Type;
+               $scope.chargetb1();
+            });
+        }
+      
+        if (phpCookies.get('tbProstects') == '1') // prostect 
+        {
+            var portlet = $("#tbProstects");
+
+            if ($('body').hasClass('page-portlet-fullscreen')) {
+                $('body').removeClass('page-portlet-fullscreen');
+            }
+
+            portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+            portlet.remove();
+        }
+        else
+        {
+            $translate(['Date', 'detail', 'Email', 'Telephone','Reference','type','Etat']).then(function (translations) {
+              $scope.date = translations.Date;
+              $scope.C_email = translations.Email;
+              $scope.C_tel = translations.Telephone;
+              $scope.C_CLI = translations.detail;
+              $scope.Reference = translations.Reference;
+              $scope.Type = translations.type;
+              $scope.Etat = translations.Etat;
+              $scope.chargetb4();
+            }, function (translationIds) {
+               $scope.date = translations.Date;
+              $scope.C_email = translations.Email;
+              $scope.C_tel = translations.Telephone;
+              $scope.C_CLI = translations.detail;
+              $scope.Reference = translations.Reference;
+              $scope.Type = translations.type;
+              $scope.Etat = translations.Etat;
+               $scope.chargetb4();
+            });
+        }
+      
+        if (phpCookies.get('tbRepartition') == '1') //graph 3
+        {
+            var portlet = $("#tbRepartition");
+
+            if ($('body').hasClass('page-portlet-fullscreen')) {
+                $('body').removeClass('page-portlet-fullscreen');
+            }
+
+            portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+            portlet.remove();
+        }
+        else
+        {
+            drawChart3();    
+        }
+
+        if (phpCookies.get('tbSante_du_site') == '1') //graph 4
+        {
+            var portlet = $("#tbSante_du_site");
+
+            if ($('body').hasClass('page-portlet-fullscreen')) {
+                $('body').removeClass('page-portlet-fullscreen');
+            }
+
+            portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+            portlet.remove();
+        }
+        else
+        {
+            drawChart4();   
+        }
+      
+        if (phpCookies.get('tbDerniers_documents') == '1') // document ajouter
+        {
+            var portlet = $("#tbDerniers_documents");
+
+            if ($('body').hasClass('page-portlet-fullscreen')) {
+                $('body').removeClass('page-portlet-fullscreen');
+            }
+
+            portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+            portlet.remove();
+        }
+        else
+        {
+           // var table = $('#table_fichier');
+            $translate(['Date', 'detail', 'Type']).then(function (translations) {
+              $scope.date = translations.Date;
+              $scope.detail = translations.detail;
+              $scope.Type = translations.Type;
+              $scope.chargetb3();
+            }, function (translationIds) {
+              $scope.date = translationIds.Date;
+              $scope.detail = translationIds.detail;
+              $scope.Type = translationIds.Type;
+               $scope.chargetb3();
+            });
+        }
+        if (phpCookies.get('tbReglement_en_retard') == '1') // facture restard
+        {
+            var portlet = $("#tbReglement_en_retard");
+
+            if ($('body').hasClass('page-portlet-fullscreen')) {
+                $('body').removeClass('page-portlet-fullscreen');
+            }
+
+            portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+            portlet.remove();
+        }
+        else
+        {
+            //var table = $('#table_facture');
+            $translate(['Date', 'N_facture', 'client','ttc','regle','reste_du','Mode_de_reglement']).then(function (translations) {
+              $scope.date = translations.Date;
+              $scope.N_facture = translations.N_facture;
+              $scope.client = translations.client;
+              $scope.ttc = translations.ttc;
+              $scope.regle = translations.regle;
+              $scope.Reste_du = translations.reste_du;
+              $scope.Mode_de_reglement = translations.Mode_de_reglement;
+              $scope.chargetb2();
+            }, function (translationIds) {
+              $scope.date = translationIds.Date;
+              $scope.N_facture = translationIds.N_facture;
+              $scope.client = translationIds.client;
+              $scope.ttc = translationIds.ttc;
+              $scope.regle = translationIds.regle;
+              $scope.Reste_du = translationIds.reste_du;
+              $scope.Mode_de_reglement = translationIds.Mode_de_reglement;
+               $scope.chargetb2();
+            })
+        }
+        if (phpCookies.get('stepassurancea') == '1') // Assurance_bientot_terminee
+        {
+            var portlet = $("#stepassurancea");
+
+            if ($('body').hasClass('page-portlet-fullscreen')) {
+                $('body').removeClass('page-portlet-fullscreen');
+            }
+
+            portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+            portlet.remove();
+        }
+        else
+        {
+            //var table = $('#table_facture');
+            $translate(['Date', 'client','contrat']).then(function (translations) {
+              $scope.date = translations.Date;
+              $scope.client = translations.client;
+              $scope.contrat = translations.contrat;
+              $scope.Assurance_bientot_terminee();
+            }, function (translationIds) {
+              $scope.date = translationIds.Date;
+              $scope.client = translationIds.client;
+              $scope.contrat = translationIds.contrat;
+               $scope.Assurance_bientot_terminee();
+            })
+        }
+        if (phpCookies.get('stepassuranceb') == '1') // Assurance_bientot_terminee
+        {
+            var portlet = $("#stepassuranceb");
+
+            if ($('body').hasClass('page-portlet-fullscreen')) {
+                $('body').removeClass('page-portlet-fullscreen');
+            }
+
+            portlet.find('.portlet-title .fullscreen').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .reload').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .remove').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .config').tooltip('destroy');
+            portlet.find('.portlet-title > .tools > .collapse, .portlet > .portlet-title > .tools > .expand').tooltip('destroy');
+            portlet.remove();
+        }
+        else
+        {
+            //var table = $('#table_facture');
+            $translate(['Date', 'client','contrat']).then(function (translations) {
+              $scope.date = translations.Date;
+              $scope.client = translations.client;
+              $scope.contrat = translations.contrat;
+              $scope.Assurance_terminee();
+            }, function (translationIds) {
+              $scope.date = translationIds.Date;
+              $scope.client = translationIds.client;
+              $scope.contrat = translationIds.contrat;
+               $scope.Assurance_terminee();
+            })
+        }
+    });
+}]);
+
+var majvartbac = function($rootScope,$scope,$http) 
+{
+    $http({
+        url : "php/tb.php",
+        method: "POST",
+        headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+        data : {id:'1', UI:$rootScope.soc.UI}
+    })
+    .success(function (data, status, headers, config) 
+    {
+        if(data.res == "1")
+        {
+            $scope.Nbbox = data.Nbbox;
+            $scope.Nbocc = data.Nbocc;
+            $scope.Nbdedite = data.Nbdedite;
+            $scope.Nbsurface = data.Nbsurface;
+            $scope.Nbvolume = data.Nbvolume;
+            $scope.Nbcontrat = data.Nbcontrat;
+            $scope.Nbcli = data.Nbcli;
+            $scope.Nbpsurface = data.Nbpsurface;
+            $scope.Nbpnb = data.Nbpnb;
+            $scope.Nbca = data.Nbca;
+            $scope.Nbassur = data.Nbassur;
+            $scope.Nbout = data.Nbout;
+            $scope.Nblibre = data.Nblibre;
+            $scope.Nbcatot = data.Nbcatot; 
+            $scope.factmois = data.factmois;
+            $scope.nbfactmois = data.nbfactmois;
+            $scope.avoirmois = data.avoirmois;
+            $scope.nbavoirmois = data.nbavoirmois;
+            $scope.regmois = data.regmois;
+            $scope.nbregmois = data.nbregmois;
+            $scope.camois = data.camois;
+            $scope.tarifth = data.tarifth;
+            $scope.totalhtfroun = data.totalhtfroun;
+            $scope.Nblitige = data.Nblitige;
+            $scope.assuranceincluse = data.Nbassurincluse;
+            $scope.assuranceadd = data.Nbassuradd;
+        }
+        else
+        {
+            alert('Erreur : ' + data.res);
+        } 
+    })
+    .error(function (data, status, headers, config) 
+    {
+      var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+      $toastlast = $toast;
+    });     
+}

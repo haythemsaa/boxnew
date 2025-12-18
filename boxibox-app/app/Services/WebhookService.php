@@ -214,4 +214,92 @@ class WebhookService
     {
         return Webhook::EVENTS;
     }
+
+    /**
+     * Retry a failed webhook delivery
+     */
+    public function retryDelivery(Webhook $webhook, WebhookDelivery $originalDelivery): array
+    {
+        // Create a new delivery attempt
+        $retryDelivery = WebhookDelivery::create([
+            'webhook_id' => $webhook->id,
+            'event_type' => $originalDelivery->event_type,
+            'event_id' => $originalDelivery->event_id,
+            'payload' => $originalDelivery->payload,
+            'attempt' => $originalDelivery->attempt + 1,
+            'status' => 'pending',
+        ]);
+
+        $startTime = microtime(true);
+        $payload = $originalDelivery->payload;
+        $jsonPayload = json_encode($payload);
+
+        try {
+            $headers = array_merge(
+                [
+                    'Content-Type' => 'application/json',
+                    'User-Agent' => 'Boxibox-Webhook/1.0',
+                    'X-Boxibox-Event' => $retryDelivery->event_type,
+                    'X-Boxibox-Delivery' => $retryDelivery->event_id,
+                    'X-Boxibox-Timestamp' => $payload['timestamp'] ?? now()->toIso8601String(),
+                    'X-Boxibox-Retry' => (string) $retryDelivery->attempt,
+                ],
+                $webhook->headers ?? []
+            );
+
+            // Add signature if secret is set
+            if ($webhook->secret_key) {
+                $headers['X-Boxibox-Signature'] = $webhook->generateSignature($jsonPayload);
+            }
+
+            $response = Http::timeout($webhook->timeout)
+                ->withHeaders($headers)
+                ->withOptions([
+                    'verify' => $webhook->verify_ssl,
+                ])
+                ->post($webhook->url, $payload);
+
+            $duration = microtime(true) - $startTime;
+
+            if ($response->successful()) {
+                $retryDelivery->markAsSuccess(
+                    $response->status(),
+                    $response->body(),
+                    $duration
+                );
+                $webhook->recordSuccess();
+
+                return [
+                    'success' => true,
+                    'status_code' => $response->status(),
+                    'duration_ms' => round($duration * 1000),
+                ];
+            } else {
+                $error = "HTTP {$response->status()}: " . substr($response->body(), 0, 500);
+                $retryDelivery->markAsFailed($error, $response->status(), $response->body());
+                $webhook->recordFailure($error);
+
+                return [
+                    'success' => false,
+                    'error' => $error,
+                    'status_code' => $response->status(),
+                ];
+            }
+        } catch (\Exception $e) {
+            $error = $e->getMessage();
+            $retryDelivery->markAsFailed($error);
+            $webhook->recordFailure($error);
+
+            Log::error("Manual webhook retry failed", [
+                'webhook_id' => $webhook->id,
+                'delivery_id' => $retryDelivery->id,
+                'error' => $error,
+            ]);
+
+            return [
+                'success' => false,
+                'error' => $error,
+            ];
+        }
+    }
 }

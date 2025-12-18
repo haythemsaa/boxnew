@@ -1,0 +1,133 @@
+{
+  "name": "BoxiBox - Prospection GRATUITE (Sans API payante)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "days", "daysInterval": 1}]
+        }
+      },
+      "name": "Chaque Jour 8h",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Liste des villes à prospecter (rotation quotidienne)\nconst villes = [\n  'Paris', 'Lyon', 'Marseille', 'Toulouse', 'Bordeaux',\n  'Nantes', 'Nice', 'Strasbourg', 'Montpellier', 'Lille',\n  'Rennes', 'Reims', 'Le Havre', 'Saint-Etienne', 'Toulon',\n  'Grenoble', 'Dijon', 'Angers', 'Nimes', 'Clermont-Ferrand'\n];\n\n// Sélectionner 3 villes par jour (rotation)\nconst dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);\nconst startIndex = (dayOfYear * 3) % villes.length;\n\nconst todayVilles = [];\nfor (let i = 0; i < 3; i++) {\n  todayVilles.push(villes[(startIndex + i) % villes.length]);\n}\n\nreturn todayVilles.map(v => ({ json: { ville: v } }));"
+      },
+      "name": "Rotation Villes",
+      "type": "n8n-nodes-base.code",
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://nominatim.openstreetmap.org/search",
+        "options": {
+          "timeout": 10000
+        },
+        "queryParameters": {
+          "parameters": [
+            {"name": "q", "value": "={{ 'self stockage ' + $json.ville + ' France' }}"},
+            {"name": "format", "value": "json"},
+            {"name": "addressdetails", "value": "1"},
+            {"name": "limit", "value": "30"}
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {"name": "User-Agent", "value": "BoxiBox-Prospection/1.0 (contact@boxibox.fr)"}
+          ]
+        }
+      },
+      "name": "OpenStreetMap Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "functionCode": "// Attendre 1.5 sec (rate limit Nominatim)\nawait new Promise(r => setTimeout(r, 1500));\nreturn items;"
+      },
+      "name": "Rate Limit",
+      "type": "n8n-nodes-base.function",
+      "position": [900, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parser les résultats OpenStreetMap\nconst results = items.flatMap(item => {\n  const data = Array.isArray(item.json) ? item.json : [item.json];\n  return data.filter(r => {\n    const name = (r.display_name || '').toLowerCase();\n    return name.includes('stockage') || \n           name.includes('storage') || \n           name.includes('garde-meuble') ||\n           name.includes('box');\n  }).map(r => {\n    const parts = (r.display_name || '').split(',');\n    return {\n      name: parts[0]?.trim() || 'Centre de stockage',\n      address: r.display_name,\n      city: r.address?.city || r.address?.town || r.address?.village || '',\n      postal_code: r.address?.postcode || '',\n      lat: r.lat,\n      lon: r.lon,\n      source: 'openstreetmap',\n      osm_id: r.osm_id\n    };\n  });\n});\n\n// Dédupliquer par nom\nconst seen = new Set();\nconst unique = results.filter(r => {\n  const key = r.name.toLowerCase();\n  if (seen.has(key)) return false;\n  seen.add(key);\n  return true;\n});\n\nreturn unique.map(r => ({ json: r }));"
+      },
+      "name": "Parser Resultats",
+      "type": "n8n-nodes-base.code",
+      "position": [1120, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Deviner l'email à partir du nom de l'entreprise\nconst lead = items[0].json;\n\n// Nettoyer le nom pour créer un domaine probable\nlet companyName = lead.name\n  .toLowerCase()\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '') // Remove accents\n  .replace(/[^a-z0-9\\s-]/g, '')\n  .replace(/\\s+/g, '-')\n  .substring(0, 30);\n\n// Patterns d'email communs\nconst possibleEmails = [\n  `contact@${companyName}.fr`,\n  `contact@${companyName}.com`,\n  `info@${companyName}.fr`,\n];\n\n// Score de base\nlet score = 45;\nif (lead.postal_code) score += 10;\nif (lead.lat && lead.lon) score += 5;\n\nlead.guessed_emails = possibleEmails;\nlead.score = score;\nlead.priority = score >= 60 ? 'warm' : 'lukewarm';\nlead.notes = `Trouvé via OpenStreetMap. Adresse: ${lead.address}`;\n\nreturn [{ json: lead }];"
+      },
+      "name": "Enrichir Lead",
+      "type": "n8n-nodes-base.code",
+      "position": [1340, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BOXIBOX_API_URL }}/api/v1/external/leads",
+        "options": {},
+        "headerParameters": {
+          "parameters": [
+            {"name": "X-API-Key", "value": "={{ $env.BOXIBOX_API_KEY }}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "bodyParameters": {
+          "parameters": [
+            {"name": "company", "value": "={{ $json.name }}"},
+            {"name": "source", "value": "n8n_osm_gratuit"},
+            {"name": "score", "value": "={{ $json.score }}"},
+            {"name": "priority", "value": "={{ $json.priority }}"},
+            {"name": "notes", "value": "={{ $json.notes }}"},
+            {"name": "metadata", "value": "={{ JSON.stringify({ osm_id: $json.osm_id, lat: $json.lat, lon: $json.lon, guessed_emails: $json.guessed_emails }) }}"}
+          ]
+        }
+      },
+      "name": "Sauver dans BoxiBox",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [1560, 300]
+    },
+    {
+      "parameters": {
+        "channel": "#leads",
+        "text": ":dart: *Nouveaux leads (gratuit)*\n\nVilles du jour: {{ $node['Rotation Villes'].json.map(v => v.ville).join(', ') }}\nLeads trouvés: {{ $node['Parser Resultats'].json.length }}\n\n_Source: OpenStreetMap via n8n_"
+      },
+      "name": "Notifier Slack",
+      "type": "n8n-nodes-base.slack",
+      "position": [1780, 300]
+    }
+  ],
+  "connections": {
+    "Chaque Jour 8h": {
+      "main": [[{"node": "Rotation Villes", "type": "main", "index": 0}]]
+    },
+    "Rotation Villes": {
+      "main": [[{"node": "OpenStreetMap Search", "type": "main", "index": 0}]]
+    },
+    "OpenStreetMap Search": {
+      "main": [[{"node": "Rate Limit", "type": "main", "index": 0}]]
+    },
+    "Rate Limit": {
+      "main": [[{"node": "Parser Resultats", "type": "main", "index": 0}]]
+    },
+    "Parser Resultats": {
+      "main": [[{"node": "Enrichir Lead", "type": "main", "index": 0}]]
+    },
+    "Enrichir Lead": {
+      "main": [[{"node": "Sauver dans BoxiBox", "type": "main", "index": 0}]]
+    },
+    "Sauver dans BoxiBox": {
+      "main": [[{"node": "Notifier Slack", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

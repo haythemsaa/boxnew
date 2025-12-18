@@ -130,7 +130,7 @@ class BookingManagementController extends Controller
                 'box' => [
                     'id' => $booking->box->id,
                     'name' => $booking->box->name,
-                    'code' => $booking->box->code,
+                    'code' => $booking->box->number,
                     'volume' => $booking->box->formatted_volume,
                     'dimensions' => $booking->box->formatted_dimensions,
                 ],
@@ -315,7 +315,13 @@ class BookingManagementController extends Controller
             $settings = new BookingSettings(['tenant_id' => $this->getTenantId()]);
         }
 
-        $settings->fill($request->all());
+        $settings->fill($request->only([
+            'allow_online_booking', 'require_id_verification', 'require_payment_upfront',
+            'min_contract_duration_days', 'max_contract_duration_days', 'booking_advance_days',
+            'cancellation_policy_hours', 'auto_confirm_bookings', 'terms_and_conditions',
+            'confirmation_email_template', 'reminder_hours_before', 'enabled_payment_methods',
+            'default_insurance_plan_id', 'allow_promo_codes', 'minimum_age', 'business_hours'
+        ]));
         $settings->save();
 
         return back()->with('success', 'Paramètres enregistrés avec succès');

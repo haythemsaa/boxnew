@@ -26,6 +26,12 @@ class Site extends Model
         'total_boxes',
         'phone',
         'email',
+        'is_active',
+        'self_service_enabled',
+        'gate_system_type',
+        'gate_api_endpoint',
+        'gate_api_key',
+        'access_hours',
     ];
 
     protected $casts = [
@@ -35,6 +41,8 @@ class Site extends Model
         'occupation_rate' => 'decimal:2',
         'total_boxes' => 'integer',
         'is_active' => 'boolean',
+        'self_service_enabled' => 'boolean',
+        'access_hours' => 'array',
         'deleted_at' => 'datetime',
     ];
 
@@ -67,7 +75,7 @@ class Site extends Model
     // Scopes
     public function scopeActive($query)
     {
-        return $query->where('status', 'active');
+        return $query->where('is_active', true);
     }
 
     public function scopeByTenant($query, int $tenantId)

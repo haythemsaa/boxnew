@@ -1,10 +1,12 @@
 <script setup>
 import { Head, Link, useForm } from '@inertiajs/vue3'
 import SuperAdminLayout from '@/Layouts/SuperAdminLayout.vue'
-import { ArrowLeftIcon } from '@heroicons/vue/24/outline'
+import { ArrowLeftIcon, CubeIcon, UsersIcon, BuildingOffice2Icon, UserGroupIcon } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     tenant: Object,
+    plans: Array,
+    currentUsage: Object,
 })
 
 const form = useForm({
@@ -19,6 +21,11 @@ const form = useForm({
     subscription_plan: props.tenant.subscription_plan,
     status: props.tenant.status,
     trial_ends_at: props.tenant.trial_ends_at?.split('T')[0] || '',
+    // Limites personnalisees
+    max_sites: props.tenant.max_sites || null,
+    max_boxes: props.tenant.max_boxes || null,
+    max_users: props.tenant.max_users || null,
+    max_customers: props.tenant.max_customers || null,
 })
 
 const submit = () => {
@@ -163,6 +170,97 @@ const submit = () => {
                                 type="date"
                                 class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500"
                             />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Limites et Quotas -->
+                <div class="bg-gray-800 rounded-xl p-6 border border-gray-700">
+                    <h2 class="text-lg font-medium text-white mb-4">Limites et Quotas</h2>
+                    <p class="text-sm text-gray-400 mb-4">
+                        Definissez des limites personnalisees pour ce tenant. Laissez vide pour utiliser les limites du plan.
+                    </p>
+
+                    <!-- Usage actuel -->
+                    <div v-if="currentUsage" class="grid grid-cols-4 gap-4 mb-6">
+                        <div class="bg-gray-700/50 rounded-lg p-3 text-center">
+                            <BuildingOffice2Icon class="h-6 w-6 mx-auto text-blue-400" />
+                            <div class="text-lg font-bold text-white mt-1">{{ currentUsage.sites || 0 }}</div>
+                            <div class="text-xs text-gray-400">Sites utilises</div>
+                        </div>
+                        <div class="bg-gray-700/50 rounded-lg p-3 text-center">
+                            <CubeIcon class="h-6 w-6 mx-auto text-green-400" />
+                            <div class="text-lg font-bold text-white mt-1">{{ currentUsage.boxes || 0 }}</div>
+                            <div class="text-xs text-gray-400">Boxes utilises</div>
+                        </div>
+                        <div class="bg-gray-700/50 rounded-lg p-3 text-center">
+                            <UsersIcon class="h-6 w-6 mx-auto text-purple-400" />
+                            <div class="text-lg font-bold text-white mt-1">{{ currentUsage.users || 0 }}</div>
+                            <div class="text-xs text-gray-400">Utilisateurs</div>
+                        </div>
+                        <div class="bg-gray-700/50 rounded-lg p-3 text-center">
+                            <UserGroupIcon class="h-6 w-6 mx-auto text-amber-400" />
+                            <div class="text-lg font-bold text-white mt-1">{{ currentUsage.customers || 0 }}</div>
+                            <div class="text-xs text-gray-400">Clients</div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-6 sm:grid-cols-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">
+                                <BuildingOffice2Icon class="h-4 w-4 inline mr-1" />
+                                Max Sites
+                            </label>
+                            <input
+                                v-model.number="form.max_sites"
+                                type="number"
+                                min="1"
+                                placeholder="Illimite"
+                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500"
+                            />
+                            <p class="mt-1 text-xs text-gray-500">Nombre maximum de sites</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">
+                                <CubeIcon class="h-4 w-4 inline mr-1" />
+                                Max Boxes
+                            </label>
+                            <input
+                                v-model.number="form.max_boxes"
+                                type="number"
+                                min="1"
+                                placeholder="Illimite"
+                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500"
+                            />
+                            <p class="mt-1 text-xs text-gray-500">Nombre maximum de boxes</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">
+                                <UsersIcon class="h-4 w-4 inline mr-1" />
+                                Max Utilisateurs
+                            </label>
+                            <input
+                                v-model.number="form.max_users"
+                                type="number"
+                                min="1"
+                                placeholder="Illimite"
+                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500"
+                            />
+                            <p class="mt-1 text-xs text-gray-500">Nombre maximum d'utilisateurs</p>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-300 mb-1">
+                                <UserGroupIcon class="h-4 w-4 inline mr-1" />
+                                Max Clients
+                            </label>
+                            <input
+                                v-model.number="form.max_customers"
+                                type="number"
+                                min="1"
+                                placeholder="Illimite"
+                                class="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500"
+                            />
+                            <p class="mt-1 text-xs text-gray-500">Nombre maximum de clients</p>
                         </div>
                     </div>
                 </div>

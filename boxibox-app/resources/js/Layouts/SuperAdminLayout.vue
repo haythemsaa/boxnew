@@ -23,6 +23,14 @@ import {
     FlagIcon,
     BanknotesIcon,
     PuzzlePieceIcon,
+    ChatBubbleLeftRightIcon,
+    ServerIcon,
+    ShieldCheckIcon,
+    GlobeAltIcon,
+    CpuChipIcon,
+    ChartPieIcon,
+    WrenchScrewdriverIcon,
+    BeakerIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
@@ -39,21 +47,58 @@ const isImpersonating = computed(() => page.props.auth?.impersonating)
 const sidebarOpen = ref(false)
 const userMenuOpen = ref(false)
 
-const navigation = [
-    { name: 'Dashboard', href: route('superadmin.dashboard'), icon: HomeIcon, current: route().current('superadmin.dashboard') },
-    { name: 'Tenants', href: route('superadmin.tenants.index'), icon: BuildingOffice2Icon, current: route().current('superadmin.tenants.*') },
-    { name: 'Utilisateurs', href: route('superadmin.users.index'), icon: UsersIcon, current: route().current('superadmin.users.*') },
-    { name: 'Abonnements', href: route('superadmin.subscriptions.index'), icon: CreditCardIcon, current: route().current('superadmin.subscriptions.*') },
-    { name: 'Facturation', href: route('superadmin.billing.index'), icon: BanknotesIcon, current: route().current('superadmin.billing.*') },
-    { name: 'Analytics', href: route('superadmin.analytics.index'), icon: ChartBarIcon, current: route().current('superadmin.analytics.*') },
-    { name: 'Annonces', href: route('superadmin.announcements.index'), icon: MegaphoneIcon, current: route().current('superadmin.announcements.*') },
-    { name: 'Templates Email', href: route('superadmin.email-templates.index'), icon: EnvelopeIcon, current: route().current('superadmin.email-templates.*') },
-    { name: 'Feature Flags', href: route('superadmin.feature-flags.index'), icon: FlagIcon, current: route().current('superadmin.feature-flags.*') },
-    { name: 'Modules & Plans', href: route('superadmin.modules.index'), icon: PuzzlePieceIcon, current: route().current('superadmin.modules.*') },
-    { name: 'Logs Activité', href: route('superadmin.activity-logs.index'), icon: DocumentTextIcon, current: route().current('superadmin.activity-logs.*') },
-    { name: 'Backups', href: route('superadmin.backups.index'), icon: CloudArrowUpIcon, current: route().current('superadmin.backups.*') },
-    { name: 'Paramètres', href: route('superadmin.settings.index'), icon: Cog6ToothIcon, current: route().current('superadmin.settings.*') },
+// Navigation organisée par sections - only include routes that exist
+const navigationSections = [
+    {
+        title: 'Principal',
+        items: [
+            { name: 'Dashboard', href: route('superadmin.dashboard'), icon: HomeIcon, current: route().current('superadmin.dashboard') },
+            { name: 'Tenants', href: route('superadmin.tenants.index'), icon: BuildingOffice2Icon, current: route().current('superadmin.tenants.*'), badge: page.props.tenantsCount },
+            { name: 'Utilisateurs', href: route('superadmin.users.index'), icon: UsersIcon, current: route().current('superadmin.users.*') },
+        ]
+    },
+    {
+        title: 'Support & Communication',
+        items: [
+            { name: 'Support Technique', href: route('superadmin.support.index'), icon: ChatBubbleLeftRightIcon, current: route().current('superadmin.support.*'), badge: page.props.openTicketsCount, badgeColor: 'red' },
+            { name: 'Annonces', href: route('superadmin.announcements.index'), icon: MegaphoneIcon, current: route().current('superadmin.announcements.*') },
+            { name: 'Templates Email', href: route('superadmin.email-templates.index'), icon: EnvelopeIcon, current: route().current('superadmin.email-templates.*') },
+        ]
+    },
+    {
+        title: 'Facturation',
+        items: [
+            { name: 'Abonnements', href: route('superadmin.subscriptions.index'), icon: CreditCardIcon, current: route().current('superadmin.subscriptions.*') },
+            { name: 'Facturation', href: route('superadmin.billing.index'), icon: BanknotesIcon, current: route().current('superadmin.billing.*') },
+            { name: 'Plans Tarifaires', href: route('superadmin.plans.index'), icon: DocumentTextIcon, current: route().current('superadmin.plans.*') },
+            { name: 'Credits Email/SMS', href: route('superadmin.credits.index'), icon: EnvelopeIcon, current: route().current('superadmin.credits.*') },
+            { name: 'Modules', href: route('superadmin.modules.index'), icon: PuzzlePieceIcon, current: route().current('superadmin.modules.*') },
+        ]
+    },
+    {
+        title: 'Analytics',
+        items: [
+            { name: 'Analytics Global', href: route('superadmin.analytics.index'), icon: ChartBarIcon, current: route().current('superadmin.analytics.*') },
+        ]
+    },
+    {
+        title: 'Configuration',
+        items: [
+            { name: 'Feature Flags', href: route('superadmin.feature-flags.index'), icon: FlagIcon, current: route().current('superadmin.feature-flags.*') },
+            { name: 'Parametres', href: route('superadmin.settings.index'), icon: Cog6ToothIcon, current: route().current('superadmin.settings.*') },
+        ]
+    },
+    {
+        title: 'Systeme',
+        items: [
+            { name: 'Logs Activite', href: route('superadmin.activity-logs.index'), icon: DocumentTextIcon, current: route().current('superadmin.activity-logs.*') },
+            { name: 'Backups', href: route('superadmin.backups.index'), icon: CloudArrowUpIcon, current: route().current('superadmin.backups.*') },
+        ]
+    },
 ]
+
+// Ancienne navigation plate pour compatibilité mobile
+const navigation = navigationSections.flatMap(section => section.items)
 
 const logout = () => {
     router.post(route('logout'))
@@ -119,36 +164,63 @@ const stopImpersonating = () => {
             <div class="flex min-h-0 flex-1 flex-col bg-gray-800 border-r border-gray-700">
                 <div class="flex h-16 shrink-0 items-center px-6 border-b border-gray-700">
                     <span class="text-xl font-bold text-white">Boxibox</span>
-                    <span class="ml-2 px-2 py-0.5 bg-purple-600 text-xs rounded text-white">SuperAdmin</span>
+                    <span class="ml-2 px-2 py-0.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-xs rounded-full text-white font-semibold">SuperAdmin</span>
                 </div>
-                <nav class="mt-5 flex-1 space-y-1 px-3">
-                    <Link
-                        v-for="item in navigation"
-                        :key="item.name"
-                        :href="item.href"
-                        :class="[
-                            item.current
-                                ? 'bg-purple-600 text-white'
-                                : 'text-gray-300 hover:bg-gray-700 hover:text-white',
-                            'group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-colors'
-                        ]"
-                    >
-                        <component
-                            :is="item.icon"
-                            :class="[
-                                item.current ? 'text-white' : 'text-gray-400 group-hover:text-white',
-                                'mr-3 h-5 w-5 flex-shrink-0'
-                            ]"
-                        />
-                        {{ item.name }}
-                    </Link>
+                <nav class="mt-3 flex-1 space-y-4 px-3 overflow-y-auto">
+                    <div v-for="section in navigationSections" :key="section.title">
+                        <p class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {{ section.title }}
+                        </p>
+                        <div class="space-y-1">
+                            <Link
+                                v-for="item in section.items"
+                                :key="item.name"
+                                :href="item.href"
+                                :class="[
+                                    item.current
+                                        ? 'bg-purple-600 text-white'
+                                        : 'text-gray-300 hover:bg-gray-700 hover:text-white',
+                                    'group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors'
+                                ]"
+                            >
+                                <div class="flex items-center">
+                                    <component
+                                        :is="item.icon"
+                                        :class="[
+                                            item.current ? 'text-white' : 'text-gray-400 group-hover:text-white',
+                                            'mr-3 h-5 w-5 flex-shrink-0'
+                                        ]"
+                                    />
+                                    {{ item.name }}
+                                </div>
+                                <span
+                                    v-if="item.badge"
+                                    :class="[
+                                        item.badgeColor === 'red' ? 'bg-red-500' : 'bg-purple-500',
+                                        'text-white text-xs font-bold px-2 py-0.5 rounded-full'
+                                    ]"
+                                >
+                                    {{ item.badge }}
+                                </span>
+                            </Link>
+                        </div>
+                    </div>
                 </nav>
                 <div class="border-t border-gray-700 p-4">
+                    <div class="flex items-center gap-3 mb-3 px-3 py-2">
+                        <div class="h-8 w-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-white font-bold text-sm">
+                            {{ user?.name?.charAt(0) || 'A' }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-medium text-white truncate">{{ user?.name }}</p>
+                            <p class="text-xs text-gray-400 truncate">{{ user?.email }}</p>
+                        </div>
+                    </div>
                     <button
                         @click="logout"
-                        class="flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-gray-300 hover:bg-gray-700 hover:text-white transition-colors"
+                        class="flex w-full items-center rounded-lg px-3 py-2.5 text-sm font-medium text-gray-300 hover:bg-red-600/20 hover:text-red-400 transition-colors"
                     >
-                        <ArrowLeftOnRectangleIcon class="mr-3 h-5 w-5 text-gray-400" />
+                        <ArrowLeftOnRectangleIcon class="mr-3 h-5 w-5" />
                         Déconnexion
                     </button>
                 </div>

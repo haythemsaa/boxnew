@@ -29,7 +29,7 @@ class UpdateBoxRequest extends FormRequest
             'building_id' => ['nullable', 'integer', 'exists:buildings,id'],
             'floor_id' => ['nullable', 'integer', 'exists:floors,id'],
             'name' => ['required', 'string', 'max:255'],
-            'code' => ['required', 'string', 'max:50', Rule::unique('boxes', 'code')->ignore($boxId)],
+            'number' => ['required', 'string', 'max:50', Rule::unique('boxes', 'number')->ignore($boxId)],
             'description' => ['nullable', 'string', 'max:1000'],
             'length' => ['required', 'numeric', 'min:0.1', 'max:100'],
             'width' => ['required', 'numeric', 'min:0.1', 'max:100'],

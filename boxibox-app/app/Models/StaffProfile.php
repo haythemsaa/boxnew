@@ -33,6 +33,8 @@ class StaffProfile extends Model
         'hourly_rate' => 'decimal:2',
         'monthly_salary' => 'decimal:2',
         'is_active' => 'boolean',
+        'skills' => 'array',
+        'certifications' => 'array',
     ];
 
     public function tenant(): BelongsTo

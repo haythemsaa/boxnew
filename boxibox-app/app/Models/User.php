@@ -110,6 +110,11 @@ class User extends Authenticatable
         return $this->hasOne(ValetDriver::class);
     }
 
+    public function staffProfile(): HasOne
+    {
+        return $this->hasOne(StaffProfile::class);
+    }
+
     // Helper Methods
     public function isSuperAdmin(): bool
     {

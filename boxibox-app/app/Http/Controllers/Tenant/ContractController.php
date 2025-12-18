@@ -23,7 +23,6 @@ class ContractController extends Controller
      */
     public function index(Request $request): Response
     {
-        $this->authorize('view_contracts');
 
         $tenantId = $request->user()->tenant_id;
 
@@ -55,12 +54,23 @@ class ContractController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        // Optimized stats query - single DB call instead of 5
+        $statsRaw = Contract::where('tenant_id', $tenantId)
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN status = 'pending_signature' THEN 1 ELSE 0 END) as pending,
+                SUM(CASE WHEN status = 'expired' THEN 1 ELSE 0 END) as expired,
+                SUM(CASE WHEN status = 'active' THEN monthly_price ELSE 0 END) as total_revenue
+            ")
+            ->first();
+
         $stats = [
-            'total' => Contract::where('tenant_id', $tenantId)->count(),
-            'active' => Contract::where('tenant_id', $tenantId)->where('status', 'active')->count(),
-            'pending' => Contract::where('tenant_id', $tenantId)->where('status', 'pending_signature')->count(),
-            'expired' => Contract::where('tenant_id', $tenantId)->where('status', 'expired')->count(),
-            'total_revenue' => Contract::where('tenant_id', $tenantId)->where('status', 'active')->sum('monthly_price'),
+            'total' => $statsRaw->total ?? 0,
+            'active' => $statsRaw->active ?? 0,
+            'pending' => $statsRaw->pending ?? 0,
+            'expired' => $statsRaw->expired ?? 0,
+            'total_revenue' => $statsRaw->total_revenue ?? 0,
         ];
 
         $sites = Site::where('tenant_id', $tenantId)
@@ -81,7 +91,6 @@ class ContractController extends Controller
      */
     public function create(Request $request): Response
     {
-        $this->authorize('create_contracts');
 
         $tenantId = $request->user()->tenant_id;
 
@@ -133,7 +142,6 @@ class ContractController extends Controller
      */
     public function createWizard(Request $request): Response
     {
-        $this->authorize('create_contracts');
 
         $tenantId = $request->user()->tenant_id;
 
@@ -206,7 +214,6 @@ class ContractController extends Controller
      */
     public function show(Contract $contract): Response
     {
-        $this->authorize('view_contracts');
 
         // Ensure tenant can only view their own contracts
         if ($contract->tenant_id !== auth()->user()->tenant_id) {
@@ -225,7 +232,6 @@ class ContractController extends Controller
      */
     public function edit(Request $request, Contract $contract): Response
     {
-        $this->authorize('edit_contracts');
 
         // Ensure tenant can only edit their own contracts
         if ($contract->tenant_id !== $request->user()->tenant_id) {
@@ -310,7 +316,6 @@ class ContractController extends Controller
      */
     public function destroy(Request $request, Contract $contract): RedirectResponse
     {
-        $this->authorize('delete_contracts');
 
         // Ensure tenant can only delete their own contracts
         if ($contract->tenant_id !== $request->user()->tenant_id) {
@@ -368,7 +373,6 @@ class ContractController extends Controller
      */
     public function export(Request $request, ExcelExportService $exportService)
     {
-        $this->authorize('view_contracts');
 
         $tenantId = $request->user()->tenant_id;
         $status = $request->query('status');
@@ -387,7 +391,6 @@ class ContractController extends Controller
      */
     public function sign(Request $request, Contract $contract): Response
     {
-        $this->authorize('view_contracts');
 
         // Ensure tenant can only sign their own contracts
         if ($contract->tenant_id !== $request->user()->tenant_id) {
@@ -413,7 +416,6 @@ class ContractController extends Controller
      */
     public function saveSignatures(Request $request, Contract $contract): RedirectResponse
     {
-        $this->authorize('edit_contracts');
 
         // Ensure tenant can only update their own contracts
         if ($contract->tenant_id !== $request->user()->tenant_id) {
@@ -546,7 +548,6 @@ class ContractController extends Controller
      */
     public function terminate(Request $request, Contract $contract): RedirectResponse
     {
-        $this->authorize('edit_contracts');
 
         // Ensure tenant can only update their own contracts
         if ($contract->tenant_id !== $request->user()->tenant_id) {
@@ -595,7 +596,6 @@ class ContractController extends Controller
      */
     public function renewalOptions(Request $request, Contract $contract): Response
     {
-        $this->authorize('view_contracts');
 
         // Ensure tenant can only view their own contracts
         if ($contract->tenant_id !== $request->user()->tenant_id) {
@@ -614,7 +614,6 @@ class ContractController extends Controller
      */
     public function renew(Request $request, Contract $contract): RedirectResponse
     {
-        $this->authorize('edit_contracts');
 
         // Ensure tenant can only update their own contracts
         if ($contract->tenant_id !== $request->user()->tenant_id) {

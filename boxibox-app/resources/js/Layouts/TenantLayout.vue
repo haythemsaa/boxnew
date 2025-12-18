@@ -8,6 +8,8 @@
             ]"
             class="fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transition-all duration-300 ease-in-out lg:translate-x-0 flex flex-col"
             data-tutorial="sidebar"
+            role="navigation"
+            aria-label="Menu principal"
         >
             <!-- Logo Section - NOA Style -->
             <div class="flex h-16 items-center justify-between px-5 border-b border-gray-100">
@@ -24,8 +26,9 @@
                 <button
                     @click="sidebarOpen = false"
                     class="lg:hidden text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-label="Fermer le menu"
                 >
-                    <XMarkIcon class="h-6 w-6" />
+                    <XMarkIcon class="h-6 w-6" aria-hidden="true" />
                 </button>
             </div>
 
@@ -71,16 +74,73 @@
                         Boxes
                     </SidebarLink>
 
+                    <!-- Plan Interactif Pro -->
                     <SidebarLink
-                        :href="route('tenant.plan.interactive')"
-                        :active="route().current('tenant.plan.*')"
+                        :href="route('tenant.plan.interactive-pro')"
+                        :active="route().current('tenant.plan.interactive-pro')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-cyan-600/20 to-blue-600/20 border border-cyan-500/30 hover:from-cyan-600/30 hover:to-blue-600/30"
+                    >
+                        <template #icon>
+                            <MapIcon class="h-5 w-5 text-cyan-500" />
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Plan Interactif
+                            <span class="text-[10px] bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold">PRO</span>
+                        </span>
+                    </SidebarLink>
+
+                    <!-- Editeur de Plan Pro -->
+                    <SidebarLink
+                        :href="route('tenant.plan.editor-pro')"
+                        :active="route().current('tenant.plan.editor-pro')"
                         :collapsed="sidebarCollapsed"
                     >
                         <template #icon>
-                            <MapIcon class="h-5 w-5" />
+                            <PencilSquareIcon class="h-5 w-5" />
                         </template>
-                        Plan interactif
+                        Editeur de Plan
                     </SidebarLink>
+
+                    <!-- Anciennes versions (a supprimer plus tard) -->
+                    <div v-if="!sidebarCollapsed" class="pl-4 border-l-2 border-gray-200 dark:border-gray-700 ml-3 mt-2 mb-2">
+                        <p class="px-2 mb-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                            Anciennes versions
+                        </p>
+                        <SidebarLink
+                            :href="route('tenant.plan.interactive')"
+                            :active="route().current('tenant.plan.interactive') && !route().current('tenant.plan.interactive-pro') && !route().current('tenant.plan.interactive-enhanced')"
+                            :collapsed="sidebarCollapsed"
+                            class="text-sm opacity-70 hover:opacity-100"
+                        >
+                            <template #icon>
+                                <MapIcon class="h-4 w-4" />
+                            </template>
+                            Plan v1
+                        </SidebarLink>
+                        <SidebarLink
+                            :href="route('tenant.plan.interactive-enhanced')"
+                            :active="route().current('tenant.plan.interactive-enhanced')"
+                            :collapsed="sidebarCollapsed"
+                            class="text-sm opacity-70 hover:opacity-100"
+                        >
+                            <template #icon>
+                                <MapIcon class="h-4 w-4" />
+                            </template>
+                            Plan Enhanced
+                        </SidebarLink>
+                        <SidebarLink
+                            :href="route('tenant.plan.editor')"
+                            :active="route().current('tenant.plan.editor') && !route().current('tenant.plan.editor-pro')"
+                            :collapsed="sidebarCollapsed"
+                            class="text-sm opacity-70 hover:opacity-100"
+                        >
+                            <template #icon>
+                                <PencilSquareIcon class="h-4 w-4" />
+                            </template>
+                            Editeur v1
+                        </SidebarLink>
+                    </div>
 
                     <SidebarLink
                         :href="route('tenant.bookings.index')"
@@ -99,6 +159,28 @@
                     <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
                         CRM
                     </p>
+
+                    <!-- AI Lead Scoring - Featured Link -->
+                    <SidebarLink
+                        :href="route('tenant.crm.ai-scoring.dashboard')"
+                        :active="route().current('tenant.crm.ai-scoring.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-rose-600/20 to-orange-600/20 border border-rose-500/30 hover:from-rose-600/30 hover:to-orange-600/30"
+                    >
+                        <template #icon>
+                            <FireIcon class="h-5 w-5 text-rose-500" />
+                        </template>
+                        <span class="flex items-center gap-2">
+                            AI Lead Scoring
+                            <span class="text-[10px] bg-gradient-to-r from-rose-500 to-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">IA</span>
+                        </span>
+                        <template #badge>
+                            <span v-if="$page.props.hotLeadsCount" class="ml-auto bg-rose-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
+                                {{ $page.props.hotLeadsCount }}
+                            </span>
+                        </template>
+                    </SidebarLink>
+
                     <SidebarLink
                         :href="route('tenant.prospects.index')"
                         :active="route().current('tenant.prospects.*')"
@@ -316,6 +398,21 @@
                         </template>
                         Prédictif
                     </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.analytics.kpis')"
+                        :active="route().current('tenant.analytics.kpis*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-indigo-600/20 to-purple-600/20 border border-indigo-500/30 hover:from-indigo-600/30 hover:to-purple-600/30"
+                    >
+                        <template #icon>
+                            <ChartBarSquareIcon class="h-5 w-5 text-indigo-400" />
+                        </template>
+                        <span class="flex items-center gap-2">
+                            KPIs Self-Storage
+                            <span class="text-[10px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">PRO</span>
+                        </span>
+                    </SidebarLink>
                 </div>
 
                 <!-- Communication Section -->
@@ -337,6 +434,34 @@
                                 {{ $page.props.unreadMessages }}
                             </span>
                         </template>
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.chatbot.index')"
+                        :active="route().current('tenant.chatbot.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-blue-600/20 to-cyan-600/20 border border-blue-500/30 hover:from-blue-600/30 hover:to-cyan-600/30"
+                    >
+                        <template #icon>
+                            <svg class="h-5 w-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/>
+                            </svg>
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Chatbot IA
+                            <span class="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold">24/7</span>
+                        </span>
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.support.index')"
+                        :active="route().current('tenant.support.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <LifebuoyIcon class="h-5 w-5" />
+                        </template>
+                        Support Client
                     </SidebarLink>
 
                     <SidebarLink
@@ -401,6 +526,21 @@
                     </SidebarLink>
 
                     <SidebarLink
+                        :href="route('tenant.smart-locks.index')"
+                        :active="route().current('tenant.smart-locks.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-indigo-600/20 to-violet-600/20 border border-indigo-500/30 hover:from-indigo-600/30 hover:to-violet-600/30"
+                    >
+                        <template #icon>
+                            <LockClosedIcon class="h-5 w-5 text-indigo-400" />
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Smart Locks
+                            <span class="text-[10px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">PRO</span>
+                        </span>
+                    </SidebarLink>
+
+                    <SidebarLink
                         :href="route('tenant.iot.dashboard')"
                         :active="route().current('tenant.iot.*')"
                         :collapsed="sidebarCollapsed"
@@ -408,7 +548,7 @@
                         <template #icon>
                             <CpuChipIcon class="h-5 w-5" />
                         </template>
-                        IoT & Smart Entry
+                        IoT & Capteurs
                     </SidebarLink>
 
                     <SidebarLink
@@ -417,9 +557,39 @@
                         :collapsed="sidebarCollapsed"
                     >
                         <template #icon>
-                            <LockClosedIcon class="h-5 w-5" />
+                            <ShieldCheckIcon class="h-5 w-5" />
                         </template>
                         Contrôle d'accès
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.media.index')"
+                        :active="route().current('tenant.media.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-purple-600/20 to-pink-600/20 border border-purple-500/30 hover:from-purple-600/30 hover:to-pink-600/30"
+                    >
+                        <template #icon>
+                            <PhotoIcon class="h-5 w-5 text-purple-500" />
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Galerie Media
+                            <span class="text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded-full font-bold">360°</span>
+                        </span>
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.self-service.index')"
+                        :active="route().current('tenant.self-service.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-emerald-600/20 to-teal-600/20 border border-emerald-500/30 hover:from-emerald-600/30 hover:to-teal-600/30"
+                    >
+                        <template #icon>
+                            <KeyIcon class="h-5 w-5 text-emerald-500" />
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Self-Service 24/7
+                            <span class="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
+                        </span>
                     </SidebarLink>
                 </div>
 
@@ -488,13 +658,7 @@
                         </template>
                         Avis clients
                     </SidebarLink>
-                </div>
 
-                <!-- Communication Section -->
-                <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                        Communication
-                    </p>
                     <SidebarLink
                         :href="route('tenant.notifications.index')"
                         :active="route().current('tenant.notifications.*')"
@@ -503,37 +667,62 @@
                         <template #icon>
                             <BellIcon class="h-5 w-5" />
                         </template>
-                        Notifications
-                    </SidebarLink>
-
-                    <SidebarLink
-                        :href="route('tenant.messages.index')"
-                        :active="route().current('tenant.messages.*')"
-                        :collapsed="sidebarCollapsed"
-                    >
-                        <template #icon>
-                            <EnvelopeIcon class="h-5 w-5" />
-                        </template>
-                        Messages
+                        Notifications Push
                     </SidebarLink>
                 </div>
 
-                <!-- Security Section -->
+                <!-- Assurances & Services Section -->
                 <div class="mb-6">
                     <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                        Sécurité
+                        Assurances & Services
                     </p>
                     <SidebarLink
-                        :href="route('tenant.access-control.dashboard')"
-                        :active="route().current('tenant.access-control.*')"
+                        :href="route('tenant.insurance.index')"
+                        :active="route().current('tenant.insurance.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-amber-600/20 to-orange-600/20 border border-amber-500/30 hover:from-amber-600/30 hover:to-orange-600/30"
+                    >
+                        <template #icon>
+                            <ShieldCheckIcon class="h-5 w-5 text-amber-500" />
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Assurances
+                            <span class="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
+                        </span>
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.video-calls.index')"
+                        :active="route().current('tenant.video-calls.*')"
                         :collapsed="sidebarCollapsed"
                     >
                         <template #icon>
-                            <ShieldCheckIcon class="h-5 w-5" />
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                            </svg>
                         </template>
-                        Contrôle d'accès
+                        Visio Agent
                     </SidebarLink>
 
+                    <SidebarLink
+                        :href="route('tenant.valet.index')"
+                        :active="route().current('tenant.valet.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                            </svg>
+                        </template>
+                        Service Valet
+                    </SidebarLink>
+                </div>
+
+                <!-- Conformité Section -->
+                <div class="mb-6">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Conformité
+                    </p>
                     <SidebarLink
                         :href="route('tenant.gdpr.index')"
                         :active="route().current('tenant.gdpr.*')"
@@ -555,33 +744,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
                             </svg>
                         </template>
-                        {{ $t('sustainability.dashboard') }}
-                    </SidebarLink>
-
-                    <SidebarLink
-                        :href="route('tenant.video-calls.index')"
-                        :active="route().current('tenant.video-calls.*')"
-                        :collapsed="sidebarCollapsed"
-                    >
-                        <template #icon>
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                            </svg>
-                        </template>
-                        {{ $t('video_calls.live_agent') }}
-                    </SidebarLink>
-
-                    <SidebarLink
-                        :href="route('tenant.valet.index')"
-                        :active="route().current('tenant.valet.*')"
-                        :collapsed="sidebarCollapsed"
-                    >
-                        <template #icon>
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                            </svg>
-                        </template>
-                        {{ $t('valet.title') }}
+                        RSE & Durabilité
                     </SidebarLink>
                 </div>
 
@@ -592,7 +755,7 @@
                     </p>
                     <SidebarLink
                         :href="route('tenant.settings.index')"
-                        :active="route().current('tenant.settings.*')"
+                        :active="route().current('tenant.settings.index') || route().current('tenant.settings.email-templates.*')"
                         :collapsed="sidebarCollapsed"
                         data-tutorial="settings-menu"
                     >
@@ -601,6 +764,31 @@
                         </template>
                         Paramètres
                     </SidebarLink>
+                    <SidebarLink
+                        :href="route('tenant.users.index')"
+                        :active="route().current('tenant.users.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <UserCircleIcon class="h-5 w-5" />
+                        </template>
+                        Utilisateurs
+                    </SidebarLink>
+                    <SidebarLink
+                        :href="route('tenant.settings.communication-providers.index')"
+                        :active="route().current('tenant.settings.communication-providers.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <SignalIcon class="h-5 w-5" />
+                        </template>
+                        Email & SMS
+                        <template #badge>
+                            <span class="ml-auto text-[10px] bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-1.5 py-0.5 rounded-full font-bold">
+                                API
+                            </span>
+                        </template>
+                    </SidebarLink>
                 </div>
             </nav>
 
@@ -608,9 +796,11 @@
             <button
                 @click="toggleCollapse"
                 class="hidden lg:flex items-center justify-center h-9 mx-3 mb-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-500 hover:text-gray-700 transition-colors"
+                :aria-label="sidebarCollapsed ? 'Agrandir le menu' : 'Réduire le menu'"
+                :aria-expanded="!sidebarCollapsed"
             >
-                <ChevronLeftIcon v-if="!sidebarCollapsed" class="h-5 w-5" />
-                <ChevronRightIcon v-else class="h-5 w-5" />
+                <ChevronLeftIcon v-if="!sidebarCollapsed" class="h-5 w-5" aria-hidden="true" />
+                <ChevronRightIcon v-else class="h-5 w-5" aria-hidden="true" />
             </button>
 
             <!-- User Section - NOA Style -->
@@ -679,18 +869,22 @@
                     <button
                         @click="sidebarOpen = true"
                         class="lg:hidden p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                        aria-label="Ouvrir le menu"
+                        aria-controls="main-navigation"
+                        :aria-expanded="sidebarOpen"
                     >
-                        <Bars3Icon class="h-6 w-6" />
+                        <Bars3Icon class="h-6 w-6" aria-hidden="true" />
                     </button>
 
                     <!-- Search Bar - NOA Style -->
-                    <div class="hidden md:flex items-center flex-1 max-w-md">
+                    <div class="hidden md:flex items-center flex-1 max-w-md" role="search">
                         <div class="flex items-center w-full bg-gray-100 rounded-lg px-4 py-2.5">
-                            <MagnifyingGlassIcon class="h-5 w-5 text-gray-400 mr-3" />
+                            <MagnifyingGlassIcon class="h-5 w-5 text-gray-400 mr-3" aria-hidden="true" />
                             <input
-                                type="text"
+                                type="search"
                                 placeholder="Rechercher..."
                                 class="bg-transparent border-none outline-none text-sm text-gray-600 placeholder-gray-400 flex-1"
+                                aria-label="Rechercher dans l'application"
                             />
                         </div>
                     </div>
@@ -739,8 +933,11 @@
                             <button
                                 @click="showQuickActions = !showQuickActions"
                                 class="p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                                aria-label="Actions rapides"
+                                :aria-expanded="showQuickActions"
+                                aria-haspopup="true"
                             >
-                                <PlusIcon class="h-5 w-5" />
+                                <PlusIcon class="h-5 w-5" aria-hidden="true" />
                             </button>
                             <transition name="dropdown">
                                 <div v-if="showQuickActions" class="absolute right-0 mt-2 w-56 rounded-xl bg-white shadow-xl border border-gray-100 py-2 z-50">
@@ -775,6 +972,16 @@
                                     <div class="px-4 py-2 border-b border-gray-100">
                                         <h3 class="text-sm font-semibold text-gray-900">Aide & Tutoriel</h3>
                                     </div>
+                                    <Link
+                                        :href="route('tenant.onboarding.index')"
+                                        @click="showTutorialMenu = false"
+                                        class="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
+                                    >
+                                        <svg class="w-5 h-5 mr-3 text-primary-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                                        </svg>
+                                        Guide de demarrage
+                                    </Link>
                                     <button
                                         @click="startTutorial"
                                         class="flex items-center w-full px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition"
@@ -783,7 +990,7 @@
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                                         </svg>
-                                        Lancer le guide interactif
+                                        Lancer le tutoriel interactif
                                     </button>
                                     <div class="border-t border-gray-100 my-1"></div>
                                     <label class="flex items-center justify-between px-4 py-2.5 cursor-pointer hover:bg-gray-50 transition">
@@ -817,11 +1024,15 @@
                             <button
                                 @click="showNotifications = !showNotifications"
                                 class="relative p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                                aria-label="Notifications"
+                                :aria-expanded="showNotifications"
+                                aria-haspopup="true"
                             >
-                                <BellIcon class="h-5 w-5" />
+                                <BellIcon class="h-5 w-5" aria-hidden="true" />
                                 <span
                                     v-if="$page.props.notificationsCount > 0"
                                     class="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white"
+                                    :aria-label="`${$page.props.notificationsCount} nouvelles notifications`"
                                 >
                                     {{ $page.props.notificationsCount > 9 ? '9+' : $page.props.notificationsCount }}
                                 </span>
@@ -849,23 +1060,23 @@
             </header>
 
             <!-- Page Content -->
-            <main class="p-4 sm:p-6 lg:p-8">
+            <main class="p-4 sm:p-6 lg:p-8" role="main" aria-label="Contenu principal">
                 <!-- Flash Messages -->
                 <transition name="slide-down">
-                    <div v-if="$page.props.flash?.success" class="mb-6 flex items-center p-4 rounded-xl bg-emerald-50 border border-emerald-200 animate-fade-in-down">
-                        <CheckCircleIcon class="h-5 w-5 text-emerald-500 mr-3 flex-shrink-0" />
+                    <div v-if="$page.props.flash?.success" class="mb-6 flex items-center p-4 rounded-xl bg-emerald-50 border border-emerald-200 animate-fade-in-down" role="alert" aria-live="polite">
+                        <CheckCircleIcon class="h-5 w-5 text-emerald-500 mr-3 flex-shrink-0" aria-hidden="true" />
                         <p class="text-sm text-emerald-800">{{ $page.props.flash.success }}</p>
-                        <button @click="dismissFlash('success')" class="ml-auto p-1 hover:bg-emerald-100 rounded-lg transition-colors">
-                            <XMarkIcon class="h-4 w-4 text-emerald-500" />
+                        <button @click="dismissFlash('success')" class="ml-auto p-1 hover:bg-emerald-100 rounded-lg transition-colors" aria-label="Fermer le message">
+                            <XMarkIcon class="h-4 w-4 text-emerald-500" aria-hidden="true" />
                         </button>
                     </div>
                 </transition>
                 <transition name="slide-down">
-                    <div v-if="$page.props.flash?.error" class="mb-6 flex items-center p-4 rounded-xl bg-red-50 border border-red-200 animate-fade-in-down">
-                        <ExclamationCircleIcon class="h-5 w-5 text-red-500 mr-3 flex-shrink-0" />
+                    <div v-if="$page.props.flash?.error" class="mb-6 flex items-center p-4 rounded-xl bg-red-50 border border-red-200 animate-fade-in-down" role="alert" aria-live="assertive">
+                        <ExclamationCircleIcon class="h-5 w-5 text-red-500 mr-3 flex-shrink-0" aria-hidden="true" />
                         <p class="text-sm text-red-800">{{ $page.props.flash.error }}</p>
-                        <button @click="dismissFlash('error')" class="ml-auto p-1 hover:bg-red-100 rounded-lg transition-colors">
-                            <XMarkIcon class="h-4 w-4 text-red-500" />
+                        <button @click="dismissFlash('error')" class="ml-auto p-1 hover:bg-red-100 rounded-lg transition-colors" aria-label="Fermer l'erreur">
+                            <XMarkIcon class="h-4 w-4 text-red-500" aria-hidden="true" />
                         </button>
                     </div>
                 </transition>
@@ -993,6 +1204,16 @@ import {
     LockClosedIcon,
     CpuChipIcon,
     EnvelopeIcon,
+    LifebuoyIcon,
+    KeyIcon,
+    FireIcon,
+    BoltIcon,
+    RocketLaunchIcon,
+    AdjustmentsHorizontalIcon,
+    SignalIcon,
+    ChartBarSquareIcon,
+    PhotoIcon,
+    UserCircleIcon,
 } from '@heroicons/vue/24/outline'
 
 defineProps({

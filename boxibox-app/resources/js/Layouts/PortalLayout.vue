@@ -6,7 +6,7 @@
                 <div class="flex h-16 justify-between">
                     <!-- Logo -->
                     <div class="flex items-center">
-                        <Link :href="route('portal.dashboard')" class="flex items-center space-x-3">
+                        <Link :href="route('customer.portal.dashboard')" class="flex items-center space-x-3">
                             <img
                                 v-if="$page.props.tenant?.logo"
                                 :src="$page.props.tenant.logo"
@@ -25,41 +25,38 @@
                     <!-- Desktop Navigation -->
                     <div class="hidden sm:flex sm:items-center sm:space-x-8">
                         <NavLink
-                            :href="route('portal.dashboard')"
-                            :active="route().current('portal.dashboard')"
+                            :href="route('customer.portal.dashboard')"
+                            :active="route().current('customer.portal.dashboard')"
                         >
-                            Dashboard
+                            Tableau de bord
                         </NavLink>
 
                         <NavLink
-                            :href="route('portal.boxes.index')"
-                            :active="route().current('portal.boxes.*')"
+                            :href="route('customer.portal.contracts')"
+                            :active="route().current('customer.portal.contracts')"
                         >
-                            My Boxes
+                            Mes Contrats
                         </NavLink>
 
                         <NavLink
-                            :href="route('portal.invoices.index')"
-                            :active="route().current('portal.invoices.*')"
+                            :href="route('customer.portal.invoices')"
+                            :active="route().current('customer.portal.invoices')"
                         >
-                            Invoices
+                            Factures
                         </NavLink>
 
                         <NavLink
-                            :href="route('portal.services.index')"
-                            :active="route().current('portal.services.*')"
+                            :href="route('customer.portal.payments')"
+                            :active="route().current('customer.portal.payments')"
                         >
-                            Services
+                            Paiements
                         </NavLink>
 
                         <NavLink
-                            :href="route('portal.messages.index')"
-                            :active="route().current('portal.messages.*')"
+                            :href="route('customer.portal.support.index')"
+                            :active="route().current('customer.portal.support.*')"
                         >
-                            Messages
-                            <span v-if="$page.props.messagesCount > 0" class="ml-1.5 rounded-full bg-red-600 px-2 py-0.5 text-xs font-bold text-white">
-                                {{ $page.props.messagesCount }}
-                            </span>
+                            Support
                         </NavLink>
 
                         <!-- User Menu -->
@@ -69,7 +66,7 @@
                                 class="flex items-center space-x-2 rounded-full bg-white p-2 text-gray-400 hover:text-gray-500"
                             >
                                 <div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary-600 text-white font-semibold">
-                                    {{ $page.props.auth.user?.name?.charAt(0) || 'U' }}
+                                    {{ $page.props.customer?.name?.charAt(0) || 'U' }}
                                 </div>
                             </button>
 
@@ -79,18 +76,18 @@
                                 class="absolute right-0 z-10 mt-2 w-48 origin-top-right rounded-md bg-white py-1 shadow-lg ring-1 ring-black/5"
                             >
                                 <Link
-                                    :href="route('portal.profile')"
+                                    :href="route('customer.portal.profile')"
                                     class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                 >
-                                    My Profile
+                                    Mon Profil
                                 </Link>
                                 <Link
-                                    :href="route('logout')"
+                                    :href="route('customer.portal.logout')"
                                     method="post"
                                     as="button"
                                     class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                                 >
-                                    Logout
+                                    Déconnexion
                                 </Link>
                             </div>
                         </div>
@@ -119,65 +116,65 @@
             <div v-if="mobileMenuOpen" class="sm:hidden">
                 <div class="space-y-1 pb-3 pt-2">
                     <Link
-                        :href="route('portal.dashboard')"
+                        :href="route('customer.portal.dashboard')"
                         class="block border-l-4 py-2 pl-3 pr-4 text-base font-medium"
-                        :class="route().current('portal.dashboard') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'"
+                        :class="route().current('customer.portal.dashboard') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'"
                     >
-                        Dashboard
+                        Tableau de bord
                     </Link>
                     <Link
-                        :href="route('portal.boxes.index')"
+                        :href="route('customer.portal.contracts')"
                         class="block border-l-4 py-2 pl-3 pr-4 text-base font-medium"
-                        :class="route().current('portal.boxes.*') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'"
+                        :class="route().current('customer.portal.contracts') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'"
                     >
-                        My Boxes
+                        Mes Contrats
                     </Link>
                     <Link
-                        :href="route('portal.invoices.index')"
+                        :href="route('customer.portal.invoices')"
                         class="block border-l-4 py-2 pl-3 pr-4 text-base font-medium"
-                        :class="route().current('portal.invoices.*') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'"
+                        :class="route().current('customer.portal.invoices') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'"
                     >
-                        Invoices
+                        Factures
                     </Link>
                     <Link
-                        :href="route('portal.services.index')"
+                        :href="route('customer.portal.payments')"
                         class="block border-l-4 py-2 pl-3 pr-4 text-base font-medium"
-                        :class="route().current('portal.services.*') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'"
+                        :class="route().current('customer.portal.payments') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'"
                     >
-                        Services
+                        Paiements
                     </Link>
                     <Link
-                        :href="route('portal.messages.index')"
+                        :href="route('customer.portal.support.index')"
                         class="block border-l-4 py-2 pl-3 pr-4 text-base font-medium"
-                        :class="route().current('portal.messages.*') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'"
+                        :class="route().current('customer.portal.support.*') ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-transparent text-gray-500 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-700'"
                     >
-                        Messages
+                        Support
                     </Link>
                 </div>
                 <div class="border-t border-gray-200 pb-3 pt-4">
                     <div class="flex items-center px-4">
                         <div class="flex h-10 w-10 items-center justify-center rounded-full bg-primary-600 text-white font-semibold">
-                            {{ $page.props.auth.user?.name?.charAt(0) || 'U' }}
+                            {{ $page.props.customer?.name?.charAt(0) || 'U' }}
                         </div>
                         <div class="ml-3">
-                            <div class="text-base font-medium text-gray-800">{{ $page.props.auth.user?.name }}</div>
-                            <div class="text-sm font-medium text-gray-500">{{ $page.props.auth.user?.email }}</div>
+                            <div class="text-base font-medium text-gray-800">{{ $page.props.customer?.name }}</div>
+                            <div class="text-sm font-medium text-gray-500">{{ $page.props.customer?.email }}</div>
                         </div>
                     </div>
                     <div class="mt-3 space-y-1">
                         <Link
-                            :href="route('portal.profile')"
+                            :href="route('customer.portal.profile')"
                             class="block px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
                         >
-                            Profile
+                            Mon Profil
                         </Link>
                         <Link
-                            :href="route('logout')"
+                            :href="route('customer.portal.logout')"
                             method="post"
                             as="button"
                             class="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:bg-gray-100 hover:text-gray-800"
                         >
-                            Logout
+                            Déconnexion
                         </Link>
                     </div>
                 </div>

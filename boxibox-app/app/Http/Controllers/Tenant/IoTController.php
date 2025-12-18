@@ -67,8 +67,8 @@ class IoTController extends Controller
                         'last_reading_at' => $sensor->last_reading_at?->toIso8601String(),
                         'box' => $sensor->box ? [
                             'id' => $sensor->box->id,
-                            'code' => $sensor->box->code,
-                            'display_name' => $sensor->box->display_name ?? $sensor->box->code,
+                            'code' => $sensor->box->number,
+                            'display_name' => $sensor->box->display_name ?? $sensor->box->number,
                         ] : null,
                         'alerts_enabled' => $sensor->alert_enabled ?? false,
                         'alert_min' => $sensor->min_threshold,
@@ -88,7 +88,7 @@ class IoTController extends Controller
                     ->get()
                     ->map(fn($lock) => [
                         'id' => $lock->id,
-                        'name' => $lock->device_name ?? 'Serrure ' . ($lock->box?->code ?? $lock->id),
+                        'name' => $lock->device_name ?? 'Serrure ' . ($lock->box?->number ?? $lock->id),
                         'serial_number' => $lock->device_id,
                         'status' => $lock->status,
                         'is_locked' => true,
@@ -98,8 +98,8 @@ class IoTController extends Controller
                         'provider' => $lock->provider ?? 'Generic',
                         'box' => $lock->box ? [
                             'id' => $lock->box->id,
-                            'code' => $lock->box->code,
-                            'display_name' => $lock->box->display_name ?? $lock->box->code,
+                            'code' => $lock->box->number,
+                            'display_name' => $lock->box->display_name ?? $lock->box->number,
                         ] : null,
                     ]);
             } catch (\Exception $e) {
@@ -135,7 +135,7 @@ class IoTController extends Controller
                         ] : null,
                         'box' => $alert->box ? [
                             'id' => $alert->box->id,
-                            'code' => $alert->box->code,
+                            'code' => $alert->box->number,
                         ] : null,
                     ]);
             } catch (\Exception $e) {
@@ -305,7 +305,7 @@ class IoTController extends Controller
             'alerts_enabled' => $sensor->alerts_enabled,
             'box' => $sensor->box ? [
                 'id' => $sensor->box->id,
-                'code' => $sensor->box->code,
+                'code' => $sensor->box->number,
                 'display_name' => $sensor->box->display_name,
             ] : null,
         ];

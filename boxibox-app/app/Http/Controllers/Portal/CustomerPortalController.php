@@ -179,7 +179,7 @@ class CustomerPortalController extends Controller
             $query->where('customer_id', $customer->id);
         })
             ->with(['invoice'])
-            ->latest('payment_date')
+            ->latest('paid_at')
             ->paginate(20);
 
         $stats = [

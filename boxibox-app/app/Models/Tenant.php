@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -44,6 +45,11 @@ class Tenant extends Model
         'features',
         'plan_elements',
         'addons', // array of active addons
+        // Subscription & Quotas
+        'current_plan_id',
+        'emails_sent_this_month',
+        'sms_sent_this_month',
+        'usage_reset_at',
     ];
 
     protected $casts = [
@@ -61,6 +67,10 @@ class Tenant extends Model
         'max_users' => 'integer',
         'total_customers' => 'integer',
         'deleted_at' => 'datetime',
+        'current_plan_id' => 'integer',
+        'emails_sent_this_month' => 'integer',
+        'sms_sent_this_month' => 'integer',
+        'usage_reset_at' => 'datetime',
     ];
 
     // Plan Constants
@@ -121,6 +131,31 @@ class Tenant extends Model
     public function floorPlans(): HasMany
     {
         return $this->hasMany(FloorPlan::class);
+    }
+
+    public function subscriptionPlan(): BelongsTo
+    {
+        return $this->belongsTo(SubscriptionPlan::class, 'current_plan_id');
+    }
+
+    public function credits(): HasMany
+    {
+        return $this->hasMany(TenantCredit::class);
+    }
+
+    public function usageRecords(): HasMany
+    {
+        return $this->hasMany(TenantUsage::class);
+    }
+
+    public function emailProviders(): HasMany
+    {
+        return $this->hasMany(TenantEmailProvider::class);
+    }
+
+    public function smsProviders(): HasMany
+    {
+        return $this->hasMany(TenantSmsProvider::class);
     }
 
     // Scopes
@@ -301,5 +336,210 @@ class Tenant extends Model
             self::PLAN_BUSINESS, self::PLAN_ENTERPRISE => 'full',
             default => 'none',
         };
+    }
+
+    // Email & SMS Quota Methods
+
+    /**
+     * Get current month usage record
+     */
+    public function getCurrentUsage(): TenantUsage
+    {
+        return TenantUsage::currentMonth($this->id);
+    }
+
+    /**
+     * Get remaining email quota for current month
+     */
+    public function getEmailsRemainingAttribute(): int
+    {
+        $usage = $this->getCurrentUsage();
+        return max(0, $usage->emails_quota - $usage->emails_sent);
+    }
+
+    /**
+     * Get remaining SMS quota for current month
+     */
+    public function getSmsRemainingAttribute(): int
+    {
+        $usage = $this->getCurrentUsage();
+        return max(0, $usage->sms_quota - $usage->sms_sent);
+    }
+
+    /**
+     * Get total available email credits (purchased packs)
+     */
+    public function getEmailCreditsAttribute(): int
+    {
+        return $this->credits()
+            ->where('type', 'email')
+            ->where('status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->sum('credits_remaining');
+    }
+
+    /**
+     * Get total available SMS credits (purchased packs)
+     */
+    public function getSmsCreditsAttribute(): int
+    {
+        return $this->credits()
+            ->where('type', 'sms')
+            ->where('status', 'active')
+            ->where(function ($q) {
+                $q->whereNull('expires_at')->orWhere('expires_at', '>', now());
+            })
+            ->sum('credits_remaining');
+    }
+
+    /**
+     * Check if tenant can send emails (quota or credits available)
+     */
+    public function canSendEmail(): bool
+    {
+        // Check plan quota
+        if ($this->emails_remaining > 0) {
+            return true;
+        }
+
+        // Check purchased credits
+        if ($this->email_credits > 0) {
+            return true;
+        }
+
+        // Check if custom provider allowed and configured
+        $plan = $this->subscriptionPlan;
+        if ($plan && $plan->custom_email_provider_allowed) {
+            return $this->emailProviders()->where('is_active', true)->where('is_verified', true)->exists();
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if tenant can send SMS (quota or credits available)
+     */
+    public function canSendSms(): bool
+    {
+        // Check plan quota
+        if ($this->sms_remaining > 0) {
+            return true;
+        }
+
+        // Check purchased credits
+        if ($this->sms_credits > 0) {
+            return true;
+        }
+
+        // Check if custom provider allowed and configured
+        $plan = $this->subscriptionPlan;
+        if ($plan && $plan->custom_sms_provider_allowed) {
+            return $this->smsProviders()->where('is_active', true)->where('is_verified', true)->exists();
+        }
+
+        return false;
+    }
+
+    /**
+     * Get email quota usage percentage
+     */
+    public function getEmailUsagePercentAttribute(): float
+    {
+        $usage = $this->getCurrentUsage();
+        return $usage->email_usage_percent;
+    }
+
+    /**
+     * Get SMS quota usage percentage
+     */
+    public function getSmsUsagePercentAttribute(): float
+    {
+        $usage = $this->getCurrentUsage();
+        return $usage->sms_usage_percent;
+    }
+
+    /**
+     * Check if custom email provider is allowed
+     */
+    public function canUseCustomEmailProvider(): bool
+    {
+        $plan = $this->subscriptionPlan;
+        return $plan && $plan->custom_email_provider_allowed;
+    }
+
+    /**
+     * Check if custom SMS provider is allowed
+     */
+    public function canUseCustomSmsProvider(): bool
+    {
+        $plan = $this->subscriptionPlan;
+        return $plan && $plan->custom_sms_provider_allowed;
+    }
+
+    /**
+     * Get active email provider (custom if available, null for shared)
+     */
+    public function getActiveEmailProvider(): ?TenantEmailProvider
+    {
+        if (!$this->canUseCustomEmailProvider()) {
+            return null;
+        }
+
+        return $this->emailProviders()
+            ->where('is_active', true)
+            ->where('is_verified', true)
+            ->first();
+    }
+
+    /**
+     * Get active SMS provider (custom if available, null for shared)
+     */
+    public function getActiveSmsProvider(): ?TenantSmsProvider
+    {
+        if (!$this->canUseCustomSmsProvider()) {
+            return null;
+        }
+
+        return $this->smsProviders()
+            ->where('is_active', true)
+            ->where('is_verified', true)
+            ->first();
+    }
+
+    /**
+     * Get communication limits summary
+     */
+    public function getCommunicationLimitsAttribute(): array
+    {
+        $plan = $this->subscriptionPlan;
+        $usage = $this->getCurrentUsage();
+
+        return [
+            'email' => [
+                'quota' => $usage->emails_quota,
+                'used' => $usage->emails_sent,
+                'remaining' => $usage->emails_remaining,
+                'credits' => $this->email_credits,
+                'percent' => $usage->email_usage_percent,
+                'can_use_custom' => $this->canUseCustomEmailProvider(),
+                'has_custom' => $this->emailProviders()->where('is_active', true)->exists(),
+            ],
+            'sms' => [
+                'quota' => $usage->sms_quota,
+                'used' => $usage->sms_sent,
+                'remaining' => $usage->sms_remaining,
+                'credits' => $this->sms_credits,
+                'percent' => $usage->sms_usage_percent,
+                'can_use_custom' => $this->canUseCustomSmsProvider(),
+                'has_custom' => $this->smsProviders()->where('is_active', true)->exists(),
+            ],
+            'plan' => $plan ? [
+                'name' => $plan->name,
+                'emails_per_month' => $plan->emails_per_month,
+                'sms_per_month' => $plan->sms_per_month,
+            ] : null,
+        ];
     }
 }

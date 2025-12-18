@@ -1,0 +1,1282 @@
+BUXIDA.service('BUXIDASERVICES', ['$rootScope','$http', 'ngDialog','$timeout','uiGridConstants', 'settings','$translate','i18nService', function($rootScope,$http,ngDialog,$timeout,uiGridConstants,settings,$translate,i18nService)
+{
+
+    this.ajoutcontrat = function($scope, IDF, C_BOX, C_controler)
+    {
+        $scope.langused = $translate.proposedLanguage();
+        var myurl = settings.repinit;
+        //var C_BOX = "";
+        var I_chqcautionMTT = "";
+        $scope.libbtvalid = "Valider le contrat";
+        $scope.I_assurancecomprise = 0;
+        $scope.B_resa = false;
+        $scope.C_messerr = "";
+        i18nService.setCurrentLang('fr');
+        if (($rootScope.soc.C_currency == 'EUR') || ($rootScope.soc.C_currency == '') )
+        {
+           $scope.C_currency = '€'; 
+        }
+        else
+        {
+            $scope.C_currency = $rootScope.soc.C_currency;     
+        }
+        if  ($rootScope.soc.C_codepays == '') 
+        {
+           $scope.C_codepays = 'FR'; 
+        }
+        else
+        {
+            $scope.C_codepays = $rootScope.soc.C_codepays;     
+        }
+        
+        if (IDF !="")
+        {
+            $http({
+                url : "php/box.php",
+                method: "POST",
+                cache: false,
+                async: false,
+                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                data : {id:'4', UI:IDF}
+            })
+                .then(function successCallback(response)
+                {
+                    if(response.data.res == "1")
+                    {
+                        C_BOX= response.data.C_numbox + " - " + response.data.c_empl + " (" + response.data.I_prixTTC + " " + $scope.C_currency + " TTC," + response.data.I_tailleM2 + " M2, " + response.data.I_tailleM3 + " M3)";
+                        I_chqcautionMTT= response.data.I_prixTTC;
+                        $scope.C_BOX = C_BOX;
+                        $scope.I_chqcautionMTT = I_chqcautionMTT;
+                        $scope.I_assurancecomprise = response.data.I_assuranceincluse;
+                        $scope.etape1 = "done";
+                        $scope.etape2 = "active";
+                        $scope.etape3 = "";
+                        $scope.isTrue3 = false;
+                    }
+                    else
+                    {
+                        alert('Erreur de connexion au serveur ');
+                    }
+                },function errorCallback(response)
+                {
+                    console.log(response.statusText);
+                    alert('Erreur de connexion au serveur ');
+                });
+        }
+
+
+        dialogModal = ngDialog.open({
+            template: 'views/ajoutcontrat.html?v=050617',
+            //className: 'ngdialog-theme-default',
+            scope: $scope,
+            width: '70%',
+            height: '90%',
+            cache:false,
+            closeByDocument:false,
+            controller:  C_controler
+        });
+
+        $rootScope.$on('ngDialog.opened', function (e, $dialog)
+        {
+            $scope.highlightFilteredHeader = function( row, rowRenderIndex, col, colRenderIndex ) {
+                if( col.filters[0].term ){
+                    return 'header-filtered';
+                } else {
+                    return '';
+                }
+            };
+
+           $scope.gridOptions = { enableRowSelection: true, enableRowHeaderSelection: false };
+          $scope.gridOptions.multiSelect = false;
+          $scope.gridOptions.modifierKeysToMultiSelect = false;
+          $scope.gridOptions.noUnselect = true;
+          $scope.gridOptions.showGridFooter= true;
+          $scope.gridOptions.enableFiltering= true;
+          $scope.gridOptions.onRegisterApi = function( gridApi ) 
+          {
+            $scope.gridApi = gridApi;
+            gridApi.selection.on.rowSelectionChanged($scope, function (selectedRow) 
+            {
+              $scope.affsuivi = false;
+              $scope.IDF = selectedRow.entity.C_UI;
+              $scope.C_UICLI  = selectedRow.entity.C_UICLI;
+              $scope.chargefiche();
+            });
+          };
+
+            $scope.gridOptions.columnDefs = [
+                { name: 'C_numbox', displayName: 'Nom', headerCellClass: $scope.highlightFilteredHeader },
+                { name: 'c_etat',field: 'c_etat', displayName: 'Etat', filter: {
+                    term: 'Libre',
+                    type: uiGridConstants.filter.SELECT,
+                    selectOptions: [ { value: 'Libre', label: 'Libre' },{ value: 'En cours', label: 'En cours' }]
+                }, headerCellClass: $scope.highlightFilteredHeader },
+                { name: 'C_M2', displayName: 'M2',field: 'C_M2', headerCellClass: $scope.highlightFilteredHeader},
+                { name: 'C_M3', displayName: 'M3',field: 'C_M3', headerCellClass: $scope.highlightFilteredHeader},
+                { name: 'c_plan', displayName: 'Plan', headerCellClass: $scope.highlightFilteredHeader  },
+                { name: 'c_tarif', displayName: 'Tarif', headerCellClass: $scope.highlightFilteredHeader  }
+            ];
+
+            $scope.toggleFullRowSelection = function() {
+                $scope.gridOptions.enableFullRowSelection = !$scope.gridOptions.enableFullRowSelection;
+                $scope.gridApi.core.notifyDataChange( uiGridConstants.dataChange.OPTIONS);
+            };
+
+            $scope.gridOptions.onRegisterApi = function(gridApi){
+                //set gridApi on scope
+                $scope.gridApi = gridApi;
+                gridApi.selection.on.rowSelectionChanged($scope,function(row){
+                    var msg = 'row selected ' + row.isSelected;
+                    IDF = row.entity.C_UI;
+                    $http({
+                        url : "php/box.php",
+                        method: "POST",
+                        cache: false,
+                        async: false,
+                        headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                        data : {id:'4', UI:IDF}
+                    })
+                        .then(function successCallback(response)
+                        {
+                            if(response.data.res == "1")
+                            {
+                                C_BOX= response.data.C_numbox + " - " + response.data.c_empl + " (" + response.data.I_prixTTC + " " + $scope.C_currency + " TTC," + response.data.I_tailleM2 + " M2, " + response.data.I_tailleM3 + " M3)";
+                                I_chqcautionMTT= response.data.I_prixTTC;
+                                $scope.C_BOX = C_BOX;
+                                $scope.I_chqcautionMTT = I_chqcautionMTT;
+                                $scope.I_assurancecomprise = response.data.I_assuranceincluse;
+                                $scope.isTrue0 = true;
+                            }
+                            else
+                            {
+                                alert('Erreur de connexion au serveur ');
+                            }
+                        },function errorCallback(response)
+                        {
+                            console.log(response.statusText);
+                            alert('Erreur de connexion au serveur ');
+                        });
+                });
+
+                gridApi.selection.on.rowSelectionChangedBatch($scope,function(rows){
+                    var msg = 'rows changed ' + rows.length;
+
+                });
+            };
+
+            $('#tarifoption').hide(); 
+            $('#typecivilite').select2(
+                {
+                    placeholder: 'sélectionner une civilité',
+                    language: "fr",
+                    cache: false,
+                    ajax: {
+                        url: "php/select.typecivilite.php",
+                        dataType: 'json',
+                        data: function (e) {
+                            return {
+                                term: e.term,
+                                page: e.page,
+                                page_limit: 10
+                            };
+                        },
+                        results: function (data, page) {
+                            return { results: data.results };
+                        }
+                    }
+                });
+            $('#dtentree').datepicker({
+                format: "dd/mm/yyyy",
+                language: "fr",
+                autoclose: true,
+                todayBtn: true,
+                todayHighlight: true
+            });
+            $('#assurance').select2();
+            $('#assurance').select2(
+            {
+                placeholder: 'sélectionner une assurance',
+                language: "fr",
+                cache: false,
+                ajax: {
+                    url: "php/select.getassurance.php",
+                    dataType: 'json',
+                    data: function (e) {
+                        return {
+                            term: e.term,
+                            page: e.page,
+                            page_limit: 20,
+                            S_UI:$rootScope.soc.UI
+                        };
+                    },
+                    results: function (data, page) {
+                        return { results: data.results };
+                    }
+                }
+            });
+            $('#moder').select2();
+            $('#moder').select2(
+            {
+                placeholder: 'sélectionner un mode de règlement',
+                cache: false,
+                language: "fr",
+                ajax: {
+                    url: "php/select.typereg.php",
+                    dataType: 'json',
+                    data: function (e) {
+                        return {
+                            term: e.term,
+                            page: e.page,
+                            page_limit: 10
+                        };
+                    },
+                    results: function (data, page) {
+                        return { results: data.results };
+                    }
+                }
+            });
+            //validate ---------------------------
+            $('#addcontrat').validate({
+                errorElement: 'span', //default input error message container
+                errorClass: 'help-block', // default input error message class
+                focusInvalid: false, // do not focus the last invalid input
+                ignore: "",
+                rules: {
+                    CLIENTnom: {
+                        required: true
+                    },
+                    CLIENTprenom: {
+                        required: true
+                    },
+                    CLIENTemail: {
+                        email: true
+                    },
+                    CLIENTadresse: {
+                        required: true
+                    },
+                    C_codepays: {
+                        required: true
+                    },
+                    cp: {
+                        required: true
+                    },
+                    CLIENTville: {
+                        required: true
+                    }
+                },
+                invalidHandler: function(event, validator) { //display error alert on form submit
+
+                },
+                highlight: function(element) { // hightlight error inputs
+                    $(element)
+                        .closest('.form-group').addClass('has-error'); // set error class to the control group
+                },
+                success: function(label) {
+                    label.closest('.form-group').removeClass('has-error');
+                    label.remove();
+                },
+                errorPlacement: function(error, element) {
+                    if (element.closest('.input-icon').size() === 1) {
+                        error.insertAfter(element.closest('.input-icon'));
+                    } else {
+                        error.insertAfter(element);
+                    }
+                },
+                submitHandler: function(form) {
+                    //form.submit();
+                }
+            });
+
+            function format(state) {
+                if (!state.id) return state.text;
+                return "<img class='flag' src='img/flags/" + state.id.toLowerCase() + ".png'/>&nbsp;&nbsp;" + state.text;
+            }
+            $('#C_codepays').val($scope.C_codepays);
+            $("#C_codepays").select2({
+                placeholder: '<i class="fa fa-map-marker"></i>&nbsp;Choisir un pays',
+                allowClear: true,
+                formatResult: format,
+                formatSelection: format,
+                escapeMarkup: function(m) {
+                    return m;
+                }
+            });
+            
+            $.uniform.update('#C_codepays');
+            $('#C_codepays').change(function() {
+                $('#addcontrat').validate().element($(this));
+            });
+            $('#ID_clientADDC').select2();
+            $('#ID_clientADDC').select2(
+                {
+                    cache: false,
+                    language: "fr",
+                    placeholder: 'sélectionner un client',
+                    ajax: {
+                        url: "php/select.getclientadc.php",
+                        dataType: 'json',
+                        data: function (e) {
+                            return {
+                                term: e.term,
+                                page: e.page,
+                                page_limit: 15,
+                                S_UI:$rootScope.soc.UI
+                            };
+                        },
+                        results: function (data, page) {
+                            return { results: data.results };
+                        }
+                    }
+                });
+
+            $('#dtentree').datepicker('update', new Date());
+            $scope.I_chqcautionMTT = "0";
+            $scope.I_chqcautionREF = "";
+            $scope.C_refclient = "";
+            $scope.I_remise = "0";
+            $scope.M_memo ="";
+            var uiclient ='';
+            $scope.C_CLIENT = '';
+            $scope.C_BOX = '';
+            $scope.C_badge = '';
+            $scope.b_societeval = "0";
+            $scope.affetape0 = true;
+            $scope.affetape1 = false;
+            $scope.affetape1b = false;
+            $scope.affetape2 = false;
+            $scope.affetape3 = false;
+            $scope.isTrue = true;
+            $scope.isTrue3 = true;
+            $scope.isTrue2 = false;
+            $scope.etape1 = "active";
+            $scope.etape2 = "";
+            $scope.etape3 = "";
+            if (IDF != "")
+            {
+                $scope.affetape0 = false;
+                $scope.affetape1 = true;
+                $scope.C_BOX = C_BOX;
+                $scope.I_chqcautionMTT = I_chqcautionMTT;
+                $scope.etape1 = "done";
+                $scope.etape2 = "active";
+                $scope.etape3 = "";
+                $scope.isTrue3 = false;
+            }
+            else
+            {
+                $http.get('php/table.TB_BOX.php?ui='+$rootScope.soc.UI+'&bt=1')
+                    .then(function (response) {
+                        $scope.gridOptions.data = response.data.data;
+
+                    });
+            }
+
+        });
+        $scope.selbox1 =function()
+        {
+            $scope.isTrue0 = true;
+        };
+        $scope.selbox =function()
+        {
+            $scope.etape1 = "done";
+            $scope.etape2 = "active";
+            $scope.etape3 = "";
+            $scope.isTrue3 = false;
+            $scope.affetape1b = true;
+        };
+
+        $scope.selcli =function()
+        {
+            $scope.affetape1b = true;
+            uiclient = $('#ID_clientADDC').val();
+            $scope.C_CLIENT =$('#ID_clientADDC').text();
+            $http({
+                url : "php/client.php",
+                method: "POST",
+                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                data : {id:'1', CUI:uiclient}
+            })
+            .success(function (data, status, headers, config)
+            {
+                if(data.res == "1")
+                {
+                    $rootScope.client = {
+                        C_nom:data.C_nom,
+                        C_prenom:data.C_prenom,
+                        C_email:data.C_email,
+                        C_tel:data.C_tel,
+                        C_UI:uiclient,
+                        B_ACTIF:"1"};
+                }
+                else
+                {
+                    alert('Erreur : ' + data.res);
+                }
+            })
+            .error(function (data, status, headers, config)
+            {
+                console.log(status);
+                alert('Erreur de connexion au serveur ');
+            });
+
+        };
+        
+        $scope.GoEtape1 =function()
+        {
+            $scope.affetape0= false;
+            $scope.affetape1 = true;
+            $scope.etape1 = "done";
+            $scope.etape2 = "active";
+            $scope.etape3 = "";
+            $scope.isTrue3 = false;
+        };
+
+        $scope.GoEtape2addlci =function()
+        {
+
+            var rs = $("#CLIENTrs").val();
+            var siret = $("#CLIENTsiret").val();
+            var nom = $("#CLIENTnom").val();
+            var prenom = $("#CLIENTprenom").val();
+            var email = $("#CLIENTemail").val();
+            var C_codepays = $('#C_codepays').val();
+            var address = $("#CLIENTadresse").val();
+            var ville = $("#CLIENTville").val();
+            var cp = $("#cp").val();
+            var tel = $("#CLIENTtel").val();
+            var port = $("#CLIENTport").val();
+            var fax = $("#CLIENTfax").val();
+            var bsociete="0";
+            var ID_civilite = $("#typecivilite").val();
+           // var C_badge = $("#C_badge").val();
+
+            if (rs != '')
+            {
+                bsociete="1";
+            }
+            if ($('#addcontrat').validate().form())
+            {
+                $http({
+                    url : "php/client.php",
+                    method: "POST",
+                    headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                    data: { id:'40',
+                        C_EMAIL:email,
+                        SUI:$rootScope.soc.UI}
+                })
+                .success(function (data, status, headers, config)
+                {
+                    if(data.res == "1")
+                    {
+                        $http({
+                            url : "php/client.php",
+                            method: "POST",
+                            headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                            data: { id:'16',
+                                nom:nom,
+                                prenom:prenom,
+                                S_UI:$rootScope.soc.UI}
+                        })
+                            .success(function (data, status, headers, config)
+                            {
+                                if(data.res == "1")
+                                {
+                                    uiclient = data.C_UI;
+                                    $scope.C_CLIENT =prenom + " " + nom;
+
+                                    $http({
+                                        url : "php/client.php",
+                                        method: "POST",
+                                        headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                                        data: { id:'3',
+                                            ID_civilite:ID_civilite,
+                                            nom:nom,
+                                            rs:rs,
+                                            siret:siret,   
+                                            prenom:prenom,
+                                            email:email,
+                                            C_codepays:C_codepays,
+                                            address:address,
+                                            ville:ville,
+                                            cp:cp,
+                                            tel:tel,
+                                            port:port,
+                                            fax:fax,
+                                            B_societe:bsociete,
+                                            CUI:uiclient}
+                                    })
+                                        .success(function (data, status, headers, config)
+                                        {
+                                            if(data.res == "1")
+                                            {
+                                                $rootScope.client = {
+                                                    idc:"",
+                                                    C_nom:nom,
+                                                    C_prenom:prenom,
+                                                    C_email:email,
+                                                    C_tel:tel,
+                                                    C_UI:uiclient,
+                                                    B_ACTIF:"0"};
+                                                $scope.C_CLIENT =rs + " " + prenom + " " + nom;
+                                                $scope.affetape1 = false;
+                                                $scope.affetape2 = true;
+                                                $scope.affetape3 = false;
+                                                $scope.etape1 = "done";
+                                                $scope.etape2 = "done";
+                                                $scope.etape3 = "active";
+                                                $scope.etape4 = "";
+                                                $http({
+                                                    url : "php/emplacement.php",
+                                                    method: "POST",
+                                                    headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                                                    data: { id:'7',
+                                                        C_UI:IDF}
+                                                })
+                                                .success(function (data, status, headers, config)
+                                                {
+                                                    if(data.res == "1")
+                                                    {
+                                                        if(data.b == "1")
+                                                        {
+                                                            $('#tarifoption').show();
+                                                            var $option = $('<option selected>' + 'Tarif de base (' + $scope.I_chqcautionMTT + ' ' + $scope.C_currency + ' TTC)' + '</option>').val('0');
+                                                            $('#boxselecttarif').select2().append($option).trigger('change');
+                                                            $scope.B_tarif= true;
+                                                            $('#boxselecttarif').select2(
+                                                            {
+                                                                cache: false,
+                                                                language: "fr",
+                                                                placeholder: 'sélectionner un Tarif',
+                                                                ajax: {
+                                                                    url: "php/select.getboxtarif.php",
+                                                                    dataType: 'json',
+                                                                    data: function (e) {
+                                                                        return {
+                                                                            term: e.term,
+                                                                            page: e.page,
+                                                                            page_limit: 15,
+                                                                            ui:data.ui
+                                                                        };
+                                                                    },
+                                                                    results: function (data, page) {
+                                                                        return { results: data.results };
+                                                                    }
+                                                                }
+                                                            });
+                                                            
+                                                        }
+                                                        else
+                                                        {
+                                                            $scope.B_tarif= false;
+                                                            $('#tarifoption').hide();    
+                                                        }
+                                                    }
+                                                    else
+                                                    {
+                                                        var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+                                            
+                                                    }
+                                                })
+                                                .error(function (data, status, headers, config)
+                                                {
+                                                  var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+                                            
+                                                });
+                                            }
+                                            else
+                                            {
+                                                var $toast = toastr['warning']('Erreur de mise à jour', 'Mise à jour');
+
+                                            }
+                                        })
+                                        .error(function (data, status, headers, config)
+                                        {
+                                            var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+                                        });
+
+                                }
+                                else
+                                {
+                                    var $toast = toastr['error']('Erreur lors de la création', 'Ajout de client');
+                                }
+                            })
+                            .error(function (data, status, headers, config)
+                            {
+                                var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+                            });
+                    }
+                    else
+                    {
+                        var $toast = toastr['error']('Email déjà utilisé pour ' + data.nom, 'Email existant');
+                    }
+                })
+                .error(function (data, status, headers, config)
+                {
+                    var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+                });
+            }
+            else
+            {
+                var $toast = toastr['warning']('Saisie incompléte', 'Erreur');
+            }
+        };
+        
+        $scope.GoEtape2 =function()
+        {
+            $scope.affetape1 = false;
+            $scope.affetape2 = true;
+            $scope.affetape3 = false;
+            $scope.etape1 = "done";
+            $scope.etape2 = "done";
+            $scope.etape3 = "active";
+            $scope.etape4 = "";
+            $http({
+                url : "php/emplacement.php",
+                method: "POST",
+                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                data: { id:'7',
+                    C_UI:IDF}
+            })
+            .success(function (data, status, headers, config)
+            {
+                if(data.res == "1")
+                {
+                    if(data.b == "1")
+                    {
+                        $('#tarifoption').show();
+                        var $option = $('<option selected>' + 'Tarif de base (' + $scope.I_chqcautionMTT + ' ' + $scope.C_currency + ' TTC)' + '</option>').val('0');
+                        $('#boxselecttarif').select2().append($option).trigger('change');
+                        $scope.B_tarif= true;
+                        $('#boxselecttarif').select2(
+                        {
+                            cache: false,
+                            language: "fr",
+                            placeholder: 'sélectionner un Tarif',
+                            ajax: {
+                                url: "php/select.getboxtarif.php",
+                                dataType: 'json',
+                                data: function (e) {
+                                    return {
+                                        term: e.term,
+                                        page: e.page,
+                                        page_limit: 15,
+                                        ui:data.ui
+                                    };
+                                },
+                                results: function (data, page) {
+                                    return { results: data.results };
+                                }
+                            }
+                        });
+                        
+                    }
+                    else
+                    {
+                        $scope.B_tarif= false;
+                        $('#tarifoption').hide();    
+                    }
+                }
+                else
+                {
+                    var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+        
+                }
+            })
+            .error(function (data, status, headers, config)
+            {
+              var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+        
+            });
+        };
+
+        $scope.GoEtape3 =function() // creation
+        {
+            var assurance= "0";
+            var moder= "0";
+            var I_chqcautionMTT ="0";
+            $scope.C_messerr = "";
+            if ($("#assurance").val() != null)
+            {
+                assurance= $("#assurance").val();
+            }
+            if ($("#moder").val() != null)
+            {
+                moder= $("#moder").val();
+            }
+            if ($("#I_chqcautionMTT").val() != null || $("#I_chqcautionMTT").val() != ""|| $("#I_chqcautionMTT").val() != undefined)
+            {
+                I_chqcautionMTT = $("#I_chqcautionMTT").val();
+            }
+            var dtentree= $("#dtentree").val();
+           // var I_chqcautionMTT= $("#I_chqcautionMTT").val();
+            var I_chqcautionREF= $("#I_chqcautionREF").val();
+            var C_refclient= $("#C_refclient").val();
+            var M_memo= $("#M_memo").val();
+            var I_remise= $("#I_remise").val();
+            var B_chequecaution= "0";
+			var C_badgemaj= $("#C_badge").val();
+            $scope.B_chequecaution = false;
+            if ($('#B_chequecaution').is(':checked'))
+            {
+                B_chequecaution= "1";
+                $scope.B_chequecaution = true;
+            }
+            $scope.B_resa = false;
+            var B_resa= "0";
+            var ID_control= "6"; // controle si il existe une résa pour le box
+            if ($('#B_resa').is(':checked'))
+            {
+                B_resa= "1";
+                $scope.B_resa = true;
+                ID_control= "7"; // controle si il existe une résa ou devis pour le box
+            }
+
+            $http({
+                url : "php/box.php",
+                method: "POST",
+                cache: false,
+                async: false,
+                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                data : {id:ID_control, UI:IDF}
+            })
+            .then(function successCallback(response)
+            {
+                if(response.data.B_resa == "0")
+                {
+                    var tui = "";
+                    var Btarifui = "0";
+                    if ($scope.B_tarif)
+                    {
+                        tui = $('#boxselecttarif').val(); 
+                        Btarifui = "1";
+                    }
+                    $http({
+                        url : "php/contrat.php",
+                        method: "POST",
+                        headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                        data: { id:'7',
+                            uibox:IDF,
+                            dtentree:dtentree,
+                            B_tarif:Btarifui,
+                            tui:tui,
+                            S_UI:$rootScope.soc.UI,
+                            C_UI:uiclient,
+							C_badgemaj:C_badgemaj,  
+                            C_UIU:$rootScope.soc.C_UIU}
+                    })
+                    .success(function (data, status, headers, config)
+                    {
+                        if(data.res == "1")
+                        {
+                            C_UICONTRAT = data.C_UI;
+                            $http({
+                                url : "php/contrat.php",
+                                method: "POST",
+                                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                                data: { id:'6',
+                                    etat:'2',
+                                    moder:moder,
+                                    I_remise:I_remise,
+                                    dtentree:dtentree,
+                                    dtsortie:'',
+                                    dtdemandededit:'',
+                                    dtfindedit:'',
+                                    I_chqcautionMTT:I_chqcautionMTT,
+                                    I_chqcautionREF:I_chqcautionREF,
+                                    B_signature:'0',
+                                    B_carteidentite:'0',
+                                    B_attestationassurance:'0',
+                                    B_assurancepropose:'0',
+                                    C_refclient:C_refclient,
+                                    M_memo:M_memo,
+                                    B_chequecaution:B_chequecaution,
+                                    assurance:assurance,
+                                    B_resa:B_resa,
+                                    C_UI:C_UICONTRAT,
+                                    C_UIU:$rootScope.soc.C_UIU}
+                            })
+                                .success(function (data, status, headers, config)
+                                {
+                                    if(data.res == "1")
+                                    {
+                                        $scope.affetape1 = false;
+                                        $scope.affetape2 = false;
+                                        $scope.affetape3 = true;
+                                        $scope.etape1 = "done";
+                                        $scope.etape2 = "done";
+                                        $scope.etape3 = "done";
+                                        $scope.etape4 = "active";
+                                    }
+                                    else
+                                    {
+                                        var $toast = toastr['error']('Erreur de mise à jour', 'Mise à jour');
+                                    }
+                                })
+                                .error(function (data, status, headers, config)
+                                {
+                                    var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+                                });
+
+                        }
+                        else
+                        {
+                            var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+
+                        }
+                    })
+                    .error(function (data, status, headers, config)
+                    {
+                        var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+
+                    });
+                }
+                else
+                {
+                    if (ID_control == "6")
+                    {
+                        var $toast = toastr['error']("Affectation impossible : Le box est réservé", 'Erreur')
+                        $scope.C_messerr = response.data.C_mess;
+                    }
+                    else
+                    {
+                        var $toast = toastr['error']("Réservation impossible : Il existe des contrats en attente pour ce box", 'Erreur')
+                        $scope.C_messerr = response.data.C_mess;
+                    }
+                }
+            },function errorCallback(response)
+            {
+                console.log(response.statusText);
+                var $toast = toastr['info']('Création annulée', 'Création');
+            });
+
+        };
+
+        $scope.click_b_annul =function()
+        {
+            dialogModal.close();
+            var $toast = toastr['info']('Création annulée', 'Création');
+        };
+
+        $scope.click_gofiche =function()
+        {
+            dialogModal.close();
+            window.location = "#/profile/contrats";
+        };
+
+        $scope.click_valid =function()
+        {
+            $scope.libbtvalid = "Patientez";
+            $http({
+                url : "php/box.php",
+                method: "POST",
+                cache: false,
+                async: false,
+                headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                data : {id:'4', UI:IDF}
+            })
+            .then(function successCallback(response)
+            {
+                if(response.data.res == "1")
+                {
+                    if (response.data.B_libre == "1")
+                    {
+                        $http({
+                            url : "php/contrat.php",
+                            method: "POST",
+                            headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                            data: { id:'54', 
+                                C_UIC:C_UICONTRAT,
+                                S_UI:$rootScope.soc.UI,
+                                BEDIT:'1',
+                                C_UIU:$rootScope.soc.C_UIU
+                                }
+                        })
+                        .success(function (data, status, headers, config) 
+                        {
+                            $scope.libbtvalid = "Patientez ...";
+                            if(data.res == "1")
+                            {
+                                $http({
+                                    url : "php/editcontrat.php",
+                                    method: "POST",
+                                    headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                                    data: { C_UI:C_UICONTRAT,
+                                        S_UI:$rootScope.soc.UI,
+                                        BEDIT:'1'
+                                        }
+                                })
+                                .success(function (data, status, headers, config) 
+                                {
+                                    if(data.res == "1")
+                                    {
+                                        var $toast = toastr['success']('Contrat editée', 'Edition');
+                                        if(data.up != "1")
+                                        {
+                                            var $toast = toastr['error']('Erreur lors de sauvegarde du fichier', 'Edition');
+                                        }
+                                        else
+                                        {
+                                             var $toast = toastr['success']('Fichier sauvegardé', 'Edition');    
+                                        }
+
+                                        // if (B_controlacess === "1")
+                                        // {
+                                        //     goaccess($rootScope,$scope,$http,$scope.C_UI,"1","3","0","0");
+                                        // }
+                                        dialogModal.close();
+                                        window.location = "#/profile/contrats";
+                                    }
+                                    else
+                                    {
+                                       var $toast = toastr['error']('Erreur lors de creation du fichier', 'Edition');
+                                    }
+                                })
+                                .error(function (data, status, headers, config) 
+                                {
+                                   var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+                                });
+                            }
+                            else
+                            {
+                               var $toast = toastr['warning']('Erreur de mise à jour', 'Mise à jour');
+                            }
+                        })
+                        .error(function (data, status, headers, config) 
+                        {
+                           var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+                        }); 
+                    }
+                    else
+                    {
+                        var $toast = toastr['error']("Le box n'est plus disponible (Contrat n° "+response.data.C_numcontrat+")", 'Erreur')
+                    }
+                }
+                else
+                {
+                    var $toast = toastr['error']("Le box n'est plus disponible", 'Erreur')
+                }
+            },function errorCallback(response)
+            {
+                console.log(response.statusText);
+                var $toast = toastr['info']('Création annulée', 'Création');
+            });
+
+        };
+
+        $scope.click_show =function()
+        {
+            var newWindow = window.open("","_blank");
+            newWindow.location.href = myurl + '/php/editcontrat.php?C_UI='+ C_UICONTRAT + '&S_UI=' + $rootScope.soc.UI + '&BEDIT=0';
+        };
+
+    };
+
+    this.goadadreg = function($rootScope,$scope,$http,I_RESTE,C_UI,ID_modereglement,C_typereglement,CLI_UI)
+    {
+        var mtall=0;
+        if (($rootScope.soc.C_currency == 'EUR') || ($rootScope.soc.C_currency == '') )
+        {
+           $scope.C_currency = '€'; 
+        }
+        else
+        {
+            $scope.C_currency = $rootScope.soc.C_currency;     
+        }
+
+        var $modal = $('#ajax-modal');
+        $('body').modalmanager('loading');
+
+        setTimeout(function()
+        {
+            $modal.load('addreclg.html', '', function(){
+                $modal.modal();
+                $('#DateRgl').datepicker({
+                    format: "dd/mm/yyyy",
+                    language: "fr",
+                    autoclose: true,
+                    todayBtn: true,
+                    todayHighlight: true
+                });
+
+                $http({
+                    url : "php/table.TB_FACTUREAPAYER2.php?ui="+C_UI,
+                    headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                })
+                    .success(function (data, status, headers, config)
+                    {
+                        var id_array = [];
+                        var val_array = [];
+                        var mtalltmp = 0.0;
+                        $.each(data.data,function(key,value)
+                        {
+                            id_array.push(value.id);
+                            val_array.push(parseFloat(value.I_TTC));
+                            mtall += parseFloat(value.I_TTC);
+                            if (value.id == C_UI)
+                            {
+                                $('#my_multi_select1').append("<option selected value=\"" + value.id + "\">" + value.text + "</option>");
+                            }
+                            else
+                            {
+                                $('#my_multi_select1').append("<option value=\"" + value.id + "\">" + value.text + "</option>");
+                                mtalltmp += parseFloat(value.I_TTC);
+
+                            }
+                            $('#labelrest').text('Restant dû par ce client : ' + mtalltmp.toFixed(2) + ' ' + $scope.C_currency + ' TTC' );
+                        });
+                        $('#my_multi_select1').multiSelect({
+                            selectableHeader: "<div class='custom-header'>Non réglée</div>",
+                            selectionHeader: "<div class='custom-header'>Facture concernée</div>",
+                            afterSelect: function(values)
+                            {
+                                var tmptm = 0.0;
+                                var tmprest = 0.0;
+                                if ($('#my_multi_select1').val() != undefined || $('#my_multi_select1').val() != null)
+                                {
+                                    var tmres = $('#my_multi_select1').val();
+
+                                    for(var i=0, im=tmres.length; im>i; i++)
+                                    {
+                                        for(var y=0, im=id_array.length; im>y; y++)
+                                        {
+                                            if (id_array[y] == tmres[i])
+                                            {
+                                                tmptm += val_array[y];
+                                            }
+                                        }
+                                    }
+                                }
+
+                                tmprest = mtall - tmptm;
+                                $('#labelrest').text('Restant du : ' + tmprest.toFixed(2) + ' ' + $scope.C_currency + ' TTC');
+                                $('#I_mtreg').val(tmptm.toFixed(2));
+                            },
+                            afterDeselect: function(values)
+                            {
+                                var tmptm = 0.0;
+                                var tmprest = 0.0;
+                                if ($('#my_multi_select1').val() != undefined || $('#my_multi_select1').val() != null)
+                                {
+                                    var tmres = $('#my_multi_select1').val();
+                                    for(var i=0, im=tmres.length; im>i; i++)
+                                    {
+                                        for(var y=0, im=id_array.length; im>y; y++)
+                                        {
+                                            if (id_array[y] == tmres[i])
+                                            {
+                                                tmptm += val_array[y];
+                                            }
+                                        }
+                                    }
+                                }
+                                tmprest = mtall - tmptm;
+                                $('#labelrest').text('Restant du : ' + tmprest.toFixed(2) + ' ' + $scope.C_currency + ' TTC');
+                                $('#I_mtreg').val(tmptm.toFixed(2));;
+                            }
+                        });
+                    })
+                    .error(function (data, status, headers, config)
+                    {
+                        var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+                        $toastlast = $toast;
+                    });
+
+                $('#DateRgl').datepicker('update', new Date());
+                $('#I_mtreg').val(I_RESTE);
+
+
+                $('#typereg').select2();
+                var $option = $('<option selected>' + C_typereglement + '</option>').val(ID_modereglement);
+                $('#typereg').select2().append($option).trigger('change');
+                $('#typereg').select2(
+                    {
+                        placeholder: 'sélectionner un type',
+                        cache: false,
+                        language: "fr",
+                        ajax: {
+                            url: "php/select.typereg.php",
+                            dataType: 'json',
+                            data: function (e) {
+                                return {
+                                    term: e.term,
+                                    page: e.page,
+                                    page_limit: 10
+                                };
+                            },
+                            results: function (data, page) {
+                                return { results: data.results };
+                            }
+                        }
+
+                    });
+
+                $("#bt_addregl").click(function()
+                {
+                    var bok = 1;
+                    var tmpui = "";
+                    var mtreg = 0;
+                    if (parseFloat($("#I_mtreg").val()) != NaN)
+                    {
+                        mtreg = parseFloat($("#I_mtreg").val());
+                    }
+                    else
+                    {
+                        bok = 0;
+                        alert("Merci de séléctionner au le montant du réglement");
+                    }
+
+                    if ($('#my_multi_select1').val() != undefined || $('#my_multi_select1').val() != null)
+                    {
+                        var tmres = $('#my_multi_select1').val();
+                        for(var i=0, im=tmres.length; im>i; i++)
+                        {
+                            tmpui +=  "'"+tmres[i] + "'."
+                        }
+                    }
+                    else
+                    {
+                        bok = 0;
+                        alert("Merci de séléctionner au moins une facture");
+                    }
+                    if (($('#typereg').select2().val() === null) || ($("#DateRgl").val() === '') || ($("#I_mtreg").val() === ''))
+                    {
+                        bok = 0;
+                        var $toast = toastr['warning']('Saisie incorrecte', 'Erreur');
+                        $toastlast = $toast;
+                    }
+                    if (bok == 1)
+                    {
+                        $http({
+                            url : "php/client.php",
+                            method: "POST",
+                            headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+                            data: { id:'19',
+                                C_UI:tmpui,
+                                CLI_UI:CLI_UI,
+                                I_numextrait:$("#I_numextrait").val(),
+                                I_mtreg:$("#I_mtreg").val(),
+                                C_ref:$("#C_ref").val(),
+                                typereg:$('#typereg').select2().val(),
+                                DateRgl:$("#DateRgl").val()}
+                        })
+                            .success(function (data, status, headers, config)
+                            {
+                                if(data.res == "1")
+                                {
+                                    $modal.modal('hide');
+                                    var table = $('#table_facture').DataTable();
+                                    table.ajax.reload( function ( json ) {
+                                        $('#table_facture').val( json.lastInput );
+                                    } );
+                                    majvartbac($rootScope,$scope,$http);
+                                }
+                                else
+                                {
+                                    var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+                                }
+                            })
+                            .error(function (data, status, headers, config)
+                            {
+                                var $toast = toastr['error']('Erreur de connexion au serveur', 'Erreur');
+                            });
+                    }
+
+                    return false;
+                });
+
+            });
+        }, 1000);
+    };
+    
+
+}]);
+
+/**
+ * LoaderService avec support des thèmes
+ */
+BUXIDA.service('LoaderService', ['$rootScope', '$timeout', function($rootScope, $timeout) {
+        
+    var loaderConfig = {
+            isVisible: false,
+            message: 'Merci de patienter',
+            type: 'spinner',
+            overlay: true,
+            delay: 0,
+            theme: ''
+        };
+	
+	var loaderTimer = null;
+	var successTimer = null;
+	
+	this.show = function(options) {
+		if (loaderTimer) {
+			$timeout.cancel(loaderTimer);
+			loaderTimer = null;
+		}
+		if (successTimer) {
+			$timeout.cancel(successTimer);
+			successTimer = null;
+		}
+		
+		angular.extend(loaderConfig, options || {});
+		
+		loaderTimer = $timeout(function() {
+			loaderConfig.isVisible = true;
+			$rootScope.$broadcast('loader:show', loaderConfig);
+		}, loaderConfig.delay);
+	};
+	
+	// ✨ NOUVELLE MÉTHODE : Mettre à jour le message
+	this.updateMessage = function(newMessage) {
+		if (loaderConfig.isVisible) {
+			loaderConfig.message = newMessage;
+			$rootScope.$broadcast('loader:update', loaderConfig);
+		}
+	};
+	
+	// ✨ NOUVELLE MÉTHODE : Mettre à jour plusieurs propriétés
+	this.update = function(updates) {
+		if (loaderConfig.isVisible) {
+			angular.extend(loaderConfig, updates);
+			$rootScope.$broadcast('loader:update', loaderConfig);
+		}
+	};
+	
+	this.hide = function(successOptions) {
+		if (loaderTimer) {
+			$timeout.cancel(loaderTimer);
+			loaderTimer = null;
+		}
+		
+		if (successOptions && successOptions.message && loaderConfig.theme === 'corner') {
+			loaderConfig.message = successOptions.message;
+			loaderConfig.type = 'success';
+			$rootScope.$broadcast('loader:show', loaderConfig);
+			
+			var duration = successOptions.duration || 3000;
+			successTimer = $timeout(function() {
+				loaderConfig.isVisible = false;
+				$rootScope.$broadcast('loader:hide');
+			}, duration);
+		} else {
+			loaderConfig.isVisible = false;
+			$rootScope.$broadcast('loader:hide');
+		}
+	};
+	
+	this.toggle = function() {
+		if (loaderConfig.isVisible) {
+			this.hide();
+		} else {
+			this.show();
+		}
+	};
+	
+	this.isVisible = function() {
+		return loaderConfig.isVisible;
+	};
+	
+	this.getConfig = function() {
+		return loaderConfig;
+	};
+}]);

@@ -337,7 +337,7 @@ class NotificationService
             $booking->load(['box', 'site', 'tenant']);
 
             $customerName = trim($booking->customer_first_name . ' ' . $booking->customer_last_name);
-            $boxCode = $booking->box?->code ?? 'N/A';
+            $boxCode = $booking->box?->number ?? 'N/A';
             $boxSize = $booking->box?->size ? " ({$booking->box->size} m²)" : '';
             $siteName = $booking->site?->name ?? '';
             $monthlyPrice = number_format($booking->monthly_price ?? 0, 2, ',', ' ');
@@ -513,7 +513,7 @@ class NotificationService
 
             $booking->load(['box', 'site']);
 
-            $boxCode = $booking->box?->code ?? 'N/A';
+            $boxCode = $booking->box?->number ?? 'N/A';
             $boxSize = $booking->box?->size ? " ({$booking->box->size} m²)" : '';
             $siteName = $booking->site?->name ?? '';
             $siteAddress = $booking->site?->address ?? '';

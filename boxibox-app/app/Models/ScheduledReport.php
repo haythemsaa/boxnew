@@ -14,21 +14,31 @@ class ScheduledReport extends Model
     protected $fillable = [
         'tenant_id',
         'name',
+        'report_type',
+        'custom_report_id',
         'frequency',
         'day_of_week',
         'day_of_month',
+        'time',
         'recipients',
         'format',
+        'filters',
         'is_active',
+        'last_sent_at',
+        'next_send_at',
+        'send_count',
     ];
 
     protected $casts = [
+        'custom_report_id' => 'integer',
         'day_of_week' => 'integer',
         'day_of_month' => 'integer',
         'recipients' => 'array',
+        'filters' => 'array',
         'is_active' => 'boolean',
         'last_sent_at' => 'datetime',
         'next_send_at' => 'datetime',
+        'send_count' => 'integer',
     ];
 
     public function tenant(): BelongsTo

@@ -156,8 +156,12 @@
                             </svg>
                         </button>
                     </form>
-                    <p class="text-xs text-gray-500 mt-2 text-center">
-                        Propulsé par IA • Vos données sont sécurisées 🔒
+                    <p class="text-xs text-gray-500 mt-2 text-center flex items-center justify-center gap-2">
+                        <span class="flex items-center gap-1">
+                            <span :class="['w-2 h-2 rounded-full', aiProvider.has_api_key ? 'bg-green-400' : 'bg-amber-400']"></span>
+                            Propulsé par {{ providerDisplayName }}
+                        </span>
+                        • 🔒
                     </p>
                 </div>
             </div>
@@ -166,12 +170,13 @@
 </template>
 
 <script setup>
-import { ref, nextTick } from 'vue';
+import { ref, nextTick, onMounted, computed } from 'vue';
 import axios from 'axios';
 
 const isOpen = ref(false);
 const messages = ref([]);
 const inputMessage = ref('');
+const aiProvider = ref({ provider: 'loading', model: '', has_api_key: false });
 const isTyping = ref(false);
 const unreadCount = ref(0);
 const conversationId = ref(null);
@@ -247,6 +252,32 @@ const scrollToBottom = async () => {
         messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight;
     }
 };
+
+// Provider display name computed
+const providerDisplayName = computed(() => {
+    const names = {
+        groq: 'Groq AI',
+        gemini: 'Gemini',
+        openrouter: 'OpenRouter',
+        openai: 'OpenAI',
+        fallback: 'IA locale',
+        loading: 'IA...',
+    };
+    return names[aiProvider.value.provider] || 'IA';
+});
+
+// Fetch provider info on mount
+onMounted(async () => {
+    try {
+        const response = await axios.get('/api/v1/chatbot/provider');
+        if (response.data) {
+            aiProvider.value = response.data;
+        }
+    } catch (e) {
+        // Fallback - keep default
+        aiProvider.value = { provider: 'fallback', model: '', has_api_key: false };
+    }
+});
 </script>
 
 <style scoped>

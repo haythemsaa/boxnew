@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Channels\SmsChannel;
 use App\Models\PaymentReminder;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,9 +13,11 @@ class PaymentReminderNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
+    public int $tenantId;
+
     public function __construct(public PaymentReminder $reminder)
     {
-        //
+        $this->tenantId = $reminder->tenant_id;
     }
 
     /**
@@ -28,10 +31,13 @@ class PaymentReminderNotification extends Notification implements ShouldQueue
             $channels[] = 'mail';
         }
 
-        // Add SMS channel if needed in the future
-        // if (in_array($this->reminder->method, ['sms', 'both'])) {
-        //     $channels[] = 'sms';
-        // }
+        // Canal SMS via le provider du tenant
+        if (in_array($this->reminder->method, ['sms', 'both'])) {
+            $channels[] = SmsChannel::class;
+        }
+
+        // Toujours stocker en base pour l'historique
+        $channels[] = 'database';
 
         return $channels;
     }
@@ -56,17 +62,56 @@ class PaymentReminderNotification extends Notification implements ShouldQueue
             ->line('Montant : ' . number_format($invoice->total, 2, ',', ' ') . ' €')
             ->line('Date d\'échéance : ' . $invoice->due_date->format('d/m/Y'));
 
-        // Add action button
-        $mail->action('Voir ma facture', url('/tenant/invoices/' . $invoice->id));
+        // Add action button - customer portal link
+        $mail->action('Payer ma facture', url('/customer/invoices/' . $invoice->id));
 
         // Add footer based on reminder type
         if ($this->reminder->type === 'after_due') {
             $mail->line('')
                 ->line('En cas de difficultés de paiement, n\'hésitez pas à nous contacter pour trouver une solution.')
-                ->level('warning');
+                ->salutation('Cordialement,');
+        } else {
+            $mail->salutation('Cordialement,');
         }
 
         return $mail;
+    }
+
+    /**
+     * Get the SMS representation of the notification.
+     */
+    public function toSms(object $notifiable): string
+    {
+        $invoice = $this->reminder->invoice;
+        $amount = number_format($invoice->total, 2, ',', ' ');
+        $dueDate = $invoice->due_date->format('d/m/Y');
+
+        return match ($this->reminder->type) {
+            'before_due' => "BoxiBox: Facture {$invoice->invoice_number} de {$amount}€ à échéance le {$dueDate}. Pensez à régler avant la date limite.",
+            'on_due' => "BoxiBox: Facture {$invoice->invoice_number} ({$amount}€) arrive à échéance AUJOURD'HUI. Réglez-la dès maintenant.",
+            'after_due' => "BoxiBox: RAPPEL - Facture {$invoice->invoice_number} de {$amount}€ en retard depuis le {$dueDate}. Merci de régulariser rapidement.",
+            default => "BoxiBox: Rappel paiement facture {$invoice->invoice_number} - {$amount}€. Échéance: {$dueDate}.",
+        };
+    }
+
+    /**
+     * Get SMS type for tracking.
+     */
+    public function getSmsType(): string
+    {
+        return 'payment_reminder';
+    }
+
+    /**
+     * Get SMS metadata for tracking.
+     */
+    public function getSmsMetadata(): array
+    {
+        return [
+            'reminder_id' => $this->reminder->id,
+            'invoice_id' => $this->reminder->invoice_id,
+            'reminder_type' => $this->reminder->type,
+        ];
     }
 
     /**
@@ -77,8 +122,11 @@ class PaymentReminderNotification extends Notification implements ShouldQueue
         return [
             'reminder_id' => $this->reminder->id,
             'invoice_id' => $this->reminder->invoice_id,
+            'invoice_number' => $this->reminder->invoice->invoice_number,
             'type' => $this->reminder->type,
             'amount' => $this->reminder->invoice->total,
+            'due_date' => $this->reminder->invoice->due_date->toISOString(),
+            'message' => $this->reminder->message,
         ];
     }
 
@@ -89,7 +137,7 @@ class PaymentReminderNotification extends Notification implements ShouldQueue
     {
         $invoiceNumber = $this->reminder->invoice->invoice_number;
 
-        return match($this->reminder->type) {
+        return match ($this->reminder->type) {
             'before_due' => "Rappel : Facture {$invoiceNumber} à échéance dans 3 jours",
             'on_due' => "Échéance aujourd'hui : Facture {$invoiceNumber}",
             'after_due' => "Facture {$invoiceNumber} en retard - Relance",

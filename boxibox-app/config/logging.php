@@ -127,6 +127,72 @@ return [
             'path' => storage_path('logs/laravel.log'),
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | Audit Log Channel
+        |--------------------------------------------------------------------------
+        |
+        | Dedicated channel for audit logging (user actions, security events).
+        | Kept separate from application logs for compliance and analysis.
+        |
+        */
+        'audit' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/audit.log'),
+            'level' => 'info',
+            'days' => 90, // Keep audit logs for 90 days
+            'replace_placeholders' => true,
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | Security Log Channel
+        |--------------------------------------------------------------------------
+        |
+        | Dedicated channel for security events (failed logins, suspicious activity).
+        | Critical for security monitoring and incident response.
+        |
+        */
+        'security' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/security.log'),
+            'level' => 'warning',
+            'days' => 180, // Keep security logs for 180 days
+            'replace_placeholders' => true,
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | API Log Channel
+        |--------------------------------------------------------------------------
+        |
+        | Dedicated channel for API usage logging.
+        | Tracks external API requests for analytics and debugging.
+        |
+        */
+        'api' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/api.log'),
+            'level' => 'info',
+            'days' => 30, // Keep API logs for 30 days
+            'replace_placeholders' => true,
+        ],
+
+        /*
+        |--------------------------------------------------------------------------
+        | Sentry Channel (Production Error Monitoring)
+        |--------------------------------------------------------------------------
+        |
+        | Sentry provides real-time error tracking and performance monitoring.
+        | Configure SENTRY_LARAVEL_DSN in .env for production use.
+        |
+        */
+        'sentry' => [
+            'driver' => 'sentry',
+            'level' => env('LOG_LEVEL', 'error'),
+            'bubble' => true,
+        ],
+
     ],
 
 ];

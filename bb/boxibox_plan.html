@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoxiBox | Plans - État des boxes</title>
+
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Open Sans', sans-serif;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+
+        /* Header Style Buxida */
+        .page-header {
+            background: #fff;
+            border-bottom: 1px solid #e1e5eb;
+            padding: 15px 0;
+        }
+
+        .page-title h1 {
+            font-size: 24px;
+            color: #333;
+            margin: 0;
+        }
+
+        .page-title h1 small {
+            font-size: 14px;
+            color: #888;
+            margin-left: 10px;
+        }
+
+        /* Portlet Style */
+        .portlet {
+            background: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .portlet-title {
+            padding: 15px 20px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .portlet-title .caption {
+            font-size: 16px;
+            font-weight: 600;
+            color: #32c5d2;
+        }
+
+        .portlet-title .caption i {
+            margin-right: 8px;
+            color: #32c5d2;
+        }
+
+        .portlet-body {
+            padding: 20px;
+            min-height: 600px;
+            position: relative;
+        }
+
+        /* Legend - Style exact Buxida */
+        .plan-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 10px 0;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+        }
+
+        .legend-box {
+            width: 35px;
+            height: 25px;
+            border: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+        }
+
+        .legend-box.libre { background: #4CAF50; color: #fff; }
+        .legend-box.occupe { background: #2196F3; color: #fff; }
+        .legend-box.reserve { background: #FF9800; color: #fff; }
+        .legend-box.dedite { background: #FFEB3B; color: #333; }
+        .legend-box.litige { background: #9C27B0; color: #fff; }
+        .legend-box.maintenance { background: #f44336; color: #fff; }
+
+        /* Size Legend */
+        .size-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: flex-end;
+        }
+
+        .size-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 11px;
+        }
+
+        .size-box {
+            background: #4CAF50;
+            border: 1px solid #333;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: bold;
+            font-size: 9px;
+        }
+
+        /* Plan Container */
+        .plan-container {
+            width: 100%;
+            overflow: auto;
+            background: #fff;
+            border: 1px solid #ddd;
+            position: relative;
+        }
+
+        #plan-svg {
+            display: block;
+        }
+
+        /* Box Styles - Exact Buxida */
+        .box-group {
+            cursor: pointer;
+        }
+
+        .box-rect {
+            stroke: #333;
+            stroke-width: 1px;
+            transition: all 0.15s ease;
+        }
+
+        .box-rect:hover {
+            stroke-width: 2px;
+            filter: brightness(1.1);
+        }
+
+        .box-rect.libre { fill: #4CAF50; }
+        .box-rect.occupe { fill: #2196F3; }
+        .box-rect.reserve { fill: #FF9800; }
+        .box-rect.dedite { fill: #FFEB3B; }
+        .box-rect.litige { fill: #9C27B0; }
+        .box-rect.maintenance { fill: #f44336; }
+        .box-rect.indisponible { fill: #9E9E9E; }
+
+        .box-text {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 10px;
+            font-weight: bold;
+            fill: #fff;
+            pointer-events: none;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .box-text.dark { fill: #333; }
+
+        .box-volume {
+            font-family: 'Open Sans', sans-serif;
+            font-size: 8px;
+            fill: #fff;
+            pointer-events: none;
+            text-anchor: middle;
+        }
+
+        .box-volume.dark { fill: #333; }
+
+        /* Popup Style - Exact Buxida */
+        #pop-up {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            width: 300px;
+            background: #fff;
+            border: 1px solid #1a1a1a;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        #pop-up .panel-heading {
+            background: #3598dc;
+            color: #fff;
+            padding: 10px 15px;
+        }
+
+        #pop-up .panel-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        #pop-up .panel-body {
+            padding: 15px;
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        #pop-up .panel-body strong {
+            color: #333;
+        }
+
+        /* Stats Header */
+        .stats-header {
+            color: #32c5d2;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        /* Container */
+        .container-fluid {
+            padding: 20px;
+            max-width: 1600px;
+        }
+
+        /* Lift/Elevator boxes */
+        .lift-box {
+            fill: #fff;
+            stroke: #333;
+            stroke-width: 1px;
+        }
+
+        .lift-text {
+            font-size: 10px;
+            fill: #333;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        /* Building outline */
+        .building-outline {
+            fill: none;
+            stroke: #333;
+            stroke-width: 2px;
+        }
+
+        /* Person icon style */
+        .person-icon {
+            font-size: 24px;
+            color: #2196F3;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="container-fluid">
+            <div class="page-title">
+                <h1>Plans <small>État des boxes</small></h1>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container-fluid">
+        <!-- Plan Portlet -->
+        <div class="portlet">
+            <div class="portlet-title">
+                <div class="caption">
+                    <i class="fa fa-street-view"></i>
+                    <span class="stats-header">
+                        PLAN - NB BOX : <span id="total-boxes">120</span> -
+                        OCCUPÉ : <span id="occupied-boxes">89</span> -
+                        LIBRE : <span id="free-boxes">31</span>
+                    </span>
+                </div>
+            </div>
+            <div class="portlet-body">
+                <!-- Size Legend -->
+                <div class="size-legend" id="size-legend">
+                    <!-- Generated by JS -->
+                </div>
+
+                <!-- Status Legend -->
+                <div class="plan-legend">
+                    <div class="legend-item">
+                        <i class="fas fa-user person-icon"></i>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box libre">3,5m3</div>
+                        <span>Libre</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box occupe">3,5m3</div>
+                        <span>Occupé</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box reserve">3,5m3</div>
+                        <span>Réservé</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box dedite">3,5m3</div>
+                        <span>Fin contrat</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box litige">3,5m3</div>
+                        <span>Litige</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box maintenance">3,5m3</div>
+                        <span>Maintenance</span>
+                    </div>
+                </div>
+
+                <!-- Plan SVG -->
+                <div class="plan-container">
+                    <svg id="plan-svg" width="1400" height="700" viewBox="0 0 1400 700">
+                        <defs>
+                            <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                                <feDropShadow dx="1" dy="1" stdDeviation="1" flood-opacity="0.2"/>
+                            </filter>
+                        </defs>
+
+                        <!-- Building Outline -->
+                        <rect class="building-outline" x="40" y="80" width="1320" height="580" rx="2"/>
+
+                        <!-- Boxes Group -->
+                        <g id="boxes-group"></g>
+
+                        <!-- Lifts -->
+                        <g id="lifts-group"></g>
+                    </svg>
+                </div>
+
+                <!-- Popup -->
+                <div id="pop-up" class="panel panel-primary">
+                    <div class="panel-heading">
+                        <h3 class="panel-title"><span id="popup-box-name">Box A1</span></h3>
+                    </div>
+                    <div class="panel-body">
+                        <div id="popup-type"><strong>Type : </strong><span></span></div>
+                        <div id="popup-etat"><strong>État : </strong><span></span></div>
+                        <div id="popup-contrat"><strong>Contrat : </strong><span></span></div>
+                        <div id="popup-client"><strong>Client : </strong><span></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // =====================================================
+        // CONFIGURATION - Style exact Buxida
+        // =====================================================
+
+        const STATUS_COLORS = {
+            libre: '#4CAF50',      // Vert
+            occupe: '#2196F3',     // Bleu
+            reserve: '#FF9800',   // Orange
+            dedite: '#FFEB3B',    // Jaune
+            litige: '#9C27B0',    // Violet
+            maintenance: '#f44336', // Rouge
+            indisponible: '#9E9E9E' // Gris
+        };
+
+        const STATUS_LABELS = {
+            libre: 'Libre',
+            occupe: 'Occupé',
+            reserve: 'Réservé',
+            dedite: 'Fin de contrat',
+            litige: 'Litige',
+            maintenance: 'Maintenance',
+            indisponible: 'Indisponible'
+        };
+
+        // =====================================================
+        // DONNÉES DES BOXES - Structure similaire à Buxida
+        // =====================================================
+
+        function generateBoxes() {
+            const boxes = [];
+
+            // Configuration des rangées (style Buxida)
+            const config = {
+                // Rangée M (gauche)
+                M: { startX: 50, startY: 100, cols: 7, rows: 2, boxW: 45, boxH: 40, volumes: [18, 18, 18, 18, 18, 18, 18] },
+
+                // Rangée K
+                K: { startX: 140, startY: 100, cols: 6, rows: 2, boxW: 35, boxH: 35, volumes: [9, 9, 9, 9, 9, 9] },
+
+                // Rangée J
+                J: { startX: 230, startY: 100, cols: 7, rows: 2, boxW: 35, boxH: 35, volumes: [16, 16, 9, 9, 9, 9, 9] },
+
+                // Rangée I (grande)
+                I: { startX: 320, startY: 100, cols: 6, rows: 3, boxW: 50, boxH: 45, volumes: [30, 30, 35, 30, 30, 30] },
+
+                // Rangée H
+                H: { startX: 450, startY: 100, cols: 11, rows: 2, boxW: 35, boxH: 35, volumes: [16, 16, 16, 16, 16, 16, 16, 16, 16, 16, 16] },
+
+                // Rangée G
+                G: { startX: 580, startY: 100, cols: 10, rows: 2, boxW: 40, boxH: 38, volumes: [18, 18, 18, 18, 18, 18, 18, 18, 18, 18] },
+
+                // Rangée F
+                F: { startX: 720, startY: 100, cols: 7, rows: 2, boxW: 45, boxH: 40, volumes: [18, 18, 18, 18, 18, 18, 18] },
+
+                // Rangée E
+                E: { startX: 850, startY: 100, cols: 7, rows: 2, boxW: 45, boxH: 40, volumes: [18, 18, 18, 18, 18, 18, 18] },
+
+                // Rangée D
+                D: { startX: 980, startY: 100, cols: 5, rows: 2, boxW: 45, boxH: 40, volumes: [18, 18, 18, 18, 18] },
+
+                // Rangée C
+                C: { startX: 1100, startY: 100, cols: 5, rows: 2, boxW: 40, boxH: 38, volumes: [18, 18, 18, 18, 18] },
+
+                // Rangée X (droite)
+                X: { startX: 1240, startY: 100, cols: 4, rows: 4, boxW: 35, boxH: 35, volumes: [25, 25, 30, 30, 25, 30, 18, 18] },
+            };
+
+            // Rangée du bas - L
+            const configBottom = {
+                L: { startX: 50, startY: 550, cols: 10, boxW: 50, boxH: 40, volumes: [25, 18, 25, 18, 18, 18, 18, 18, 18, 19] },
+
+                // Rangées du milieu bas
+                A: { startX: 350, startY: 550, cols: 15, boxW: 30, boxH: 25, volumes: new Array(15).fill(3) },
+                B: { startX: 350, startY: 510, cols: 15, boxW: 30, boxH: 25, volumes: new Array(15).fill(3) },
+
+                // N et Q (droite bas)
+                N: { startX: 1000, startY: 530, cols: 3, boxW: 60, boxH: 50, volumes: [30, 50, 50] },
+                Q: { startX: 1200, startY: 510, cols: 2, rows: 4, boxW: 40, boxH: 30, volumes: [30, 30, 30, 30, 18, 32] },
+            };
+
+            let boxId = 0;
+            const statuses = ['libre', 'occupe', 'occupe', 'occupe', 'occupe', 'reserve', 'dedite'];
+
+            // Générer les boxes pour chaque rangée principale
+            Object.keys(config).forEach(row => {
+                const cfg = config[row];
+                const rows = cfg.rows || 1;
+
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cfg.cols; c++) {
+                        const num = rows > 1 ? (cfg.cols * 2 - (r * cfg.cols + c)) : (cfg.cols - c);
+                        const volume = cfg.volumes[c % cfg.volumes.length];
+                        const status = statuses[Math.floor(Math.random() * statuses.length)];
+
+                        boxes.push({
+                            id: `box-${row}${num}`,
+                            name: `${row}${num}`,
+                            row: row,
+                            x: cfg.startX + c * (cfg.boxW + 2),
+                            y: cfg.startY + r * (cfg.boxH + 2),
+                            width: cfg.boxW,
+                            height: cfg.boxH,
+                            volume: volume,
+                            status: status,
+                            contract: status === 'occupe' ? `CO${2022 + Math.floor(Math.random() * 3)}${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}` : null,
+                            client: status === 'occupe' ? getRandomClient() : null,
+                            startDate: status === 'occupe' ? getRandomDate() : null
+                        });
+                        boxId++;
+                    }
+                }
+            });
+
+            // Générer les boxes du bas
+            Object.keys(configBottom).forEach(row => {
+                const cfg = configBottom[row];
+                const rows = cfg.rows || 1;
+
+                for (let r = 0; r < rows; r++) {
+                    for (let c = 0; c < cfg.cols; c++) {
+                        const num = c + 1 + (r * cfg.cols);
+                        const volume = cfg.volumes[Math.min(num - 1, cfg.volumes.length - 1)];
+                        const status = statuses[Math.floor(Math.random() * statuses.length)];
+
+                        boxes.push({
+                            id: `box-${row}${num}`,
+                            name: `${row}${num}`,
+                            row: row,
+                            x: cfg.startX + c * (cfg.boxW + 2),
+                            y: cfg.startY + r * (cfg.boxH + 2),
+                            width: cfg.boxW,
+                            height: cfg.boxH,
+                            volume: volume,
+                            status: status,
+                            contract: status === 'occupe' ? `CO${2022 + Math.floor(Math.random() * 3)}${String(Math.floor(Math.random() * 100000)).padStart(5, '0')}` : null,
+                            client: status === 'occupe' ? getRandomClient() : null,
+                            startDate: status === 'occupe' ? getRandomDate() : null
+                        });
+                        boxId++;
+                    }
+                }
+            });
+
+            return boxes;
+        }
+
+        function getRandomClient() {
+            const clients = [
+                'Martin Dupont', 'Marie Dubois', 'Jean Lefebvre', 'Sophie Bernard',
+                'Pierre Martin', 'Isabelle Petit', 'François Robert', 'Nathalie Richard',
+                'Philippe Durand', 'Catherine Leroy', 'Michel Moreau', 'Anne Simon',
+                'Amba Akatshi Philomène Bridget', 'Laurent Garcia', 'Sylvie Martinez'
+            ];
+            return clients[Math.floor(Math.random() * clients.length)];
+        }
+
+        function getRandomDate() {
+            const year = 2022 + Math.floor(Math.random() * 3);
+            const month = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
+            const day = String(Math.floor(Math.random() * 28) + 1).padStart(2, '0');
+            return `${day}/${month}/${year}`;
+        }
+
+        // =====================================================
+        // RENDU SVG
+        // =====================================================
+
+        let boxes = generateBoxes();
+        const svg = document.getElementById('plan-svg');
+        const boxesGroup = document.getElementById('boxes-group');
+        const popup = document.getElementById('pop-up');
+
+        function renderBoxes() {
+            boxesGroup.innerHTML = '';
+
+            boxes.forEach(box => {
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', 'box-group');
+                g.setAttribute('data-box-id', box.id);
+
+                // Rectangle
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('class', `box-rect ${box.status}`);
+                rect.setAttribute('x', box.x);
+                rect.setAttribute('y', box.y);
+                rect.setAttribute('width', box.width);
+                rect.setAttribute('height', box.height);
+                rect.setAttribute('rx', '1');
+
+                // Box name text
+                const textName = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                textName.setAttribute('class', `box-text ${box.status === 'dedite' ? 'dark' : ''}`);
+                textName.setAttribute('x', box.x + box.width / 2);
+                textName.setAttribute('y', box.y + box.height / 2 - 5);
+                textName.textContent = box.name;
+
+                // Volume text
+                const textVol = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                textVol.setAttribute('class', `box-volume ${box.status === 'dedite' ? 'dark' : ''}`);
+                textVol.setAttribute('x', box.x + box.width / 2);
+                textVol.setAttribute('y', box.y + box.height / 2 + 8);
+                textVol.textContent = `${box.volume}m3`;
+
+                // Events
+                g.addEventListener('mouseenter', (e) => showPopup(box, e));
+                g.addEventListener('mouseleave', hidePopup);
+                g.addEventListener('mousemove', (e) => movePopup(e));
+
+                g.appendChild(rect);
+                g.appendChild(textName);
+                g.appendChild(textVol);
+                boxesGroup.appendChild(g);
+            });
+
+            // Add lifts
+            renderLifts();
+
+            // Update stats
+            updateStats();
+        }
+
+        function renderLifts() {
+            const liftsGroup = document.getElementById('lifts-group');
+            liftsGroup.innerHTML = '';
+
+            const lifts = [
+                { x: 200, y: 500, width: 60, height: 40 },
+                { x: 1150, y: 520, width: 60, height: 40 }
+            ];
+
+            lifts.forEach(lift => {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('class', 'lift-box');
+                rect.setAttribute('x', lift.x);
+                rect.setAttribute('y', lift.y);
+                rect.setAttribute('width', lift.width);
+                rect.setAttribute('height', lift.height);
+                rect.setAttribute('rx', '2');
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('class', 'lift-text');
+                text.setAttribute('x', lift.x + lift.width / 2);
+                text.setAttribute('y', lift.y + lift.height / 2);
+                text.textContent = 'LIFT';
+
+                liftsGroup.appendChild(rect);
+                liftsGroup.appendChild(text);
+            });
+        }
+
+        function updateStats() {
+            let total = boxes.length;
+            let occupied = boxes.filter(b => b.status === 'occupe').length;
+            let free = boxes.filter(b => b.status === 'libre').length;
+
+            document.getElementById('total-boxes').textContent = total;
+            document.getElementById('occupied-boxes').textContent = occupied;
+            document.getElementById('free-boxes').textContent = free;
+        }
+
+        // =====================================================
+        // POPUP - Style exact Buxida
+        // =====================================================
+
+        function showPopup(box, event) {
+            // Update content
+            document.getElementById('popup-box-name').textContent = `Box ${box.name}`;
+
+            document.querySelector('#popup-type span').textContent =
+                `${box.volume}m3 (0 m2 - ${box.volume} m3)`;
+
+            let etatText = STATUS_LABELS[box.status];
+            if (box.contract) {
+                etatText += ` - Contrat : ${box.contract}`;
+                if (box.startDate) {
+                    etatText += ` Début le ${box.startDate}`;
+                }
+            }
+            document.querySelector('#popup-etat span').textContent = etatText;
+
+            document.querySelector('#popup-contrat span').textContent = box.contract || '-';
+            document.querySelector('#popup-client span').textContent = box.client || '-';
+
+            // Show/hide contract and client rows
+            document.getElementById('popup-contrat').style.display = box.contract ? 'block' : 'none';
+            document.getElementById('popup-client').style.display = box.client ? 'block' : 'none';
+
+            // Position
+            movePopup(event);
+            popup.style.display = 'block';
+        }
+
+        function movePopup(event) {
+            const containerRect = document.querySelector('.plan-container').getBoundingClientRect();
+            let x = event.clientX - containerRect.left + 15;
+            let y = event.clientY - containerRect.top + 15;
+
+            // Keep popup on screen
+            if (x + 310 > containerRect.width) {
+                x = event.clientX - containerRect.left - 310;
+            }
+            if (y + 200 > containerRect.height) {
+                y = event.clientY - containerRect.top - 200;
+            }
+
+            popup.style.left = x + 'px';
+            popup.style.top = y + 'px';
+        }
+
+        function hidePopup() {
+            popup.style.display = 'none';
+        }
+
+        // =====================================================
+        // SIZE LEGEND
+        // =====================================================
+
+        function generateSizeLegend() {
+            const sizeLegend = document.getElementById('size-legend');
+            const sizes = [
+                { volume: '3,5m3', width: 25, height: 20 },
+                { volume: '75m3', width: 45, height: 35 },
+                { volume: '75m3', width: 45, height: 35 },
+                { volume: '150m3', width: 55, height: 40 },
+                { volume: '100m3', width: 50, height: 38 },
+                { volume: '16m3', width: 35, height: 28 },
+                { volume: '18m3', width: 38, height: 30 },
+                { volume: '110m3', width: 52, height: 40 },
+            ];
+
+            sizes.forEach(size => {
+                const item = document.createElement('div');
+                item.className = 'size-item';
+
+                const box = document.createElement('div');
+                box.className = 'size-box';
+                box.style.width = size.width + 'px';
+                box.style.height = size.height + 'px';
+                box.textContent = size.volume.replace('m3', '');
+
+                const label = document.createElement('span');
+                label.textContent = size.volume;
+
+                item.appendChild(box);
+                item.appendChild(label);
+                sizeLegend.appendChild(item);
+            });
+        }
+
+        // =====================================================
+        // INITIALIZATION
+        // =====================================================
+
+        generateSizeLegend();
+        renderBoxes();
+    </script>
+</body>
+</html>

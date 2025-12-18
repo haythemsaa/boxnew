@@ -1,0 +1,1395 @@
+// Route State Load Spinner(used on page or content load)
+BUXIDA.directive('ngSpinnerBar', ['$rootScope',
+    function($rootScope) {
+        return {
+            link: function(scope, element, attrs) {
+                // by defult hide the spinner bar
+                element.addClass('hide'); // hide spinner bar by default
+
+                // display the spinner bar whenever the route changes(the content part started loading)
+                $rootScope.$on('$stateChangeStart', function() {
+                    element.removeClass('hide'); // show spinner bar
+                    Layout.closeMainMenu();
+                });
+
+                // hide the spinner bar on rounte change success(after the content loaded)
+                $rootScope.$on('$stateChangeSuccess', function() {
+                    element.addClass('hide'); // hide spinner bar
+                    $('body').removeClass('page-on-load'); // remove page loading indicator
+                    Layout.setMainMenuActiveLink('match'); // activate selected link in the sidebar menu
+
+                    // auto scorll to page top
+                    setTimeout(function () {
+                        App.scrollTop(); // scroll to the top on content load
+                    }, $rootScope.settings.layout.pageAutoScrollOnLoad);                    
+                });
+
+                // handle errors
+                $rootScope.$on('$stateNotFound', function() {
+                    element.addClass('hide'); // hide spinner bar
+                });
+
+                // handle errors
+                $rootScope.$on('$stateChangeError', function() {
+                    element.addClass('hide'); // hide spinner bar
+                });
+            }
+        };
+    }
+])
+
+// Handle global LINK click
+BUXIDA.directive('a',
+    function() {
+        return {
+            restrict: 'E',
+            link: function(scope, elem, attrs) {
+                if (attrs.ngClick || attrs.href === '' || attrs.href === '#') {
+                    elem.on('click', function(e) {
+                        e.preventDefault(); // prevent link click for above criteria
+                    });
+                }
+            }
+        };
+    });
+ 
+BUXIDA.directive('dropdownMenuHover', function () {
+  return {
+    link: function (scope, elem) {
+      elem.dropdownHover();
+    }
+  };  
+})
+BUXIDA.directive('stNumberRange', ['$timeout', function ($timeout) {
+        return {
+            restrict: 'E',
+            require: '^stTable',
+            scope: {
+                lower: '=',
+                higher: '='
+            },
+            templateUrl: 'stNumberRange.html',
+            link: function (scope, element, attr, table) {
+                var inputs = element.find('input');
+                var inputLower = angular.element(inputs[0]);
+                var inputHigher = angular.element(inputs[1]);
+                var predicateName = attr.predicate;
+
+                [inputLower, inputHigher].forEach(function (input, index) {
+
+                    input.bind('blur', function () {
+                        var query = {};
+
+                        if (scope.lower) {
+                            query.lower = scope.lower;
+                        }
+
+                        if (scope.higher) {
+                            query.higher = scope.higher;
+                        }
+
+                        scope.$apply(function () {
+                            table.search(query, predicateName)
+                        });
+                    });
+                });
+            }
+        };
+    }])
+;
+
+angular.module('BUXIDA').directive('summernoteEditor', ['$timeout', '$log', function($timeout, $log) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        scope: {
+            summernoteConfig: '&?', // Configuration optionnelle
+            ngModel: '='            // Binding bidirectionnel
+        },
+        link: function(scope, element, attrs, ngModelCtrl) {
+            
+            // ===== CONFIGURATION PAR DÉFAUT =====
+            var defaultConfig = {
+                height: 100,
+                lang: 'fr-FR',
+                placeholder: 'Saisissez votre texte...',
+                toolbar: [
+                    ['style', ['bold', 'italic', 'underline', 'clear']],
+                    ['fontsize', ['fontsize']],
+                    ['color', ['color']],
+                    ['para', ['ul', 'ol', 'paragraph']],
+                    ['height', ['height']]
+                ],
+                callbacks: {
+                    onChange: function(contents) {
+                        // Synchroniser avec ng-model
+                        scope.$apply(function() {
+                            ngModelCtrl.$setViewValue(contents);
+                            scope.ngModel = contents;
+                        });
+                    },
+                    onInit: function() {
+                        $log.debug('Summernote initialisé');
+                        // Charger la valeur initiale si elle existe
+                        if (scope.ngModel) {
+                            element.summernote('code', scope.ngModel);
+                        }
+                    },
+                    onFocus: function() {
+                        ngModelCtrl.$setTouched();
+                    }
+                }
+            };
+
+            // ===== FUSION DE LA CONFIGURATION =====
+            var config = defaultConfig;
+            if (scope.summernoteConfig && angular.isFunction(scope.summernoteConfig)) {
+                var customConfig = scope.summernoteConfig();
+                if (customConfig && angular.isObject(customConfig)) {
+                    // Fusionner les callbacks pour éviter d'écraser onChange
+                    if (customConfig.callbacks) {
+                        var customCallbacks = customConfig.callbacks;
+                        customConfig.callbacks = angular.extend({}, defaultConfig.callbacks, customCallbacks);
+                        
+                        // Préserver notre onChange critique
+                        var originalOnChange = defaultConfig.callbacks.onChange;
+                        if (customCallbacks.onChange) {
+                            customConfig.callbacks.onChange = function(contents) {
+                                // Exécuter d'abord notre sync avec ng-model
+                                originalOnChange(contents);
+                                // Puis le callback personnalisé
+                                customCallbacks.onChange(contents);
+                            };
+                        }
+                    }
+                    config = angular.extend({}, defaultConfig, customConfig);
+                }
+            }
+
+            // ===== INITIALISATION DIFFÉRÉE =====
+            $timeout(function() {
+                try {
+                    // Vérifier que Summernote est disponible
+                    if (!angular.isFunction(element.summernote)) {
+                        $log.error('Summernote non disponible. Vérifiez que la librairie est chargée.');
+                        return;
+                    }
+
+                    // Initialiser Summernote
+                    element.summernote(config);
+                    
+                    $log.debug('Summernote directive initialisée avec succès');
+
+                } catch (error) {
+                    $log.error('Erreur lors de l\'initialisation de Summernote:', error);
+                }
+            }, 0);
+
+            // ===== SYNCHRONISATION ng-model → Summernote =====
+            scope.$watch('ngModel', function(newValue, oldValue) {
+                if (newValue !== oldValue && element.data('summernote')) {
+                    var currentContent = element.summernote('code');
+                    if (currentContent !== newValue) {
+                        element.summernote('code', newValue || '');
+                    }
+                }
+            });
+
+            // ===== MÉTHODES PUBLIQUES =====
+            
+            // Fonction pour réinitialiser l'éditeur
+            scope.resetEditor = function() {
+                if (element.data('summernote')) {
+                    element.summernote('code', '');
+                    ngModelCtrl.$setViewValue('');
+                    scope.ngModel = '';
+                }
+            };
+
+            // Fonction pour obtenir le contenu
+            scope.getContent = function() {
+                return element.data('summernote') ? element.summernote('code') : '';
+            };
+
+            // Fonction pour définir le contenu
+            scope.setContent = function(content) {
+                if (element.data('summernote')) {
+                    element.summernote('code', content || '');
+                    ngModelCtrl.$setViewValue(content || '');
+                    scope.ngModel = content || '';
+                }
+            };
+
+            // ===== VALIDATION ANGULARJS =====
+            
+            // Marquer comme touché lors de la première modification
+            var firstChange = true;
+            config.callbacks.onChange = (function(originalOnChange) {
+                return function(contents) {
+                    // Exécuter le callback original
+                    originalOnChange(contents);
+                    
+                    // Marquer comme touché à la première modification
+                    if (firstChange) {
+                        scope.$apply(function() {
+                            ngModelCtrl.$setTouched();
+                        });
+                        firstChange = false;
+                    }
+                    
+                    // Validation personnalisée si nécessaire
+                    ngModelCtrl.$setValidity('summernote', true);
+                };
+            })(config.callbacks.onChange);
+
+            // ===== NETTOYAGE =====
+            scope.$on('$destroy', function() {
+                try {
+                    if (element.data('summernote')) {
+                        element.summernote('destroy');
+                        $log.debug('Summernote détruit proprement');
+                    }
+                } catch (error) {
+                    $log.error('Erreur lors de la destruction de Summernote:', error);
+                }
+            });
+
+            // ===== GESTION DES ERREURS =====
+            
+            // Surveiller les erreurs Summernote
+            element.on('summernote.error', function(we, e) {
+                $log.error('Erreur Summernote:', e);
+            });
+
+            // Vérification périodique de l'état
+            var healthCheck = $timeout(function checkHealth() {
+                if (!element.data('summernote')) {
+                    $log.warn('Summernote semble avoir été détruit de manière inattendue');
+                } else {
+                    healthCheck = $timeout(checkHealth, 30000); // Vérifier toutes les 30s
+                }
+            }, 30000);
+
+            // Nettoyer le health check
+            scope.$on('$destroy', function() {
+                if (healthCheck) {
+                    $timeout.cancel(healthCheck);
+                }
+            });
+        }
+    };
+}]);
+
+/**
+ * Directive AngularJS pour intégrer Select2 avec ng-model
+ * Usage: <select ui-select2="config" ng-model="selectedValue" on-select2-select="onSelect($item)" required-selection="true"></select>
+ */
+angular.module('BUXIDA').directive('uiSelect2', ['$timeout', '$parse', function($timeout, $parse) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function(scope, element, attrs, ngModel) {
+            var config = {};
+            var onSelectCallback = null;
+            var requireSelection = attrs.requiredSelection === 'true';
+            
+            // 1. RÉCUPÉRER LA CONFIGURATION
+            if (attrs.uiSelect2) {
+                scope.$watch(attrs.uiSelect2, function(newVal) {
+                    if (newVal) {
+                        config = angular.copy(newVal);
+                        
+                        // Si requireSelection, ajouter l'option vide par défaut
+                        if (requireSelection) {
+                            // Activer allowClear pour pouvoir désélectionner
+                            config.allowClear = false; // Ne pas permettre de vider après sélection
+                            
+                            // S'assurer qu'il y a un placeholder
+                            if (!config.placeholder) {
+                                config.placeholder = 'Merci de faire une sélection';
+                            }
+                        }
+                        
+                        initSelect2();
+                    }
+                }, true);
+            }
+            
+            // 2. RÉCUPÉRER LE CALLBACK on-select
+            if (attrs.onSelect2Select) {
+                onSelectCallback = $parse(attrs.onSelect2Select);
+            }
+            
+            // 3. INITIALISATION SELECT2
+            function initSelect2() {
+                $timeout(function() {
+                    // Détruire l'instance existante si présente
+                    if (element.data('select2')) {
+                        element.select2('destroy');
+                    }
+                    
+                    // Si requireSelection, ajouter l'option vide
+                    if (requireSelection && element.find('option[value="0"]').length === 0) {
+                        element.prepend('<option value="0" selected disabled>Merci de faire une sélection</option>');
+                    }
+                    
+                    // Initialiser Select2 avec la config
+                    element.select2(config);
+                    
+                    // Définir la valeur initiale si elle existe et n'est pas "0"
+                    if (ngModel.$viewValue && ngModel.$viewValue !== '0' && ngModel.$viewValue !== 0) {
+                        element.val(ngModel.$viewValue).trigger('change.select2');
+                    } else if (requireSelection) {
+                        // Si requireSelection, forcer la valeur à "0"
+                        element.val('0').trigger('change.select2');
+                        ngModel.$setViewValue('0');
+                    }
+                    
+                    // 4. SYNCHRONISER Select2 → ngModel
+                    element.on('change', function() {
+                        scope.$apply(function() {
+                            var value = element.val();
+                            ngModel.$setViewValue(value);
+                            
+                            // Validation : invalide si value est "0" et requireSelection
+                            if (requireSelection) {
+                                ngModel.$setValidity('required', value !== '0' && value !== 0 && value !== null && value !== '');
+                            }
+                        });
+                    });
+                    
+                    // 5. GÉRER L'ÉVÉNEMENT select2:select
+                    element.on('select2:select', function(e) {
+                        var value = e.params.data.id;
+                        
+                        // Validation automatique
+                        if (requireSelection) {
+                            ngModel.$setValidity('required', value !== '0' && value !== 0);
+                        }
+                        
+                        if (onSelectCallback) {
+                            scope.$apply(function() {
+                                onSelectCallback(scope, {
+                                    $event: e,
+                                    $item: e.params.data
+                                });
+                            });
+                        }
+                    });
+                    
+                    // 6. GÉRER L'ÉVÉNEMENT select2:unselect (pour multi-select)
+                    element.on('select2:unselect', function(e) {
+                        scope.$apply(function() {
+                            ngModel.$setViewValue(element.val());
+                            
+                            if (requireSelection) {
+                                var value = element.val();
+                                ngModel.$setValidity('required', value !== '0' && value !== 0 && value !== null && value !== '');
+                            }
+                        });
+                    });
+                    
+                    // 7. VALIDATION INITIALE
+                    if (requireSelection) {
+                        var initialValue = ngModel.$viewValue;
+                        ngModel.$setValidity('required', 
+                            initialValue && 
+                            initialValue !== '0' && 
+                            initialValue !== 0 && 
+                            initialValue !== null && 
+                            initialValue !== ''
+                        );
+                    }
+                }, 0);
+            }
+            
+            // 8. SYNCHRONISER ngModel → Select2
+            ngModel.$render = function() {
+                $timeout(function() {
+                    if (element.data('select2')) {
+                        var value = ngModel.$viewValue;
+                        
+                        // Si pas de valeur et requireSelection, mettre "0"
+                        if (requireSelection && (!value || value === '' || value === null)) {
+                            value = '0';
+                        }
+                        
+                        element.val(value).trigger('change.select2');
+                        
+                        // Validation
+                        if (requireSelection) {
+                            ngModel.$setValidity('required', value !== '0' && value !== 0);
+                        }
+                    }
+                });
+            };
+            
+            // 9. WATCH sur le ngModel pour les changements externes
+            scope.$watch(attrs.ngModel, function(newValue, oldValue) {
+                if (newValue !== oldValue && element.data('select2')) {
+                    var value = newValue;
+                    
+                    // Si pas de valeur et requireSelection, mettre "0"
+                    if (requireSelection && (!value || value === '' || value === null)) {
+                        value = '0';
+                    }
+                    
+                    element.val(value).trigger('change.select2');
+                    
+                    // Validation
+                    if (requireSelection) {
+                        ngModel.$setValidity('required', value !== '0' && value !== 0 && value !== null && value !== '');
+                    }
+                }
+            });
+            
+            // 10. NETTOYAGE
+            scope.$on('$destroy', function() {
+                if (element.data('select2')) {
+                    element.off('change select2:select select2:unselect');
+                    element.select2('destroy');
+                }
+            });
+            
+            // Initialiser si config déjà disponible
+            if (scope.$eval(attrs.uiSelect2)) {
+                config = scope.$eval(attrs.uiSelect2);
+                initSelect2();
+            }
+        }
+    };
+}]);
+
+/**
+ * Directive AngularJS pour intégrer Bootstrap Switch avec ng-model
+ * Version finale simplifiée - Utilise des classes CSS prédéfinies
+ * 
+ * Usage: 
+ * <input type="checkbox" 
+ *        bootstrap-switch 
+ *        ng-model="assurancePropose" 
+ *        switch-config="switchConfig">
+ * 
+ * Configuration:
+ * $scope.switchConfig = {
+ *     size: 'small',
+ *     onColor: 'success',
+ *     offColor: 'default',
+ *     onText: 'OUI',
+ *     offText: 'NON',
+ *     cssClass: 'switch-text-full',  // ← Classe CSS pour la largeur
+ *     animate: true
+ * };
+ * 
+ * Classes CSS disponibles (à définir dans votre CSS) :
+ * - switch-text-full : Pour texte OUI/NON (80px)
+ * - switch-compact : Pour symboles ✓/✗ (50px)
+ * - switch-text-long : Pour texte long ACTIVÉ/DÉSACTIVÉ (140px)
+ * - switch-medium : Pour texte moyen (100px)
+ * - switch-minimal : Sans texte (45px)
+ */
+angular.module('BUXIDA').directive('bootstrapSwitch', ['$timeout', '$parse', function($timeout, $parse) {
+    return {
+        restrict: 'A',
+        require: 'ngModel',
+        link: function(scope, element, attrs, ngModel) {
+            var config = {};
+            var onChangeCallback = null;
+            
+            // 1. RÉCUPÉRER LA CONFIGURATION
+            if (attrs.switchConfig) {
+                scope.$watch(attrs.switchConfig, function(newVal) {
+                    if (newVal) {
+                        config = angular.copy(newVal);
+                        initBootstrapSwitch();
+                    }
+                }, true);
+            }
+            
+            // 2. RÉCUPÉRER LE CALLBACK on-switch-change (optionnel)
+            if (attrs.onSwitchChange) {
+                onChangeCallback = $parse(attrs.onSwitchChange);
+            }
+            
+            // 3. INITIALISATION BOOTSTRAP SWITCH
+            function initBootstrapSwitch() {
+                $timeout(function() {
+                    // Détruire l'instance existante si présente
+                    if (element.data('bootstrap-switch')) {
+                        element.bootstrapSwitch('destroy');
+                    }
+                    
+                    // Configuration par défaut
+                    var defaultConfig = {
+                        size: 'small',
+                        onColor: 'success',
+                        offColor: 'default',
+                        onText: 'OUI',
+                        offText: 'NON',
+                        animate: true
+                    };
+                    
+                    // Fusionner avec la configuration personnalisée
+                    var finalConfig = angular.extend({}, defaultConfig, config);
+                    
+                    // Extraire la classe CSS personnalisée
+                    var customClass = finalConfig.cssClass || '';
+                    delete finalConfig.cssClass;
+                    
+                    // Ajouter la classe via wrapperClass
+                    if (customClass) {
+                        finalConfig.wrapperClass = (finalConfig.wrapperClass || '') + ' ' + customClass;
+                    }
+                    
+                    // Initialiser Bootstrap Switch
+                    element.bootstrapSwitch(finalConfig);
+                    
+                    // Définir l'état initial
+                    var initialValue = ngModel.$viewValue;
+                    element.bootstrapSwitch('state', !!initialValue);
+                    
+                    // 4. SYNCHRONISER Bootstrap Switch → ngModel
+                    element.on('switchChange.bootstrapSwitch', function(event, state) {
+                        scope.$apply(function() {
+                            // Mettre à jour le modèle
+                            ngModel.$setViewValue(state);
+                            ngModel.$setTouched();
+                            
+                            // Appeler le callback personnalisé si défini
+                            if (onChangeCallback) {
+                                onChangeCallback(scope, {
+                                    $event: event,
+                                    $state: state
+                                });
+                            }
+                        });
+                    });
+                }, 0);
+            }
+            
+            // 5. SYNCHRONISER ngModel → Bootstrap Switch
+            ngModel.$render = function() {
+                $timeout(function() {
+                    if (element.data('bootstrap-switch')) {
+                        var value = ngModel.$viewValue;
+                        element.bootstrapSwitch('state', !!value);
+                    }
+                });
+            };
+            
+            // 6. WATCH sur le ngModel pour les changements externes
+            scope.$watch(attrs.ngModel, function(newValue, oldValue) {
+                if (newValue !== oldValue && element.data('bootstrap-switch')) {
+                    element.bootstrapSwitch('state', !!newValue);
+                }
+            });
+            
+            // 7. NETTOYAGE
+            scope.$on('$destroy', function() {
+                if (element.data('bootstrap-switch')) {
+                    element.off('switchChange.bootstrapSwitch');
+                    element.bootstrapSwitch('destroy');
+                }
+            });
+            
+            // Initialiser si config déjà disponible
+            if (scope.$eval(attrs.switchConfig)) {
+                config = scope.$eval(attrs.switchConfig);
+                initBootstrapSwitch();
+            } else {
+                // Initialiser avec config par défaut
+                initBootstrapSwitch();
+            }
+        }
+    };
+}]);
+
+/**
+ * Directive Loader avec 10 variantes visuelles
+ */
+angular.module('BUXIDA').directive('buxidaLoader', ['LoaderService', function(LoaderService) {
+    return {
+        restrict: 'E',
+        template: `
+            <style>
+                /* ========================================
+                   STYLES DE BASE
+                   ======================================== */
+                .buxida-loader-overlay {
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(3px);
+                    z-index: 9999;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    animation: buxida-fadeIn 0.2s ease-in;
+                }
+
+                .buxida-loader-container {
+                    text-align: center;
+                    animation: buxida-slideUp 0.3s ease-out;
+                }
+
+                .buxida-loader-overlay .loader-message {
+                    margin-top: 20px;
+                    font-size: 14px;
+                    color: #555;
+                    font-weight: 400;
+                    letter-spacing: 0.5px;
+                }
+
+                /* SPINNER */
+                .buxida-loader-overlay .loader-spinner {
+                    display: inline-block;
+                }
+
+                .buxida-loader-overlay .spinner {
+                    width: 50px;
+                    height: 50px;
+                    border: 3px solid #f3f3f3;
+                    border-top: 3px solid #3498db;
+                    border-radius: 50%;
+                    animation: buxida-spin 0.8s linear infinite;
+                }
+
+                @keyframes buxida-spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+
+                /* DOTS */
+                .buxida-loader-overlay .loader-dots {
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .buxida-loader-overlay .loader-dots .dot {
+                    width: 12px;
+                    height: 12px;
+                    background: #3498db;
+                    border-radius: 50%;
+                    animation: buxida-bounce 1.4s infinite ease-in-out both;
+                }
+
+                .buxida-loader-overlay .loader-dots .dot:nth-child(1) {
+                    animation-delay: -0.32s;
+                }
+
+                .buxida-loader-overlay .loader-dots .dot:nth-child(2) {
+                    animation-delay: -0.16s;
+                }
+
+                @keyframes buxida-bounce {
+                    0%, 80%, 100% { 
+                        transform: scale(0);
+                        opacity: 0.5;
+                    }
+                    40% { 
+                        transform: scale(1);
+                        opacity: 1;
+                    }
+                }
+
+                /* PULSE */
+                .buxida-loader-overlay .loader-pulse {
+                    position: relative;
+                    width: 60px;
+                    height: 60px;
+                    margin: 0 auto;
+                }
+
+                .buxida-loader-overlay .pulse-ring {
+                    position: absolute;
+                    width: 100%;
+                    height: 100%;
+                    border: 3px solid #3498db;
+                    border-radius: 50%;
+                    animation: buxida-pulse 1.5s ease-out infinite;
+                }
+
+                @keyframes buxida-pulse {
+                    0% {
+                        transform: scale(0.5);
+                        opacity: 1;
+                    }
+                    100% {
+                        transform: scale(1.2);
+                        opacity: 0;
+                    }
+                }
+
+                /* PROGRESS */
+                .buxida-loader-overlay .loader-progress {
+                    width: 200px;
+                    height: 4px;
+                    background: #e0e0e0;
+                    border-radius: 2px;
+                    overflow: hidden;
+                    margin: 0 auto;
+                }
+
+                .buxida-loader-overlay .loader-progress .progress-bar {
+                    height: 100%;
+                    background: linear-gradient(90deg, #3498db, #2ecc71);
+                    border-radius: 2px;
+                    animation: buxida-progress 1.5s ease-in-out infinite;
+                }
+
+                @keyframes buxida-progress {
+                    0% { width: 0%; margin-left: 0%; }
+                    50% { width: 75%; margin-left: 25%; }
+                    100% { width: 0%; margin-left: 100%; }
+                }
+				/* ========================================
+                   VARIANTE 1: GLASSMORPHISM
+                   ======================================== */
+                .buxida-loader-overlay.glass {
+                    background: rgba(255, 255, 255, 0.25);
+                    backdrop-filter: blur(20px) brightness(1.1);
+                }
+
+                .buxida-loader-overlay.glass .buxida-loader-container {
+                    background: rgba(255, 255, 255, 0.5);
+                    backdrop-filter: blur(10px);
+                    border-radius: 20px;
+                    padding: 40px;
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+                }
+
+                .buxida-loader-overlay.glass .spinner {
+                    border-top-color: rgba(52, 152, 219, 0.8);
+                    box-shadow: 0 0 20px rgba(52, 152, 219, 0.2);
+                }
+
+                /* ========================================
+                   VARIANTE 2: DARK MODE ÉLÉGANT
+                   ======================================== */
+                .buxida-loader-overlay.dark-elegant {
+                    background: rgba(30, 30, 40, 0.95);
+                    backdrop-filter: blur(5px);
+                }
+
+                .buxida-loader-overlay.dark-elegant .buxida-loader-container {
+                    background: linear-gradient(135deg, rgba(60, 60, 80, 0.5), rgba(40, 40, 60, 0.5));
+                    border-radius: 16px;
+                    padding: 35px;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                }
+
+                .buxida-loader-overlay.dark-elegant .spinner {
+                    border-color: rgba(255, 255, 255, 0.1);
+                    border-top-color: #64b5f6;
+                    box-shadow: 0 0 15px rgba(100, 181, 246, 0.3);
+                }
+
+                .buxida-loader-overlay.dark-elegant .loader-message {
+                    color: #e0e0e0;
+                    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+                }
+
+                .buxida-loader-overlay.dark-elegant .dot {
+                    background: #64b5f6;
+                }
+
+                .buxida-loader-overlay.dark-elegant .pulse-ring {
+                    border-color: #64b5f6;
+                }
+
+                /* ========================================
+                   VARIANTE 3: MATERIAL DESIGN
+                   ======================================== */
+                .buxida-loader-overlay.material {
+                    background: rgba(250, 250, 250, 0.98);
+                }
+
+                .buxida-loader-overlay.material .buxida-loader-container {
+                    background: white;
+                    border-radius: 12px;
+                    padding: 32px;
+                    box-shadow: 
+                        0 2px 4px rgba(0, 0, 0, 0.05),
+                        0 8px 16px rgba(0, 0, 0, 0.1);
+                    animation: buxida-materialSlideUp 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+                }
+
+                .buxida-loader-overlay.material .spinner {
+                    animation: buxida-spin 0.7s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+                }
+
+                .buxida-loader-overlay.material .loader-message {
+                    color: rgba(0, 0, 0, 0.87);
+                    font-weight: 500;
+                    letter-spacing: 0.25px;
+                }
+
+                @keyframes buxida-materialSlideUp {
+                    from {
+                        transform: translateY(30px) scale(0.9);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateY(0) scale(1);
+                        opacity: 1;
+                    }
+                }
+
+                /* ========================================
+                   VARIANTE 4: MINIMAL BLUR
+                   ======================================== */
+                .buxida-loader-overlay.minimal {
+                    background: rgba(255, 255, 255, 0.7);
+                    backdrop-filter: blur(10px) saturate(150%);
+                }
+
+                .buxida-loader-overlay.minimal .loader-spinner {
+                    filter: drop-shadow(0 0 10px rgba(52, 152, 219, 0.3));
+                }
+
+                .buxida-loader-overlay.minimal .spinner {
+                    border-width: 2px;
+                    width: 40px;
+                    height: 40px;
+                }
+
+                /* ========================================
+                   VARIANTE 5: GRADIENT MODERNE
+                   ======================================== */
+                .buxida-loader-overlay.gradient {
+                    background: linear-gradient(135deg, 
+                        rgba(102, 126, 234, 0.1),
+                        rgba(118, 75, 162, 0.1));
+                    backdrop-filter: blur(8px);
+                }
+
+                .buxida-loader-overlay.gradient .spinner {
+                    border-width: 3px;
+                    border-color: transparent;
+                    border-top-color: #667eea;
+                    border-right-color: #764ba2;
+                }
+
+                .buxida-loader-overlay.gradient .dot {
+                    background: linear-gradient(135deg, #667eea, #764ba2);
+                }
+
+                .buxida-loader-overlay.gradient .pulse-ring {
+                    border-color: #667eea;
+                }
+
+                /* ========================================
+                   VARIANTE 6: NEUMORPHISM
+                   ======================================== */
+                .buxida-loader-overlay.neuro {
+                    background: #e0e5ec;
+                }
+
+                .buxida-loader-overlay.neuro .buxida-loader-container {
+                    background: #e0e5ec;
+                    border-radius: 25px;
+                    padding: 40px;
+                    box-shadow: 
+                        9px 9px 16px rgba(163, 177, 198, 0.6),
+                        -9px -9px 16px rgba(255, 255, 255, 0.5);
+                }
+
+                .buxida-loader-overlay.neuro .spinner {
+                    border-color: rgba(163, 177, 198, 0.3);
+                    border-top-color: #3498db;
+                    box-shadow: 
+                        inset 2px 2px 4px rgba(163, 177, 198, 0.2),
+                        inset -2px -2px 4px rgba(255, 255, 255, 0.3);
+                }
+
+                .buxida-loader-overlay.neuro .loader-message {
+                    color: #626c77;
+                    font-weight: 500;
+                    text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+                }
+
+				/* ========================================
+				   VARIANTE 7: MICROINTERACTIONS - FIX COMPLET
+				   ======================================== */
+				.buxida-loader-overlay.micro {
+				    background: rgba(255, 255, 255, 0.95) !important;
+				    backdrop-filter: blur(3px) !important;
+				    /* FORCER l'animation d'entrée */
+				    animation: buxida-microFadeIn 0.25s ease-out forwards !important;
+				}
+				
+				.buxida-loader-overlay.micro .buxida-loader-container {
+				    /* ANNULER l'animation par défaut */
+				    animation: buxida-microBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards !important;
+				    transform-origin: center center !important;
+				    will-change: transform, opacity !important;
+				}
+				
+				.buxida-loader-overlay.micro .spinner {
+				    width: 50px !important;
+				    height: 50px !important;
+				    border: 3px solid #f3f3f3 !important;
+				    border-top: 3px solid #3498db !important;
+				    animation: 
+				        buxida-spin 0.9s cubic-bezier(0.5, 0.2, 0.5, 0.8) infinite,
+				        buxida-microPulse 2s ease-in-out infinite !important;
+				    will-change: transform !important;
+				}
+				
+				.buxida-loader-overlay.micro .dot {
+				    animation: 
+				        buxida-bounce 1.4s infinite ease-in-out both,
+				        buxida-microPulse 2s ease-in-out infinite !important;
+				}
+				
+				.buxida-loader-overlay.micro .pulse-ring {
+				    animation: 
+				        buxida-pulse 1.5s ease-out infinite,
+				        buxida-microPulse 2s ease-in-out infinite !important;
+				}
+				
+				@keyframes buxida-microFadeIn {
+				    0% {
+				        opacity: 0;
+				        backdrop-filter: blur(0px);
+				    }
+				    100% {
+				        opacity: 1;
+				        backdrop-filter: blur(3px);
+				    }
+				}
+				
+				/* Animation de rebond TRÈS VISIBLE */
+				@keyframes buxida-microBounce {
+				    0% {
+				        transform: scale(0.5) translateY(50px);
+				        opacity: 0;
+				    }
+				    40% {
+				        transform: scale(1.15) translateY(-15px);
+				    }
+				    65% {
+				        transform: scale(0.95) translateY(5px);
+				    }
+				    85% {
+				        transform: scale(1.02) translateY(-2px);
+				    }
+				    100% {
+				        transform: scale(1) translateY(0);
+				        opacity: 1;
+				    }
+				}
+				
+				@keyframes buxida-microPulse {
+				    0%, 100% {
+				        transform: scale(1);
+				        filter: brightness(1);
+				    }
+				    50% {
+				        transform: scale(1.08);
+				        filter: brightness(1.15);
+				    }
+				}
+
+			/* ========================================
+			   VARIANTE 8: CORNER LOADER - HAUT DROITE AVEC SUCCÈS
+			   ======================================== */
+			.buxida-loader-overlay.buxida-loader-corner,
+			.buxida-loader-corner {
+			    position: fixed !important;
+			    top: 20px !important;
+			    right: 20px !important;
+			    bottom: auto !important;
+			    left: auto !important;
+			    width: auto !important;
+			    height: auto !important;
+			    background: white !important;
+			    padding: 15px 20px !important;
+			    border-radius: 12px !important;
+			    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15) !important;
+			    display: flex !important;
+			    align-items: center !important;
+			    gap: 12px !important;
+			    backdrop-filter: none !important;
+			    animation: buxida-slideInCornerTop 0.3s ease-out !important;
+			    z-index: 9999 !important;
+			    transition: background-color 0.3s ease !important;
+			}
+			
+			/* Style pour le succès */
+			.buxida-loader-corner.success-mode {
+			    background: #2ecc71 !important;
+			    color: white !important;
+			}
+			
+			.buxida-loader-corner.success-mode .loader-message {
+			    color: white !important;
+			    font-weight: 600 !important;
+			}
+			
+			.buxida-loader-corner .buxida-loader-container {
+			    display: flex !important;
+			    align-items: center !important;
+			    gap: 12px !important;
+			    padding: 0 !important;
+			    margin: 0 !important;
+			    animation: none !important;
+			    background: transparent !important;
+			}
+			
+			.buxida-loader-corner .spinner {
+			    width: 24px !important;
+			    height: 24px !important;
+			    border-width: 2px !important;
+			    margin: 0 !important;
+			}
+			
+			/* Icône de succès */
+			.buxida-loader-corner .success-icon {
+			    width: 24px !important;
+			    height: 24px !important;
+			    display: flex !important;
+			    align-items: center !important;
+			    justify-content: center !important;
+			    font-size: 18px !important;
+			    animation: buxida-successPop 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+			}
+			
+			.buxida-loader-corner .success-icon::before {
+			    content: '✓';
+			    color: white;
+			    font-weight: bold;
+			}
+			
+			@keyframes buxida-successPop {
+			    0% {
+			        transform: scale(0);
+			        opacity: 0;
+			    }
+			    50% {
+			        transform: scale(1.2);
+			    }
+			    100% {
+			        transform: scale(1);
+			        opacity: 1;
+			    }
+			}
+			
+			.buxida-loader-corner .loader-message {
+			    margin: 0 !important;
+			    padding: 0 !important;
+			    font-size: 14px !important;
+			    white-space: nowrap !important;
+			}
+			
+			.buxida-loader-corner .dot {
+			    width: 8px !important;
+			    height: 8px !important;
+			}
+			
+			.buxida-loader-corner .pulse-ring {
+			    width: 24px !important;
+			    height: 24px !important;
+			}
+			
+			@keyframes buxida-slideInCornerTop {
+			    from {
+			        transform: translateX(120%) translateY(-20px);
+			        opacity: 0;
+			    }
+			    to {
+			        transform: translateX(0) translateY(0);
+			        opacity: 1;
+			    }
+			}
+			
+			@media (max-width: 768px) {
+			    .buxida-loader-corner {
+			        top: 10px !important;
+			        right: 10px !important;
+			        padding: 12px 16px !important;
+			        font-size: 13px !important;
+			    }
+			}
+
+				/* ========================================
+				   VARIANTE 9: TOP PROGRESS BAR (CORRIGÉ)
+				   ======================================== */
+				.buxida-loader-overlay.buxida-loader-top,
+				.buxida-loader-top {
+				    position: fixed !important;
+				    top: 0 !important;
+				    left: 0 !important;
+				    width: 100% !important;
+				    height: 3px !important;
+				    background: transparent !important;
+				    backdrop-filter: none !important;
+				    display: block !important;
+				    overflow: visible !important;
+				    z-index: 9999 !important;
+				    padding: 0 !important;
+				    margin: 0 !important;
+				    border-radius: 0 !important;
+				}
+				
+				.buxida-loader-top .buxida-loader-container {
+				    height: 100% !important;
+				    width: 100% !important;
+				    animation: none !important;
+				    padding: 0 !important;
+				    margin: 0 !important;
+				    display: block !important;
+				    background: transparent !important;
+				}
+				
+				.buxida-loader-top .loader-progress {
+				    width: 100% !important;
+				    height: 3px !important;
+				    margin: 0 !important;
+				    padding: 0 !important;
+				    border-radius: 0 !important;
+				    background: rgba(0, 0, 0, 0.05) !important;
+				    overflow: hidden !important;
+				    position: relative !important;
+				}
+				
+				.buxida-loader-top .progress-bar {
+				    height: 3px !important;
+				    background: linear-gradient(90deg, #3498db 0%, #2ecc71 50%, #3498db 100%) !important;
+				    background-size: 200% 100% !important;
+				    animation: buxida-progressTop 1.8s ease-in-out infinite !important;
+				    box-shadow: 0 0 10px rgba(52, 152, 219, 0.5) !important;
+				    border-radius: 0 !important;
+				    position: absolute !important;
+				    top: 0 !important;
+				}
+				
+				@keyframes buxida-progressTop {
+				    0% {
+				        width: 0%;
+				        left: 0%;
+				    }
+				    50% {
+				        width: 70%;
+				        left: 15%;
+				    }
+				    100% {
+				        width: 0%;
+				        left: 100%;
+				    }
+				}
+				
+				/* Cacher tous les autres éléments pour le thème top */
+				.buxida-loader-top .loader-message,
+				.buxida-loader-top .loader-spinner,
+				.buxida-loader-top .loader-dots,
+				.buxida-loader-top .loader-pulse,
+				.buxida-loader-top .spinner,
+				.buxida-loader-top .dot,
+				.buxida-loader-top .pulse-ring {
+				    display: none !important;
+				}
+
+                /* ========================================
+                   VARIANTE 10: SKELETON
+                   ======================================== */
+                .buxida-loader-overlay.skeleton .loader-spinner,
+                .buxida-loader-overlay.skeleton .loader-dots,
+                .buxida-loader-overlay.skeleton .loader-pulse {
+                    display: none;
+                }
+
+                .buxida-loader-overlay.skeleton .buxida-loader-container::before {
+                    content: '';
+                    display: block;
+                    width: 200px;
+                    height: 20px;
+                    background: linear-gradient(
+                        90deg,
+                        #f0f0f0 25%,
+                        #e0e0e0 50%,
+                        #f0f0f0 75%
+                    );
+                    background-size: 200% 100%;
+                    animation: buxida-skeletonShimmer 1.5s infinite;
+                    border-radius: 4px;
+                    margin-bottom: 20px;
+                }
+
+                @keyframes buxida-skeletonShimmer {
+                    0% {
+                        background-position: 200% 0;
+                    }
+                    100% {
+                        background-position: -200% 0;
+                    }
+                }
+
+                /* ========================================
+                   ANIMATIONS & RESPONSIVE
+                   ======================================== */
+                @keyframes buxida-fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+
+                @keyframes buxida-slideUp {
+                    from {
+                        transform: translateY(20px);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateY(0);
+                        opacity: 1;
+                    }
+                }
+
+                .buxida-loader-inline {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 8px 16px;
+                }
+
+                .buxida-loader-inline .spinner-small {
+                    width: 20px;
+                    height: 20px;
+                    border: 2px solid #f3f3f3;
+                    border-top: 2px solid #3498db;
+                    border-radius: 50%;
+                    animation: buxida-spin 0.6s linear infinite;
+                }
+
+                .buxida-loader-inline .loader-message-inline {
+                    font-size: 13px;
+                    color: #666;
+                }
+
+                @media (max-width: 768px) {
+                    .buxida-loader-overlay .spinner {
+                        width: 40px;
+                        height: 40px;
+                    }
+                    
+                    .buxida-loader-overlay .loader-message {
+                        font-size: 13px;
+                    }
+                    
+                    .buxida-loader-overlay .loader-progress {
+                        width: 150px;
+                    }
+
+                    .buxida-loader-corner {
+                        bottom: 10px !important;
+                        right: 10px !important;
+                        padding: 12px 16px !important;
+                    }
+                }
+				
+				/* Désactiver l'animation slideUp pour micro */
+				.buxida-loader-overlay.micro .buxida-loader-container {
+				    animation: buxida-microBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards !important;
+				}
+            </style>
+			<div ng-class="[loaderCtrl.getLoaderClass(), loaderCtrl.config.type === 'success' ? 'success-mode' : '']" 
+     ng-show="loaderCtrl.config.isVisible && loaderCtrl.config.overlay">
+                <div class="buxida-loader-container">
+                    <!-- Spinner Type -->
+                    <div ng-if="loaderCtrl.config.type === 'spinner'" class="loader-spinner">
+                        <div class="spinner"></div>
+                    </div>
+                    
+                    <!-- Dots Type -->
+                    <div ng-if="loaderCtrl.config.type === 'dots'" class="loader-dots">
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                        <div class="dot"></div>
+                    </div>
+                    
+                    <!-- Pulse Type -->
+                    <div ng-if="loaderCtrl.config.type === 'pulse'" class="loader-pulse">
+                        <div class="pulse-ring"></div>
+                    </div>
+                    
+                    <!-- Progress Type -->
+                    <div ng-if="loaderCtrl.config.type === 'progress'" class="loader-progress">
+                        <div class="progress-bar"></div>
+                    </div>
+					
+					 <!-- Success Type (pour corner) -->
+			        <div ng-if="loaderCtrl.config.type === 'success'" class="success-icon">
+			        </div>
+					
+                    <!-- Message -->
+                    <div class="loader-message" ng-if="loaderCtrl.config.message">
+                        {{ loaderCtrl.config.message }}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Inline loader (sans overlay) -->
+            <div class="buxida-loader-inline" ng-show="loaderCtrl.config.isVisible && !loaderCtrl.config.overlay">
+                <div ng-if="loaderCtrl.config.type === 'spinner'" class="loader-spinner-inline">
+                    <div class="spinner-small"></div>
+                </div>
+                <span ng-if="loaderCtrl.config.message" class="loader-message-inline">
+                    {{ loaderCtrl.config.message }}
+                </span>
+            </div>
+        `,
+        controllerAs: 'loaderCtrl',
+        controller: ['$scope', function($scope) {
+            var ctrl = this;
+            
+            // Configuration initiale
+            ctrl.config = LoaderService.getConfig();
+			
+		    ctrl.getLoaderClass = function() {
+		        var theme = ctrl.config.theme || '';
+		        
+		        // Thèmes spéciaux avec classes différentes
+		        if (theme === 'corner') {
+		            return 'buxida-loader-corner';
+		        }
+		        if (theme === 'top') {
+		            return 'buxida-loader-top';
+		        }
+		        
+		        // Thèmes standards
+		        if (theme) {
+		            return 'buxida-loader-overlay ' + theme;
+		        }
+		        
+		        return 'buxida-loader-overlay';
+		    };
+		    
+		    // Écouter les événements
+		    $scope.$on('loader:show', function(event, config) {
+		        ctrl.config = config;
+		    });
+		    
+		    $scope.$on('loader:hide', function() {
+		        ctrl.config.isVisible = false;
+		    });
+            // Écouter les événements
+            $scope.$on('loader:show', function(event, config) {
+                ctrl.config = config;
+            });
+
+			// Écouter les mises à jour
+		    $scope.$on('loader:update', function(event, config) {
+		        ctrl.config = config;
+		    });
+			
+            $scope.$on('loader:hide', function() {
+                ctrl.config.isVisible = false;
+            });
+        }]
+    };
+}]);

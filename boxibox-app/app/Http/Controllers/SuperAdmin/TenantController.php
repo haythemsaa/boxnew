@@ -175,8 +175,17 @@ class TenantController extends Controller
         $tenant->status = $this->getTenantStatus($tenant);
         $tenant->subscription_plan = $tenant->plan;
 
+        // Current usage for limits display
+        $currentUsage = [
+            'sites' => $tenant->sites()->count(),
+            'boxes' => Box::whereIn('site_id', $tenant->sites()->pluck('id'))->count(),
+            'users' => $tenant->users()->count(),
+            'customers' => $tenant->customers()->count(),
+        ];
+
         return Inertia::render('SuperAdmin/Tenants/Edit', [
             'tenant' => $tenant,
+            'currentUsage' => $currentUsage,
         ]);
     }
 
@@ -194,6 +203,11 @@ class TenantController extends Controller
             'subscription_plan' => 'required|in:free,starter,professional,enterprise',
             'status' => 'required|in:active,trial,suspended,cancelled',
             'trial_ends_at' => 'nullable|date',
+            // Limites personnalisees
+            'max_sites' => 'nullable|integer|min:1',
+            'max_boxes' => 'nullable|integer|min:1',
+            'max_users' => 'nullable|integer|min:1',
+            'max_customers' => 'nullable|integer|min:1',
         ]);
 
         $tenant->update([
@@ -208,6 +222,11 @@ class TenantController extends Controller
             'plan' => $validated['subscription_plan'],
             'is_active' => !in_array($validated['status'], ['suspended', 'cancelled']),
             'trial_ends_at' => $validated['status'] === 'trial' ? $validated['trial_ends_at'] : null,
+            // Limites personnalisees
+            'max_sites' => $validated['max_sites'],
+            'max_boxes' => $validated['max_boxes'],
+            'max_users' => $validated['max_users'],
+            'max_customers' => $validated['max_customers'],
         ]);
 
         return redirect()->route('superadmin.tenants.show', $tenant)

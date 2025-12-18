@@ -316,4 +316,453 @@ class RevenueManagementService
         if (!$previous || $previous == 0) return 0;
         return round((($current - $previous) / $previous) * 100, 2);
     }
+
+    /**
+     * Algorithme avancé de pricing dynamique avec ML-like scoring
+     */
+    public function calculateAdvancedOptimalPrice(Box $box, array $options = []): array
+    {
+        $site = $box->site;
+        $basePrice = $box->base_price ?? $box->current_price ?? 0;
+
+        // Facteurs avec pondération
+        $factors = [
+            'occupancy' => $this->calculateOccupancyScore($site),
+            'demand' => $this->calculateDemandScore($site, $box),
+            'seasonality' => $this->calculateSeasonalityScore(),
+            'competitor' => $this->calculateCompetitorScore($site, $box),
+            'velocity' => $this->calculateVelocityScore($site),
+            'duration' => $this->calculateDurationScore($box),
+        ];
+
+        // Pondération des facteurs (somme = 1.0)
+        $weights = [
+            'occupancy' => 0.30,
+            'demand' => 0.20,
+            'seasonality' => 0.15,
+            'competitor' => 0.15,
+            'velocity' => 0.10,
+            'duration' => 0.10,
+        ];
+
+        // Score combiné pondéré
+        $combinedScore = 0;
+        foreach ($factors as $key => $score) {
+            $combinedScore += $score * $weights[$key];
+        }
+
+        // Convertir le score en multiplicateur de prix (0.8 à 1.2)
+        $priceMultiplier = 0.8 + ($combinedScore * 0.4);
+
+        // Appliquer les limites min/max
+        $strategy = $this->getDefaultStrategy($site);
+        $priceMultiplier = max($strategy->min_price_factor, min($strategy->max_price_factor, $priceMultiplier));
+
+        $optimalPrice = round($basePrice * $priceMultiplier, 2);
+        $change = $optimalPrice - $box->current_price;
+        $changePercent = $box->current_price > 0
+            ? round((($optimalPrice - $box->current_price) / $box->current_price) * 100, 1)
+            : 0;
+
+        // Calculer le niveau de confiance
+        $confidence = $this->calculatePriceConfidence($factors, $site);
+
+        return [
+            'box_id' => $box->id,
+            'box_code' => $box->number ?? $box->name,
+            'box_size' => $box->size_m2 ?? $box->area,
+            'site_id' => $site->id,
+            'site_name' => $site->name,
+            'current_price' => $box->current_price,
+            'base_price' => $basePrice,
+            'optimal_price' => $optimalPrice,
+            'adjustment_percent' => $changePercent,
+            'change' => $change,
+            'estimated_revenue_impact' => $change * 12, // Impact annuel
+            'factors' => $factors,
+            'adjustments' => $this->getActiveAdjustments($factors),
+            'confidence' => $confidence,
+            'recommendation' => $this->getRecommendationText($changePercent, $confidence),
+        ];
+    }
+
+    /**
+     * Score basé sur le taux d'occupation (0-1)
+     */
+    protected function calculateOccupancyScore(Site $site): float
+    {
+        $total = $site->boxes()->count();
+        $occupied = $site->boxes()->where('status', 'occupied')->count();
+
+        if ($total === 0) return 0.5;
+
+        $rate = $occupied / $total;
+
+        // Occupation haute = score élevé = prix plus hauts
+        // < 60% = 0.2, 60-80% = 0.5, 80-90% = 0.7, > 90% = 1.0
+        if ($rate < 0.60) return 0.2 + ($rate * 0.3);
+        if ($rate < 0.80) return 0.5 + (($rate - 0.60) * 1.0);
+        if ($rate < 0.90) return 0.7 + (($rate - 0.80) * 2.0);
+        return 0.9 + (($rate - 0.90) * 1.0);
+    }
+
+    /**
+     * Score basé sur la demande récente (0-1)
+     */
+    protected function calculateDemandScore(Site $site, Box $box): float
+    {
+        // Réservations/contrats des 30 derniers jours vs moyenne 6 mois
+        $recent = \App\Models\Contract::where('site_id', $site->id)
+            ->where('created_at', '>=', now()->subDays(30))
+            ->count();
+
+        $avgMonthly = \App\Models\Contract::where('site_id', $site->id)
+            ->where('created_at', '>=', now()->subMonths(6))
+            ->count() / 6;
+
+        if ($avgMonthly === 0) return 0.5;
+
+        $ratio = $recent / max($avgMonthly, 1);
+
+        // ratio > 1.5 = forte demande, < 0.7 = faible demande
+        return min(1.0, max(0.0, ($ratio - 0.5) / 1.5));
+    }
+
+    /**
+     * Score saisonnier (0-1)
+     */
+    protected function calculateSeasonalityScore(): float
+    {
+        $month = (int) now()->format('n');
+
+        // Haute saison: juin-septembre (déménagements)
+        $seasonScores = [
+            1 => 0.3, 2 => 0.35, 3 => 0.45, 4 => 0.5,
+            5 => 0.6, 6 => 0.85, 7 => 1.0, 8 => 0.95,
+            9 => 0.75, 10 => 0.5, 11 => 0.4, 12 => 0.25,
+        ];
+
+        return $seasonScores[$month] ?? 0.5;
+    }
+
+    /**
+     * Score concurrentiel (0-1) basé sur données de marché
+     */
+    protected function calculateCompetitorScore(Site $site, Box $box): float
+    {
+        // Vérifier si données concurrentielles disponibles en cache
+        $competitorKey = "competitor_avg_price_{$site->id}_{$box->size_category}";
+        $avgCompetitorPrice = \Illuminate\Support\Facades\Cache::get($competitorKey);
+
+        if (!$avgCompetitorPrice) {
+            return 0.5; // Neutre si pas de données
+        }
+
+        $priceRatio = $box->current_price / $avgCompetitorPrice;
+
+        // Si moins cher que concurrence = score élevé (marge augmentation)
+        // Si plus cher = score bas (besoin de réduire)
+        if ($priceRatio < 0.85) return 0.9;
+        if ($priceRatio < 0.95) return 0.7;
+        if ($priceRatio < 1.05) return 0.5;
+        if ($priceRatio < 1.15) return 0.3;
+        return 0.1;
+    }
+
+    /**
+     * Score de vélocité de location (0-1)
+     */
+    protected function calculateVelocityScore(Site $site): float
+    {
+        // Temps moyen pour louer un box (jours depuis disponible jusqu'à occupé)
+        $avgDays = \App\Models\Box::where('site_id', $site->id)
+            ->where('status', 'occupied')
+            ->whereNotNull('last_status_change')
+            ->avg(\DB::raw('DATEDIFF(last_status_change, created_at)'));
+
+        if (!$avgDays || $avgDays <= 0) return 0.5;
+
+        // < 7 jours = très rapide = score élevé
+        // > 60 jours = lent = score bas
+        if ($avgDays <= 7) return 1.0;
+        if ($avgDays <= 14) return 0.8;
+        if ($avgDays <= 30) return 0.6;
+        if ($avgDays <= 60) return 0.4;
+        return 0.2;
+    }
+
+    /**
+     * Score basé sur la durée moyenne des contrats (0-1)
+     */
+    protected function calculateDurationScore(Box $box): float
+    {
+        $avgDuration = \App\Models\Contract::where('box_id', $box->id)
+            ->whereNotNull('end_date')
+            ->avg(\DB::raw('DATEDIFF(end_date, start_date)'));
+
+        if (!$avgDuration) return 0.5;
+
+        // Contrats longs = clients fidèles = possibilité d'augmentation
+        $months = $avgDuration / 30;
+
+        if ($months >= 12) return 0.9;
+        if ($months >= 6) return 0.7;
+        if ($months >= 3) return 0.5;
+        return 0.3;
+    }
+
+    /**
+     * Calculer le niveau de confiance de la recommandation
+     */
+    protected function calculatePriceConfidence(array $factors, Site $site): float
+    {
+        $confidence = 0.5;
+
+        // Plus de données historiques = plus de confiance
+        $contractCount = \App\Models\Contract::where('site_id', $site->id)->count();
+        if ($contractCount > 100) $confidence += 0.2;
+        elseif ($contractCount > 50) $confidence += 0.15;
+        elseif ($contractCount > 20) $confidence += 0.1;
+
+        // Données concurrentielles disponibles
+        if ($factors['competitor'] !== 0.5) $confidence += 0.1;
+
+        // Stabilité des facteurs (écart-type bas)
+        $variance = $this->calculateVariance(array_values($factors));
+        if ($variance < 0.1) $confidence += 0.1;
+
+        return min(0.95, $confidence);
+    }
+
+    /**
+     * Calculer la variance d'un tableau
+     */
+    protected function calculateVariance(array $values): float
+    {
+        $count = count($values);
+        if ($count === 0) return 0;
+
+        $mean = array_sum($values) / $count;
+        $squaredDiffs = array_map(fn($v) => pow($v - $mean, 2), $values);
+
+        return array_sum($squaredDiffs) / $count;
+    }
+
+    /**
+     * Obtenir les ajustements actifs pour affichage
+     */
+    protected function getActiveAdjustments(array $factors): array
+    {
+        $adjustments = [];
+
+        if ($factors['occupancy'] > 0.7) $adjustments['high_occupation'] = 1;
+        if ($factors['occupancy'] < 0.4) $adjustments['low_occupation'] = -1;
+        if ($factors['demand'] > 0.7) $adjustments['high_demand'] = 1;
+        if ($factors['seasonality'] > 0.7) $adjustments['high_season'] = 1;
+        if ($factors['seasonality'] < 0.4) $adjustments['low_season'] = -1;
+        if ($factors['competitor'] > 0.7) $adjustments['competitor_advantage'] = 1;
+
+        return $adjustments;
+    }
+
+    /**
+     * Générer le texte de recommandation
+     */
+    protected function getRecommendationText(float $changePercent, float $confidence): string
+    {
+        $confidenceText = $confidence > 0.8 ? 'haute' : ($confidence > 0.6 ? 'moyenne' : 'faible');
+
+        if ($changePercent > 10) {
+            return "Forte augmentation recommandée (confiance {$confidenceText})";
+        } elseif ($changePercent > 5) {
+            return "Augmentation modérée recommandée (confiance {$confidenceText})";
+        } elseif ($changePercent > 0) {
+            return "Légère augmentation possible (confiance {$confidenceText})";
+        } elseif ($changePercent > -5) {
+            return "Prix optimal - aucun changement nécessaire";
+        } elseif ($changePercent > -10) {
+            return "Réduction modérée recommandée pour stimuler les ventes";
+        } else {
+            return "Forte réduction recommandée - prix trop élevé vs marché";
+        }
+    }
+
+    /**
+     * Appliquer automatiquement les prix optimaux pour un site
+     */
+    public function autoApplyOptimalPrices(Site $site, array $options = []): array
+    {
+        $dryRun = $options['dry_run'] ?? true;
+        $minConfidence = $options['min_confidence'] ?? 0.7;
+        $minChangePercent = $options['min_change_percent'] ?? 3;
+        $maxChangePercent = $options['max_change_percent'] ?? 15;
+
+        $results = [
+            'site_id' => $site->id,
+            'site_name' => $site->name,
+            'dry_run' => $dryRun,
+            'applied' => [],
+            'skipped' => [],
+            'errors' => [],
+            'summary' => [
+                'total_analyzed' => 0,
+                'total_applied' => 0,
+                'total_revenue_impact' => 0,
+            ],
+        ];
+
+        $boxes = $site->boxes()->where('status', 'available')->get();
+        $results['summary']['total_analyzed'] = $boxes->count();
+
+        \DB::beginTransaction();
+
+        try {
+            foreach ($boxes as $box) {
+                $pricing = $this->calculateAdvancedOptimalPrice($box);
+
+                // Vérifications de sécurité
+                if ($pricing['confidence'] < $minConfidence) {
+                    $results['skipped'][] = [
+                        'box_id' => $box->id,
+                        'reason' => "Confiance trop basse ({$pricing['confidence']})",
+                    ];
+                    continue;
+                }
+
+                if (abs($pricing['adjustment_percent']) < $minChangePercent) {
+                    $results['skipped'][] = [
+                        'box_id' => $box->id,
+                        'reason' => "Changement trop faible ({$pricing['adjustment_percent']}%)",
+                    ];
+                    continue;
+                }
+
+                if (abs($pricing['adjustment_percent']) > $maxChangePercent) {
+                    $results['skipped'][] = [
+                        'box_id' => $box->id,
+                        'reason' => "Changement trop important ({$pricing['adjustment_percent']}%) - validation manuelle requise",
+                    ];
+                    continue;
+                }
+
+                if (!$dryRun) {
+                    // Enregistrer l'historique
+                    \App\Models\PriceHistory::create([
+                        'box_id' => $box->id,
+                        'old_price' => $box->current_price,
+                        'new_price' => $pricing['optimal_price'],
+                        'change_reason' => 'auto_optimization',
+                        'factors' => json_encode($pricing['factors']),
+                        'confidence' => $pricing['confidence'],
+                        'applied_by' => 'system',
+                        'applied_at' => now(),
+                    ]);
+
+                    // Appliquer le nouveau prix
+                    $box->update(['current_price' => $pricing['optimal_price']]);
+                }
+
+                $results['applied'][] = $pricing;
+                $results['summary']['total_applied']++;
+                $results['summary']['total_revenue_impact'] += $pricing['estimated_revenue_impact'];
+            }
+
+            if (!$dryRun) {
+                \DB::commit();
+
+                Log::info('Revenue Management: Auto-applied optimal prices', [
+                    'site_id' => $site->id,
+                    'boxes_updated' => $results['summary']['total_applied'],
+                    'revenue_impact' => $results['summary']['total_revenue_impact'],
+                ]);
+            }
+
+        } catch (\Exception $e) {
+            \DB::rollBack();
+
+            Log::error('Revenue Management: Auto-apply failed', [
+                'site_id' => $site->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            $results['errors'][] = $e->getMessage();
+        }
+
+        return $results;
+    }
+
+    /**
+     * Stocker les données de benchmark concurrentiel
+     */
+    public function storeCompetitorBenchmark(Site $site, array $data): void
+    {
+        foreach ($data as $sizeCategory => $prices) {
+            $key = "competitor_avg_price_{$site->id}_{$sizeCategory}";
+            $avgPrice = is_array($prices) ? array_sum($prices) / count($prices) : $prices;
+
+            \Illuminate\Support\Facades\Cache::put($key, $avgPrice, now()->addDays(30));
+        }
+
+        Log::info('Revenue Management: Competitor benchmark updated', [
+            'site_id' => $site->id,
+            'categories' => array_keys($data),
+        ]);
+    }
+
+    /**
+     * Obtenir toutes les optimisations pour un tenant
+     */
+    public function getAllOptimizations(int $tenantId): array
+    {
+        $sites = Site::where('tenant_id', $tenantId)->with('boxes')->get();
+        $allOptimizations = [];
+
+        foreach ($sites as $site) {
+            $availableBoxes = $site->boxes->where('status', 'available');
+
+            foreach ($availableBoxes as $box) {
+                $optimization = $this->calculateAdvancedOptimalPrice($box);
+
+                // Ne garder que les optimisations significatives
+                if (abs($optimization['adjustment_percent']) >= 2) {
+                    $allOptimizations[] = $optimization;
+                }
+            }
+        }
+
+        // Trier par impact potentiel décroissant
+        usort($allOptimizations, fn($a, $b) => abs($b['estimated_revenue_impact']) - abs($a['estimated_revenue_impact']));
+
+        return $allOptimizations;
+    }
+
+    /**
+     * Calculer le résumé des optimisations
+     */
+    public function getOptimizationSummary(array $optimizations): array
+    {
+        $count = count($optimizations);
+
+        if ($count === 0) {
+            return [
+                'boxes_analyzed' => 0,
+                'boxes_to_optimize' => 0,
+                'total_potential_revenue' => 0,
+                'average_adjustment' => 0,
+                'average_confidence' => 0,
+            ];
+        }
+
+        $totalPotentialRevenue = array_sum(array_column($optimizations, 'estimated_revenue_impact'));
+        $avgAdjustment = array_sum(array_column($optimizations, 'adjustment_percent')) / $count;
+        $avgConfidence = array_sum(array_column($optimizations, 'confidence')) / $count;
+
+        return [
+            'boxes_analyzed' => $count,
+            'boxes_to_optimize' => count(array_filter($optimizations, fn($o) => abs($o['adjustment_percent']) >= 3)),
+            'total_potential_revenue' => round($totalPotentialRevenue, 2),
+            'average_adjustment' => round($avgAdjustment, 1),
+            'average_confidence' => round($avgConfidence * 100, 0),
+        ];
+    }
 }

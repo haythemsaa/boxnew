@@ -207,7 +207,7 @@ class InvoiceGenerationService
             'tenant_id' => $invoice->tenant_id,
             'amount' => $amount,
             'payment_method' => $method,
-            'payment_date' => now(),
+            'paid_at' => now(),
             'reference' => 'Manual payment',
         ]);
     }

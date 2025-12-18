@@ -69,7 +69,7 @@ class MaintenanceController extends Controller
 
         return Inertia::render('Tenant/Maintenance/Create', [
             'sites' => Site::where('tenant_id', $tenantId)->get(['id', 'name']),
-            'boxes' => Box::where('tenant_id', $tenantId)->get(['id', 'site_id', 'code']),
+            'boxes' => Box::where('tenant_id', $tenantId)->get(['id', 'site_id', 'number', 'name']),
             'types' => ['repair', 'cleaning', 'inspection', 'installation', 'other'],
             'users' => User::where('tenant_id', $tenantId)->get(['id', 'name']),
             'customers' => \App\Models\Customer::where('tenant_id', $tenantId)->get(['id', 'first_name', 'last_name']),
@@ -141,7 +141,7 @@ class MaintenanceController extends Controller
         return Inertia::render('Tenant/Maintenance/Edit', [
             'ticket' => $maintenance->load(['site', 'box']),
             'sites' => Site::where('tenant_id', $tenantId)->get(['id', 'name']),
-            'boxes' => Box::where('tenant_id', $tenantId)->get(['id', 'site_id', 'code']),
+            'boxes' => Box::where('tenant_id', $tenantId)->get(['id', 'site_id', 'number', 'name']),
             'types' => ['repair', 'cleaning', 'inspection', 'installation', 'other'],
             'users' => User::where('tenant_id', $tenantId)->get(['id', 'name']),
         ]);

@@ -157,9 +157,16 @@ class IoTWebhookController extends Controller
      */
     public function nokeWebhook(Request $request)
     {
-        Log::info('Noke webhook received', ['payload' => $request->all()]);
+        // Log only safe fields, never log full payload
+        Log::info('Noke webhook received', [
+            'event' => $request->input('event'),
+            'lock_id' => $request->input('lock_id'),
+        ]);
 
-        $payload = $request->all();
+        $payload = $request->only([
+            'event', 'type', 'lock_id', 'mac', 'method',
+            'quick_click_code', 'timestamp', 'battery'
+        ]);
         $eventType = $payload['event'] ?? $payload['type'] ?? null;
 
         // Verify webhook signature if configured
@@ -222,9 +229,16 @@ class IoTWebhookController extends Controller
      */
     public function saltoWebhook(Request $request)
     {
-        Log::info('Salto webhook received', ['payload' => $request->all()]);
+        // Log only safe fields, never log full payload
+        Log::info('Salto webhook received', [
+            'eventType' => $request->input('eventType'),
+            'lockId' => $request->input('lockId'),
+        ]);
 
-        $payload = $request->all();
+        $payload = $request->only([
+            'eventType', 'lockId', 'accessPoint', 'accessMethod',
+            'mobileKey', 'pinCode', 'eventTimestamp'
+        ]);
         $eventType = $payload['eventType'] ?? null;
 
         // Find lock by Salto ID
@@ -273,9 +287,13 @@ class IoTWebhookController extends Controller
      */
     public function kisiWebhook(Request $request)
     {
-        Log::info('Kisi webhook received', ['payload' => $request->all()]);
+        // Log only safe fields, never log full payload
+        Log::info('Kisi webhook received', [
+            'event_type' => $request->input('event.type'),
+            'lock_id' => $request->input('event.lock_id'),
+        ]);
 
-        $payload = $request->all();
+        $payload = $request->only(['event', 'lock', 'timestamp']);
         $event = $payload['event'] ?? [];
 
         $lockId = $event['lock_id'] ?? $payload['lock']['id'] ?? null;
@@ -313,9 +331,16 @@ class IoTWebhookController extends Controller
      */
     public function ptiWebhook(Request $request)
     {
-        Log::info('PTI webhook received', ['payload' => $request->all()]);
+        // Log only safe fields, never log full payload
+        Log::info('PTI webhook received', [
+            'event_code' => $request->input('event_code'),
+            'device_id' => $request->input('device_id'),
+        ]);
 
-        $payload = $request->all();
+        $payload = $request->only([
+            'device_id', 'gate_id', 'event_code',
+            'access_code', 'timestamp'
+        ]);
 
         // PTI typically sends gate/door events
         $deviceId = $payload['device_id'] ?? $payload['gate_id'] ?? null;

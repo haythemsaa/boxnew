@@ -1,0 +1,440 @@
+/**
+ * BUXIDA Changelog Widget
+ * Widget JavaScript pour afficher le changelog dans votre application
+ *
+ * Usage:
+ * <div id="buxida-changelog"></div>
+ * <script src="changelog-widget.js"></script>
+ * <script>
+ *   BuxidaChangelog.init({
+ *     apiUrl: 'http://votre-domaine.com/api/changelog.php',
+ *     container: '#buxida-changelog',
+ *     limit: 10,
+ *     theme: 'light'
+ *   });
+ * </script>
+ */
+
+(function(window, document) {
+    'use strict';
+
+    const BuxidaChangelog = {
+        config: {
+            apiUrl: '',
+            container: '#buxida-changelog',
+            limit: 10,
+            theme: 'light',
+            showFilters: true,
+            showSearch: true,
+            groupByVersion: false,
+            animations: true,
+            locale: 'fr'
+        },
+
+        translations: {
+            fr: {
+                title: 'Historique des modifications',
+                search: 'Rechercher...',
+                filters: 'Filtres',
+                all: 'Tous',
+                feature: 'Fonctionnalités',
+                bugfix: 'Corrections',
+                improvement: 'Améliorations',
+                security: 'Sécurité',
+                breaking: 'Changements majeurs',
+                version: 'Version',
+                publishedOn: 'Publié le',
+                readMore: 'Lire plus',
+                readLess: 'Lire moins',
+                noEntries: 'Aucune modification disponible',
+                loadMore: 'Charger plus',
+                loading: 'Chargement...'
+            },
+            en: {
+                title: 'Changelog',
+                search: 'Search...',
+                filters: 'Filters',
+                all: 'All',
+                feature: 'Features',
+                bugfix: 'Bug Fixes',
+                improvement: 'Improvements',
+                security: 'Security',
+                breaking: 'Breaking Changes',
+                version: 'Version',
+                publishedOn: 'Published on',
+                readMore: 'Read more',
+                readLess: 'Read less',
+                noEntries: 'No changes available',
+                loadMore: 'Load more',
+                loading: 'Loading...'
+            }
+        },
+
+        data: {
+            entries: [],
+            filteredEntries: [],
+            currentFilter: 'all',
+            searchQuery: '',
+            offset: 0
+        },
+
+        /**
+         * Initialise le widget
+         */
+        init: function(options) {
+            // Fusionner les options
+            this.config = Object.assign({}, this.config, options);
+
+            // Vérifier la présence de l'API
+            if (!this.config.apiUrl) {
+                console.error('BuxidaChangelog: apiUrl is required');
+                return;
+            }
+
+            // Injecter les styles
+            this.injectStyles();
+
+            // Charger les données
+            this.loadEntries();
+        },
+
+        /**
+         * Injecte les styles CSS
+         */
+        injectStyles: function() {
+            if (document.getElementById('buxida-changelog-styles')) {
+                return;
+            }
+
+            const link = document.createElement('link');
+            link.id = 'buxida-changelog-styles';
+            link.rel = 'stylesheet';
+            link.href = this.config.apiUrl.replace('changelog.php', '../widget/changelog-widget.css');
+            document.head.appendChild(link);
+
+            // Ajouter Font Awesome si pas déjà présent
+            if (!document.querySelector('link[href*="font-awesome"]')) {
+                const fa = document.createElement('link');
+                fa.rel = 'stylesheet';
+                fa.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css';
+                document.head.appendChild(fa);
+            }
+        },
+
+        /**
+         * Charge les entrées depuis l'API
+         */
+        loadEntries: function() {
+            const url = `${this.config.apiUrl}?endpoint=list&status=published&limit=${this.config.limit}&offset=${this.data.offset}`;
+
+            fetch(url)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Filter out login-message type entries
+                        const filteredData = data.data.filter(entry => entry.type !== 'login-message');
+                        this.data.entries = this.data.entries.concat(filteredData);
+                        this.data.filteredEntries = this.data.entries;
+                        this.render();
+                    } else {
+                        this.renderError('Erreur lors du chargement des données');
+                    }
+                })
+                .catch(error => {
+                    this.renderError('Erreur réseau: ' + error.message);
+                });
+        },
+
+        /**
+         * Filtre les entrées
+         */
+        filterEntries: function(type) {
+            this.data.currentFilter = type;
+
+            if (type === 'all') {
+                this.data.filteredEntries = this.data.entries;
+            } else {
+                this.data.filteredEntries = this.data.entries.filter(entry => entry.type === type);
+            }
+
+            this.applySearch();
+            this.renderList();
+        },
+
+        /**
+         * Recherche dans les entrées
+         */
+        applySearch: function() {
+            if (!this.data.searchQuery) {
+                return;
+            }
+
+            const query = this.data.searchQuery.toLowerCase();
+            this.data.filteredEntries = this.data.filteredEntries.filter(entry => {
+                return entry.title.toLowerCase().includes(query) ||
+                       entry.description.toLowerCase().includes(query) ||
+                       (entry.version && entry.version.toLowerCase().includes(query));
+            });
+        },
+
+        /**
+         * Rendu du widget
+         */
+        render: function() {
+            const container = document.querySelector(this.config.container);
+            if (!container) {
+                console.error('BuxidaChangelog: Container not found');
+                return;
+            }
+
+            // Si le widget existe déjà, on ne recharge que la liste
+            const existingWidget = container.querySelector('.buxida-changelog');
+            if (existingWidget) {
+                this.renderList();
+                return;
+            }
+
+            // Sinon, rendu complet
+            const t = this.translations[this.config.locale];
+            const themeClass = `buxida-changelog-${this.config.theme}`;
+
+            let html = `<div class="buxida-changelog ${themeClass}">`;
+
+            // En-tête
+            html += `
+                <div class="buxida-changelog-header">
+                    <h2 class="buxida-changelog-title">
+                        <i class="fa fa-list-alt"></i> ${t.title}
+                    </h2>
+                </div>
+            `;
+
+            // Barre de recherche et filtres
+            if (this.config.showSearch || this.config.showFilters) {
+                html += `<div class="buxida-changelog-controls">`;
+
+                if (this.config.showSearch) {
+                    html += `
+                        <div class="buxida-changelog-search">
+                            <input type="text"
+                                   id="buxida-search"
+                                   class="buxida-search-input"
+                                   placeholder="${t.search}">
+                            <i class="fa fa-search"></i>
+                        </div>
+                    `;
+                }
+
+                if (this.config.showFilters) {
+                    html += `
+                        <div class="buxida-changelog-filters">
+                            <button class="buxida-filter-btn active" data-filter="all">${t.all}</button>
+                            <button class="buxida-filter-btn" data-filter="feature">
+                                <i class="fa fa-star"></i> ${t.feature}
+                            </button>
+                            <button class="buxida-filter-btn" data-filter="bugfix">
+                                <i class="fa fa-bug"></i> ${t.bugfix}
+                            </button>
+                            <button class="buxida-filter-btn" data-filter="improvement">
+                                <i class="fa fa-arrow-up"></i> ${t.improvement}
+                            </button>
+                            <button class="buxida-filter-btn" data-filter="security">
+                                <i class="fa fa-shield-alt"></i> ${t.security}
+                            </button>
+                        </div>
+                    `;
+                }
+
+                html += `</div>`;
+            }
+
+            // Conteneur de la liste (sera rempli par renderList)
+            html += `<div class="buxida-changelog-list" id="buxida-changelog-list"></div>`;
+
+            html += `</div>`;
+
+            container.innerHTML = html;
+
+            // Attacher les événements
+            this.attachEvents();
+
+            // Rendre la liste
+            this.renderList();
+        },
+
+        /**
+         * Rendu de la liste des entrées uniquement
+         */
+        renderList: function() {
+            const listContainer = document.getElementById('buxida-changelog-list');
+            if (!listContainer) {
+                console.error('BuxidaChangelog: List container not found');
+                return;
+            }
+
+            const t = this.translations[this.config.locale];
+            let html = '';
+
+            if (this.data.filteredEntries.length === 0) {
+                html = `
+                    <div class="buxida-changelog-empty">
+                        <i class="fa fa-inbox"></i>
+                        <p>${t.noEntries}</p>
+                    </div>
+                `;
+            } else {
+                this.data.filteredEntries.forEach((entry, index) => {
+                    html += this.renderEntry(entry, index);
+                });
+            }
+
+            listContainer.innerHTML = html;
+        },
+
+        /**
+         * Rendu d'une entrée
+         */
+        renderEntry: function(entry, index) {
+            const t = this.translations[this.config.locale];
+            const typeIcons = {
+                feature: 'fa-star',
+                bugfix: 'fa-bug',
+                improvement: 'fa-arrow-up',
+                security: 'fa-shield-alt',
+                breaking: 'fa-exclamation-triangle'
+            };
+
+            const icon = typeIcons[entry.type] || 'fa-circle';
+            const date = new Date(entry.published_date || entry.created_at);
+            const formattedDate = date.toLocaleDateString(this.config.locale === 'fr' ? 'fr-FR' : 'en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            const animationClass = this.config.animations ? 'buxida-fade-in' : '';
+            const animationStyle = this.config.animations ? `animation-delay: ${index * 0.1}s` : '';
+
+            return `
+                <div class="buxida-changelog-entry buxida-type-${entry.type} ${animationClass}"
+                     style="${animationStyle}">
+                    <div class="buxida-entry-header">
+                        <div class="buxida-entry-meta">
+                            ${entry.version && entry.version !== '0' && entry.version.trim() !== '' ? `
+                            <span class="buxida-version">
+                                <i class="fa fa-tag"></i> ${t.version} ${this.escapeHtml(entry.version)}
+                            </span>
+                            ` : ''}
+                            <span class="buxida-type-badge buxida-badge-${entry.type}">
+                                <i class="fa ${icon}"></i> ${t[entry.type]}
+                            </span>
+                        </div>
+                        <div class="buxida-entry-date">
+                            <i class="fa fa-clock"></i> ${formattedDate}
+                        </div>
+                    </div>
+
+                    <h3 class="buxida-entry-title">${this.escapeHtml(entry.title)}</h3>
+                    <p class="buxida-entry-description">${this.escapeHtml(entry.description)}</p>
+
+                    <div class="buxida-entry-content" id="content-${entry.id}">
+                        ${entry.content}
+                    </div>
+
+                    ${entry.content.length > 200 ? `
+                        <button class="buxida-read-more" onclick="BuxidaChangelog.toggleContent(${entry.id})">
+                            <span class="more-text">${t.readMore} <i class="fa fa-chevron-down"></i></span>
+                            <span class="less-text" style="display: none;">${t.readLess} <i class="fa fa-chevron-up"></i></span>
+                        </button>
+                    ` : ''}
+
+                    ${entry.tags && entry.tags.length > 0 ? `
+                        <div class="buxida-entry-tags">
+                            ${entry.tags.map(tag => `
+                                <span class="buxida-tag">${this.escapeHtml(tag)}</span>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        },
+
+        /**
+         * Toggle le contenu d'une entrée
+         */
+        toggleContent: function(entryId) {
+            const content = document.getElementById(`content-${entryId}`);
+            const button = content.nextElementSibling;
+
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                button.querySelector('.more-text').style.display = '';
+                button.querySelector('.less-text').style.display = 'none';
+            } else {
+                content.classList.add('expanded');
+                button.querySelector('.more-text').style.display = 'none';
+                button.querySelector('.less-text').style.display = '';
+            }
+        },
+
+        /**
+         * Attache les événements
+         */
+        attachEvents: function() {
+            const self = this;
+
+            // Recherche
+            const searchInput = document.getElementById('buxida-search');
+            if (searchInput) {
+                searchInput.addEventListener('input', function(e) {
+                    self.data.searchQuery = e.target.value;
+                    self.data.filteredEntries = self.data.entries;
+                    self.filterEntries(self.data.currentFilter);
+                });
+            }
+
+            // Filtres
+            const filterButtons = document.querySelectorAll('.buxida-filter-btn');
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    filterButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    self.filterEntries(this.getAttribute('data-filter'));
+                });
+            });
+        },
+
+        /**
+         * Rendu d'une erreur
+         */
+        renderError: function(message) {
+            const container = document.querySelector(this.config.container);
+            if (container) {
+                container.innerHTML = `
+                    <div class="buxida-changelog buxida-changelog-error">
+                        <i class="fa fa-exclamation-triangle"></i>
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+        },
+
+        /**
+         * Échappe le HTML
+         */
+        escapeHtml: function(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, m => map[m]);
+        }
+    };
+
+    // Exposer le widget globalement
+    window.BuxidaChangelog = BuxidaChangelog;
+
+})(window, document);

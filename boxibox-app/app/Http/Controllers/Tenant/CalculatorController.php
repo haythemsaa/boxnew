@@ -22,6 +22,11 @@ class CalculatorController extends Controller
             ->with('site')
             ->get();
 
+        $recentSessions = CalculatorSession::where('tenant_id', $tenantId)
+            ->latest()
+            ->take(5)
+            ->get();
+
         $stats = [
             'total_sessions' => CalculatorSession::where('tenant_id', $tenantId)->count(),
             'converted_sessions' => CalculatorSession::where('tenant_id', $tenantId)->converted()->count(),
@@ -33,6 +38,23 @@ class CalculatorController extends Controller
         return Inertia::render('Tenant/Calculator/Index', [
             'widgets' => $widgets,
             'stats' => $stats,
+            'recentSessions' => $recentSessions,
+        ]);
+    }
+
+    /**
+     * Display the 3D vehicle loading simulator
+     */
+    public function vehicleSimulator()
+    {
+        $tenantId = Auth::user()->tenant_id;
+
+        $sites = Site::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->get(['id', 'name', 'code']);
+
+        return Inertia::render('Tenant/Calculator/VehicleSimulator', [
+            'sites' => $sites,
         ]);
     }
 

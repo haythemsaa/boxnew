@@ -29,7 +29,7 @@ class LoyaltyController extends Controller
             'total_points_redeemed' => LoyaltyTransaction::whereHas('loyaltyPoints.customer', fn($q) => $q->where('tenant_id', $tenantId))
                 ->where('type', 'redeemed')
                 ->sum('points') * -1,
-            'active_rewards' => $program ? LoyaltyReward::where('loyalty_program_id', $program->id)->active()->count() : 0,
+            'active_rewards' => $program ? LoyaltyReward::where('program_id', $program->id)->where('is_active', true)->count() : 0,
         ];
 
         // Top membres

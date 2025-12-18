@@ -331,6 +331,17 @@ const startTour = () => {
 
 const close = () => {
     isActive.value = false
+
+    // Toujours marquer comme montré pour éviter l'affichage automatique futur
+    // (même si l'utilisateur n'a pas coché "ne plus afficher")
+    localStorage.setItem('tutorial_welcome_shown', 'true')
+
+    const page = usePage()
+    if (page.props?.auth?.user) {
+        localStorage.setItem(`tutorial_user_${page.props.auth.user.id}_welcomed`, 'true')
+    }
+
+    // Si l'utilisateur a coché "ne plus afficher", marquer comme complété
     if (dontShowAgain.value) {
         saveTourPreference()
     }
@@ -338,6 +349,8 @@ const close = () => {
 
 const skipTour = () => {
     emit('skip')
+    // Marquer comme montré même en cas de skip
+    localStorage.setItem('tutorial_welcome_shown', 'true')
     close()
 }
 
@@ -462,12 +475,18 @@ const positionTooltip = () => {
 }
 
 const saveTourPreference = () => {
-    // Save to localStorage
+    // Save to localStorage - marquer comme complété
     localStorage.setItem(`tutorial_${props.tourId}_completed`, 'true')
+
+    // Marquer le tutoriel de bienvenue comme montré (pour éviter auto-démarrage futur)
+    localStorage.setItem('tutorial_welcome_shown', 'true')
 
     // Also save to backend if user is logged in
     const page = usePage()
     if (page.props.auth?.user) {
+        // Marquer pour cet utilisateur spécifique
+        localStorage.setItem(`tutorial_user_${page.props.auth.user.id}_welcomed`, 'true')
+
         router.post(route('tenant.user.preferences'), {
             key: `tutorial_${props.tourId}_completed`,
             value: true
@@ -475,14 +494,28 @@ const saveTourPreference = () => {
     }
 }
 
+/**
+ * Vérifie si le guide doit démarrer automatiquement
+ * RÈGLE: Seulement la PREMIÈRE fois que l'utilisateur se connecte
+ */
 const checkAutoStart = () => {
     if (!props.autoStart) return
 
+    // Vérifier si le tutoriel a déjà été montré (plusieurs vérifications)
     const completed = localStorage.getItem(`tutorial_${props.tourId}_completed`)
-    if (!completed) {
-        // Delay start for better UX
-        setTimeout(startTour, 1500)
+    const welcomeShown = localStorage.getItem('tutorial_welcome_shown')
+
+    const page = usePage()
+    const userId = page.props?.auth?.user?.id
+    const userWelcomed = userId ? localStorage.getItem(`tutorial_user_${userId}_welcomed`) : null
+
+    // Ne pas auto-démarrer si l'une de ces conditions est vraie
+    if (completed || welcomeShown || userWelcomed) {
+        return
     }
+
+    // C'est vraiment la première visite - démarrer après un délai
+    setTimeout(startTour, 1500)
 }
 
 // Handle window resize

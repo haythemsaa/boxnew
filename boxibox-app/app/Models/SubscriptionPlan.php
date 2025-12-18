@@ -26,6 +26,14 @@ class SubscriptionPlan extends Model
         'is_popular',
         'is_active',
         'sort_order',
+        // Quotas Email & SMS
+        'emails_per_month',
+        'sms_per_month',
+        'email_tracking_enabled',
+        'custom_email_provider_allowed',
+        'custom_sms_provider_allowed',
+        'api_access',
+        'whitelabel',
     ];
 
     protected $casts = [
@@ -37,6 +45,14 @@ class SubscriptionPlan extends Model
         'includes_support' => 'boolean',
         'is_popular' => 'boolean',
         'is_active' => 'boolean',
+        // Email & SMS casts
+        'emails_per_month' => 'integer',
+        'sms_per_month' => 'integer',
+        'email_tracking_enabled' => 'boolean',
+        'custom_email_provider_allowed' => 'boolean',
+        'custom_sms_provider_allowed' => 'boolean',
+        'api_access' => 'boolean',
+        'whitelabel' => 'boolean',
     ];
 
     /**
@@ -124,5 +140,41 @@ class SubscriptionPlan extends Model
             'users' => $this->max_users ?? '∞',
             'customers' => $this->max_customers ?? '∞',
         ];
+    }
+
+    /**
+     * Quotas email/SMS formatés
+     */
+    public function getQuotasAttribute(): array
+    {
+        return [
+            'emails' => $this->emails_per_month === 0 ? 'Illimité' : number_format($this->emails_per_month, 0, '', ' '),
+            'sms' => $this->sms_per_month === 0 ? 'Illimité' : number_format($this->sms_per_month, 0, '', ' '),
+        ];
+    }
+
+    /**
+     * Vérifier si emails illimités
+     */
+    public function getHasUnlimitedEmailsAttribute(): bool
+    {
+        return $this->emails_per_month === 0 || $this->emails_per_month === null;
+    }
+
+    /**
+     * Vérifier si SMS illimités
+     */
+    public function getHasUnlimitedSmsAttribute(): bool
+    {
+        return $this->sms_per_month === 0 || $this->sms_per_month === null;
+    }
+
+    /**
+     * Obtenir le plan par défaut
+     */
+    public static function getDefault(): ?self
+    {
+        return static::where('code', 'starter')->first()
+            ?? static::active()->first();
     }
 }

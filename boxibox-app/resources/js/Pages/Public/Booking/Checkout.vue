@@ -21,6 +21,7 @@ import {
     ChevronUpIcon,
     XMarkIcon,
     ArrowLeftIcon,
+    DevicePhoneMobileIcon,
 } from '@heroicons/vue/24/outline'
 import { CheckCircleIcon, StarIcon, CreditCardIcon, LockClosedIcon } from '@heroicons/vue/24/solid'
 
@@ -37,6 +38,225 @@ const props = defineProps({
         default: null,
     },
 })
+
+// Mobile detection
+const isMobile = ref(false)
+const checkMobile = () => {
+    isMobile.value = window.innerWidth < 768 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+}
+
+// Progress tracking for conversion optimization
+const currentStep = computed(() => {
+    if (!selectedSite.value) return 1
+    if (!selectedBox.value) return 2
+    if (!form.value.start_date) return 3
+    if (!form.value.customer_email) return 4
+    return 5
+})
+
+const progressPercent = computed(() => (currentStep.value / 5) * 100)
+
+// Auto-save to localStorage for mobile users who might lose connection
+const STORAGE_KEY = 'boxibox_checkout_draft'
+
+const saveFormDraft = () => {
+    if (typeof localStorage !== 'undefined') {
+        const draft = {
+            selectedSite: selectedSite.value,
+            selectedBox: selectedBox.value,
+            form: form.value,
+            savedAt: Date.now(),
+        }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(draft))
+    }
+}
+
+const loadFormDraft = () => {
+    if (typeof localStorage !== 'undefined') {
+        try {
+            const draft = JSON.parse(localStorage.getItem(STORAGE_KEY))
+            if (draft && Date.now() - draft.savedAt < 24 * 60 * 60 * 1000) { // 24h max
+                // Restore only if site/box still available
+                if (draft.selectedSite && props.sites.find(s => s.id === draft.selectedSite)) {
+                    selectedSite.value = draft.selectedSite
+                }
+                if (draft.form) {
+                    Object.assign(form.value, draft.form)
+                }
+                return true
+            }
+        } catch (e) {}
+    }
+    return false
+}
+
+const clearFormDraft = () => {
+    if (typeof localStorage !== 'undefined') {
+        localStorage.removeItem(STORAGE_KEY)
+    }
+}
+
+// Apple Pay / Google Pay support
+const walletPaymentAvailable = ref(false)
+const paymentRequest = ref(null)
+
+const initWalletPayments = async () => {
+    if (!props.settings?.stripe_publishable_key || !stripeInstance.value) return
+
+    try {
+        paymentRequest.value = stripeInstance.value.paymentRequest({
+            country: 'FR',
+            currency: 'eur',
+            total: {
+                label: 'Réservation Box',
+                amount: Math.round((totalDueNow.value || 100) * 100),
+            },
+            requestPayerName: true,
+            requestPayerEmail: true,
+            requestPayerPhone: true,
+        })
+
+        const result = await paymentRequest.value.canMakePayment()
+        walletPaymentAvailable.value = !!result
+
+        if (result) {
+            paymentRequest.value.on('paymentmethod', async (ev) => {
+                await handleWalletPayment(ev)
+            })
+        }
+    } catch (e) {
+        console.log('Wallet payments not available:', e)
+    }
+}
+
+const handleWalletPayment = async (ev) => {
+    try {
+        // Auto-fill form from wallet
+        if (ev.payerName) {
+            const nameParts = ev.payerName.split(' ')
+            form.value.customer_first_name = nameParts[0] || ''
+            form.value.customer_last_name = nameParts.slice(1).join(' ') || ''
+        }
+        if (ev.payerEmail) form.value.customer_email = ev.payerEmail
+        if (ev.payerPhone) form.value.customer_phone = ev.payerPhone
+
+        // Create payment intent
+        const intentResponse = await fetch(route('public.booking.create-payment-intent'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+            },
+            body: JSON.stringify({
+                tenant_id: props.tenant.id,
+                amount: totalDueNow.value,
+                customer_email: form.value.customer_email,
+                customer_name: `${form.value.customer_first_name} ${form.value.customer_last_name}`,
+            }),
+        })
+
+        const intentData = await intentResponse.json()
+
+        const { error, paymentIntent } = await stripeInstance.value.confirmCardPayment(
+            intentData.client_secret,
+            { payment_method: ev.paymentMethod.id },
+            { handleActions: false }
+        )
+
+        if (error) {
+            ev.complete('fail')
+            cardError.value = error.message
+            return
+        }
+
+        ev.complete('success')
+
+        // Submit booking with payment
+        await submitBookingWithPayment(paymentIntent.id)
+
+    } catch (e) {
+        ev.complete('fail')
+        cardError.value = e.message || 'Erreur de paiement'
+    }
+}
+
+const submitBookingWithPayment = async (paymentIntentId) => {
+    processing.value = true
+
+    try {
+        const response = await fetch(route('public.booking.store'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+            },
+            body: JSON.stringify({
+                tenant_id: props.tenant.id,
+                site_id: selectedSite.value,
+                box_id: selectedBox.value,
+                ...form.value,
+                promo_code: promoApplied.value?.code,
+                source: isMobile.value ? 'mobile_checkout' : 'desktop_checkout',
+                payment_method: 'wallet',
+                payment_intent_id: paymentIntentId,
+                amount_paid: totalDueNow.value,
+            }),
+        })
+
+        const data = await response.json()
+
+        if (data.success) {
+            clearFormDraft()
+            success.value = true
+            bookingResult.value = data.booking
+            window.scrollTo({ top: 0, behavior: 'smooth' })
+
+            // Track conversion
+            trackConversion('booking_completed', { method: 'wallet_payment' })
+        } else {
+            errors.value = data.errors || {}
+        }
+    } catch (e) {
+        errors.value.general = 'Une erreur est survenue'
+    } finally {
+        processing.value = false
+    }
+}
+
+// Conversion tracking
+const trackConversion = (event, data = {}) => {
+    // Google Analytics
+    if (typeof gtag !== 'undefined') {
+        gtag('event', event, { ...data, currency: 'EUR', value: totalDueNow.value })
+    }
+    // Facebook Pixel
+    if (typeof fbq !== 'undefined') {
+        fbq('track', event === 'booking_completed' ? 'Purchase' : 'InitiateCheckout', {
+            currency: 'EUR',
+            value: totalDueNow.value,
+        })
+    }
+}
+
+// Urgency indicators for conversion
+const urgencyMessage = computed(() => {
+    if (!selectedBoxData.value) return null
+
+    const available = availableBoxes.value.filter(b =>
+        b.volume === selectedBoxData.value.volume
+    ).length
+
+    if (available <= 2) {
+        return { type: 'critical', message: `Plus que ${available} box de cette taille !` }
+    }
+    if (available <= 5) {
+        return { type: 'warning', message: `Seulement ${available} box disponibles` }
+    }
+    return null
+})
+
+// Recently viewed (social proof)
+const recentViewers = ref(Math.floor(Math.random() * 8) + 3)
 
 // Reactive state
 const selectedSite = ref(props.preselectedSite || null)
@@ -454,19 +674,44 @@ const setNextMonth = () => {
     form.value.start_date = date.toISOString().split('T')[0]
 }
 
+// Auto-save form on changes (debounced)
+let saveTimeout = null
+watch([selectedSite, selectedBox, form], () => {
+    clearTimeout(saveTimeout)
+    saveTimeout = setTimeout(saveFormDraft, 1000)
+}, { deep: true })
+
 // Initialize
 onMounted(() => {
+    // Check mobile
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+
+    // Try to restore draft
+    const hasDraft = loadFormDraft()
+
     if (props.sites.length === 1) {
         selectedSite.value = props.sites[0].id
     }
 
-    // Set default date to today
-    form.value.start_date = minDate.value
+    // Set default date to today if not restored
+    if (!form.value.start_date) {
+        form.value.start_date = minDate.value
+    }
 
     // Preload Stripe if available
     if (props.settings?.stripe_publishable_key) {
-        loadStripe()
+        loadStripe().then(() => {
+            initWalletPayments()
+        })
     }
+
+    // Track checkout initiation
+    trackConversion('checkout_started')
+})
+
+onUnmounted(() => {
+    window.removeEventListener('resize', checkMobile)
 })
 </script>
 
@@ -476,7 +721,7 @@ onMounted(() => {
     </Head>
 
     <div class="min-h-screen bg-gray-50">
-        <!-- Compact Header -->
+        <!-- Compact Header with Progress -->
         <header class="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
             <div class="max-w-7xl mx-auto px-4 py-3">
                 <div class="flex items-center justify-between">
@@ -502,7 +747,74 @@ onMounted(() => {
                     </div>
                 </div>
             </div>
+            <!-- Progress Bar (Mobile-friendly) -->
+            <div class="h-1 bg-gray-100">
+                <div
+                    class="h-full transition-all duration-500 ease-out"
+                    :style="{ width: progressPercent + '%', backgroundColor: settings?.primary_color }"
+                ></div>
+            </div>
         </header>
+
+        <!-- Mobile Quick Actions (Sticky bottom on mobile) -->
+        <div
+            v-if="isMobile && selectedBoxData && !success"
+            class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-2xl p-4 safe-area-inset-bottom"
+        >
+            <!-- Urgency Message -->
+            <div
+                v-if="urgencyMessage"
+                class="mb-3 text-center text-sm font-medium animate-pulse"
+                :class="urgencyMessage.type === 'critical' ? 'text-red-600' : 'text-orange-600'"
+            >
+                {{ urgencyMessage.message }}
+            </div>
+
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <p class="text-sm text-gray-500">Total</p>
+                    <p class="text-xl font-bold" :style="{ color: settings?.primary_color }">
+                        {{ formatCurrency(totalDueAtSigning) }}
+                    </p>
+                </div>
+
+                <!-- Apple Pay / Google Pay Button (if available) -->
+                <div v-if="walletPaymentAvailable && paymentRequest" class="flex-1">
+                    <div id="payment-request-button" class="w-full"></div>
+                </div>
+
+                <button
+                    v-else
+                    @click="submitBooking"
+                    :disabled="processing || !isFormComplete"
+                    class="flex-1 py-3 px-6 rounded-xl text-white font-semibold transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    :style="{ backgroundColor: settings?.primary_color }"
+                >
+                    <svg v-if="processing" class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>{{ processing ? 'En cours...' : 'Réserver' }}</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Social Proof Banner -->
+        <div
+            v-if="!success && selectedSiteData"
+            class="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100"
+        >
+            <div class="max-w-7xl mx-auto px-4 py-2 flex items-center justify-center gap-4 text-sm">
+                <span class="flex items-center gap-1 text-blue-700">
+                    <UserIcon class="h-4 w-4" />
+                    {{ recentViewers }} personnes consultent ce site
+                </span>
+                <span class="hidden sm:flex items-center gap-1 text-green-700">
+                    <CheckCircleIcon class="h-4 w-4" />
+                    Réservation instantanée
+                </span>
+            </div>
+        </div>
 
         <!-- Success State -->
         <div v-if="success" class="max-w-2xl mx-auto px-4 py-12">
@@ -1095,5 +1407,58 @@ onMounted(() => {
 }
 .max-h-96::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
+}
+
+/* Mobile optimizations */
+@media (max-width: 767px) {
+    /* Add padding for sticky footer on mobile */
+    .min-h-screen {
+        padding-bottom: 120px;
+    }
+
+    /* Larger touch targets on mobile */
+    button, input, select {
+        min-height: 48px;
+    }
+
+    /* Better spacing for mobile forms */
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="date"] {
+        font-size: 16px !important; /* Prevents iOS zoom */
+    }
+}
+
+/* Safe area for notch devices (iPhone X+) */
+.safe-area-inset-bottom {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+}
+
+/* Apple Pay / Google Pay button styling */
+#payment-request-button {
+    min-height: 48px;
+}
+
+/* Pulse animation for urgency messages */
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.animate-pulse {
+    animation: pulse 2s ease-in-out infinite;
+}
+
+/* Smooth section transitions */
+section {
+    transition: all 0.3s ease-out;
+}
+
+/* Touch-friendly hover states */
+@media (hover: none) {
+    button:active {
+        transform: scale(0.98);
+    }
 }
 </style>

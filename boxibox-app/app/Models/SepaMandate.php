@@ -32,6 +32,11 @@ class SepaMandate extends Model
         'collection_count',
         'total_collected',
         'notes',
+        // GoCardless fields
+        'gocardless_mandate_id',
+        'gocardless_customer_id',
+        'gocardless_bank_account_id',
+        'scheme',
     ];
 
     protected $casts = [

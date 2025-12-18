@@ -41,6 +41,12 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'gocardless' => [
+        'access_token' => env('GOCARDLESS_ACCESS_TOKEN'),
+        'environment' => env('GOCARDLESS_ENVIRONMENT', 'sandbox'), // sandbox or live
+        'webhook_secret' => env('GOCARDLESS_WEBHOOK_SECRET'),
+    ],
+
     'openai' => [
         'api_key' => env('OPENAI_API_KEY'),
         'model' => env('OPENAI_MODEL', 'gpt-4'),
@@ -71,6 +77,33 @@ return [
     'firebase' => [
         'server_key' => env('FIREBASE_SERVER_KEY'),
         'project_id' => env('FIREBASE_PROJECT_ID'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | AI Services (Free APIs)
+    |--------------------------------------------------------------------------
+    */
+
+    // Groq - Free, very fast (Llama 3.3)
+    // Get your free API key at: https://console.groq.com
+    'groq' => [
+        'api_key' => env('GROQ_API_KEY'),
+        'model' => env('GROQ_MODEL', 'llama-3.3-70b-versatile'),
+    ],
+
+    // Google Gemini - Free tier: 60 requests/minute
+    // Get your free API key at: https://aistudio.google.com/apikey
+    'gemini' => [
+        'api_key' => env('GEMINI_API_KEY'),
+        'model' => env('GEMINI_MODEL', 'gemini-1.5-flash'),
+    ],
+
+    // OpenRouter - Multiple free models available
+    // Get your API key at: https://openrouter.ai/keys
+    'openrouter' => [
+        'api_key' => env('OPENROUTER_API_KEY'),
+        'model' => env('OPENROUTER_MODEL', 'meta-llama/llama-3.1-8b-instruct:free'),
     ],
 
 ];

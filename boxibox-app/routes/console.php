@@ -62,3 +62,85 @@ Schedule::command('copilot:generate-briefings')
     ->withoutOverlapping()
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/ai-agents.log'));
+
+/*
+|--------------------------------------------------------------------------
+| Billing & Invoicing Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Generate recurring invoices - Run daily at 6:00 AM
+// Checks all active contracts and generates invoices on their billing day
+Schedule::command('invoices:generate-recurring')
+    ->dailyAt('06:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/invoicing.log'));
+
+// Send payment reminders - Run twice daily at 9:00 AM and 3:00 PM
+Schedule::command('reminders:send')
+    ->dailyAt('09:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/reminders.log'));
+
+Schedule::command('reminders:send')
+    ->dailyAt('15:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/reminders.log'));
+
+// Check for overdue invoices and update status - Run daily at 1:00 AM
+Schedule::command('invoices:check-overdue')
+    ->dailyAt('01:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/invoicing.log'));
+
+// Check expiring contracts and send alerts - Run daily at 8:00 AM
+Schedule::command('contracts:check-expiring')
+    ->dailyAt('08:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/contracts.log'));
+
+/*
+|--------------------------------------------------------------------------
+| Marketing & Recovery Scheduled Tasks
+|--------------------------------------------------------------------------
+*/
+
+// Recover abandoned bookings - Run every 30 minutes
+Schedule::command('bookings:recover-abandoned')
+    ->everyThirtyMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/marketing.log'));
+
+// Score leads automatically - Run every hour during business hours
+Schedule::command('leads:calculate-scores')
+    ->hourly()
+    ->between('08:00', '20:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/crm.log'));
+
+/*
+|--------------------------------------------------------------------------
+| Scheduled Reports
+|--------------------------------------------------------------------------
+*/
+
+// Send scheduled reports - Run every 15 minutes to catch all due reports
+Schedule::command('reports:send-scheduled')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/scheduled-reports.log'));
+
+// Process email automations - Run every 5 minutes
+Schedule::command('emails:process-automations')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/email-automation.log'));

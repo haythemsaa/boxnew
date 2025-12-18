@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Tenant;
 
 use App\Http\Controllers\Controller;
 use App\Models\Webhook;
+use App\Models\WebhookDelivery;
 use App\Models\ApiKey;
 use App\Services\WebhookService;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -20,7 +22,7 @@ class WebhookController extends Controller
     }
 
     /**
-     * Display webhooks management page
+     * Display webhooks management page (legacy)
      */
     public function index(Request $request): Response
     {
@@ -41,6 +43,143 @@ class WebhookController extends Controller
             'availableEvents' => Webhook::EVENTS,
             'availablePermissions' => ApiKey::PERMISSIONS,
         ]);
+    }
+
+    /**
+     * Display webhooks list page (new interface)
+     */
+    public function webhooksIndex(Request $request): Response
+    {
+        $tenantId = auth()->user()->tenant_id;
+
+        $webhooks = Webhook::where('tenant_id', $tenantId)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($webhook) {
+                $webhook->successful_calls = $webhook->deliveries()->where('status', 'success')->count();
+                $webhook->failed_calls = $webhook->deliveries()->where('status', 'failed')->count();
+                $webhook->last_triggered_at = $webhook->deliveries()->latest()->value('created_at');
+                $lastDelivery = $webhook->deliveries()->latest()->first();
+                $webhook->last_status = $lastDelivery?->status;
+                $webhook->last_error = $lastDelivery?->error;
+                return $webhook;
+            });
+
+        // Calculate stats
+        $activeCount = $webhooks->where('is_active', true)->count();
+        $totalCalls = $webhooks->sum('successful_calls') + $webhooks->sum('failed_calls');
+        $successfulCalls = $webhooks->sum('successful_calls');
+        $failedCalls = $webhooks->sum('failed_calls');
+        $successRate = $totalCalls > 0 ? round(($successfulCalls / $totalCalls) * 100) : 100;
+
+        // Recent failures (last 24h)
+        $recentFailures = WebhookDelivery::whereHas('webhook', fn($q) => $q->where('tenant_id', $tenantId))
+            ->where('status', 'failed')
+            ->where('created_at', '>=', now()->subDay())
+            ->count();
+
+        return Inertia::render('Tenant/Integrations/Webhooks/Index', [
+            'webhooks' => $webhooks,
+            'stats' => [
+                'active' => $activeCount,
+                'calls_this_month' => $totalCalls,
+                'success_rate' => $successRate,
+                'recent_failures' => $recentFailures,
+            ],
+        ]);
+    }
+
+    /**
+     * Show create webhook form
+     */
+    public function webhooksCreate(): Response
+    {
+        return Inertia::render('Tenant/Integrations/Webhooks/Create');
+    }
+
+    /**
+     * Show edit webhook form
+     */
+    public function webhooksEdit(Webhook $webhook): Response
+    {
+        $this->authorize('update', $webhook);
+
+        $webhook->successful_calls = $webhook->deliveries()->where('status', 'success')->count();
+        $webhook->failed_calls = $webhook->deliveries()->where('status', 'failed')->count();
+        $webhook->average_response_time = round($webhook->deliveries()->avg('response_time_ms') ?? 0);
+
+        return Inertia::render('Tenant/Integrations/Webhooks/Edit', [
+            'webhook' => $webhook,
+        ]);
+    }
+
+    /**
+     * Show webhook logs
+     */
+    public function webhooksLogs(Webhook $webhook, Request $request): Response
+    {
+        $this->authorize('view', $webhook);
+
+        $perPage = 20;
+        $query = $webhook->deliveries()->orderByDesc('created_at');
+
+        // Pagination
+        $total = $query->count();
+        $page = max(1, (int) $request->get('page', 1));
+        $logs = $query->skip(($page - 1) * $perPage)->take($perPage)->get();
+
+        // Stats
+        $stats = [
+            'total' => $total,
+            'success' => $webhook->deliveries()->where('status', 'success')->count(),
+            'failed' => $webhook->deliveries()->where('status', 'failed')->count(),
+            'success_rate' => $total > 0 ? round(($webhook->deliveries()->where('status', 'success')->count() / $total) * 100) : 100,
+            'avg_response_time' => round($webhook->deliveries()->avg('response_time_ms') ?? 0),
+        ];
+
+        return Inertia::render('Tenant/Integrations/Webhooks/Logs', [
+            'webhook' => $webhook,
+            'logs' => $logs,
+            'stats' => $stats,
+            'pagination' => [
+                'current_page' => $page,
+                'last_page' => ceil($total / $perPage),
+                'per_page' => $perPage,
+                'total' => $total,
+                'from' => ($page - 1) * $perPage + 1,
+                'to' => min($page * $perPage, $total),
+            ],
+        ]);
+    }
+
+    /**
+     * Retry a failed webhook delivery
+     */
+    public function retryDelivery(Webhook $webhook, WebhookDelivery $delivery): JsonResponse
+    {
+        $this->authorize('update', $webhook);
+
+        try {
+            $result = $this->webhookService->retryDelivery($webhook, $delivery);
+
+            return response()->json([
+                'success' => $result['success'] ?? false,
+                'error' => $result['error'] ?? null,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Display API documentation page
+     */
+    public function apiDocs(): Response
+    {
+        return Inertia::render('Tenant/Integrations/ApiDocs');
     }
 
     /**

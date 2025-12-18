@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Lead extends Model
@@ -25,6 +26,9 @@ class Lead extends Model
         'source',
         'score',
         'priority',
+        'conversion_probability',
+        'score_breakdown',
+        'score_factors',
         'box_type_interest',
         'budget_min',
         'budget_max',
@@ -33,18 +37,26 @@ class Lead extends Model
         'metadata',
         'first_contacted_at',
         'last_contacted_at',
+        'last_activity_at',
         'converted_at',
         'converted_to_customer_id',
+        'score_calculated_at',
     ];
 
     protected $casts = [
         'metadata' => 'array',
+        'score_breakdown' => 'array',
+        'score_factors' => 'array',
+        'conversion_probability' => 'decimal:2',
         'budget_min' => 'decimal:2',
         'budget_max' => 'decimal:2',
+        'score' => 'integer',
         'move_in_date' => 'date',
         'first_contacted_at' => 'datetime',
         'last_contacted_at' => 'datetime',
+        'last_activity_at' => 'datetime',
         'converted_at' => 'datetime',
+        'score_calculated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
 
@@ -66,6 +78,11 @@ class Lead extends Model
     public function customer(): BelongsTo
     {
         return $this->belongsTo(Customer::class, 'converted_to_customer_id');
+    }
+
+    public function interactions(): MorphMany
+    {
+        return $this->morphMany(CrmInteraction::class, 'interactable');
     }
 
     public function getFullNameAttribute(): string

@@ -10,6 +10,7 @@ use App\Http\Controllers\API\V1\ContractController;
 use App\Http\Controllers\API\V1\InvoiceController;
 use App\Http\Controllers\API\V1\PaymentController;
 use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\API\V1\PushNotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -24,11 +25,52 @@ use App\Http\Controllers\WebhookController;
 
 /*
 |--------------------------------------------------------------------------
+| Health Check Routes (No Authentication Required)
+|--------------------------------------------------------------------------
+*/
+
+Route::prefix('health')->group(function () {
+    Route::get('/', [\App\Http\Controllers\API\HealthController::class, 'liveness'])->name('health.liveness');
+    Route::get('/ready', [\App\Http\Controllers\API\HealthController::class, 'readiness'])->name('health.readiness');
+    Route::get('/detailed', [\App\Http\Controllers\API\HealthController::class, 'detailed'])->name('health.detailed');
+});
+
+/*
+|--------------------------------------------------------------------------
 | Webhook Routes (No Authentication Required)
 |--------------------------------------------------------------------------
 */
 
-Route::post('/webhooks/stripe', [WebhookController::class, 'handleStripe'])->name('webhooks.stripe');
+Route::middleware('throttle:webhooks')->group(function () {
+    Route::post('/webhooks/stripe', [WebhookController::class, 'handleStripe'])->name('webhooks.stripe');
+
+    // GoCardless SEPA webhooks
+    Route::post('/webhooks/gocardless', [\App\Http\Controllers\API\GoCardlessWebhookController::class, 'handle'])->name('webhooks.gocardless');
+
+    // Email & SMS Tracking Webhooks
+    Route::post('/webhooks/email/{provider}/{token}', [\App\Http\Controllers\API\TrackingController::class, 'handleEmailWebhook'])->name('webhooks.email');
+    Route::post('/webhooks/sms/{provider}/{token}', [\App\Http\Controllers\API\TrackingController::class, 'handleSmsWebhook'])->name('webhooks.sms');
+
+    // Provider-specific webhooks (legacy endpoints)
+    Route::post('/webhooks/twilio', [\App\Http\Controllers\API\TrackingController::class, 'handleTwilioWebhook'])->name('webhooks.twilio');
+    Route::post('/webhooks/mailgun', [\App\Http\Controllers\API\TrackingController::class, 'handleMailgunWebhook'])->name('webhooks.mailgun');
+    Route::post('/webhooks/sendinblue', [\App\Http\Controllers\API\TrackingController::class, 'handleSendinblueWebhook'])->name('webhooks.sendinblue');
+    Route::post('/webhooks/brevo', [\App\Http\Controllers\API\TrackingController::class, 'handleSendinblueWebhook'])->name('webhooks.brevo');
+    Route::post('/webhooks/vonage', [\App\Http\Controllers\API\TrackingController::class, 'handleVonageWebhook'])->name('webhooks.vonage');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Email & SMS Tracking Routes (Public, No Auth)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('track')->group(function () {
+    // Email open tracking (1x1 pixel)
+    Route::get('/email/open/{trackingId}', [\App\Http\Controllers\API\TrackingController::class, 'trackEmailOpen'])->name('track.email.open');
+
+    // Email link click tracking
+    Route::get('/email/click/{linkId}', [\App\Http\Controllers\API\TrackingController::class, 'trackEmailClick'])->name('track.email.click');
+});
 
 /*
 |--------------------------------------------------------------------------
@@ -41,37 +83,109 @@ Route::post('/webhooks/stripe', [WebhookController::class, 'handleStripe'])->nam
 | Public Chatbot API (No Auth Required)
 |--------------------------------------------------------------------------
 */
-Route::post('/chatbot', [\App\Http\Controllers\API\ChatbotController::class, 'chat'])->name('api.chatbot.chat');
-Route::post('/chatbot/recommend-size', [\App\Http\Controllers\API\ChatbotController::class, 'recommendSize'])->name('api.chatbot.recommend-size');
+// Legacy route for ChatbotWidget.vue (/api/chatbot)
+Route::post('/chatbot', [\App\Http\Controllers\API\ChatbotController::class, 'chat'])->middleware('throttle:60,1')->name('api.chatbot');
+
+// V1 API Routes
+Route::prefix('v1/chatbot')->middleware('throttle:60,1')->group(function () {
+    Route::get('/provider', [\App\Http\Controllers\API\V1\ChatbotController::class, 'getProviderInfo'])->name('api.v1.chatbot.provider');
+    Route::post('/message', [\App\Http\Controllers\API\V1\ChatbotController::class, 'sendMessage'])->name('api.v1.chatbot.message');
+    Route::post('/recommend-size', [\App\Http\Controllers\API\V1\ChatbotController::class, 'recommendSize'])->name('api.v1.chatbot.recommend-size');
+    Route::get('/conversation/{conversationId}', [\App\Http\Controllers\API\V1\ChatbotController::class, 'getConversation'])->name('api.v1.chatbot.conversation');
+    Route::post('/handoff', [\App\Http\Controllers\API\V1\ChatbotController::class, 'requestHandoff'])->name('api.v1.chatbot.handoff');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Public Availability Calendar API (No Auth Required)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/availability')->group(function () {
+    Route::get('/calendar', [\App\Http\Controllers\API\V1\AvailabilityController::class, 'calendar'])->name('api.v1.availability.calendar');
+    Route::get('/boxes', [\App\Http\Controllers\API\V1\AvailabilityController::class, 'availableBoxes'])->name('api.v1.availability.boxes');
+    Route::get('/sites/{site}/box-types', [\App\Http\Controllers\API\V1\AvailabilityController::class, 'boxTypes'])->name('api.v1.availability.box-types');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Public Media Gallery API (No Auth Required)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/gallery')->group(function () {
+    Route::get('/sites/{site}', [\App\Http\Controllers\Tenant\MediaGalleryController::class, 'publicGallery'])->name('api.v1.gallery.site');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Self-Service Access Control API (For gate/lock systems)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/access')->group(function () {
+    Route::post('/validate', [\App\Http\Controllers\Tenant\SelfServiceController::class, 'validateAccess'])->name('api.v1.access.validate');
+});
 
 /*
 |--------------------------------------------------------------------------
 | Push Notifications API (Requires Auth)
 |--------------------------------------------------------------------------
 */
+// Public endpoint for VAPID key
+Route::get('/v1/push/public-key', [PushNotificationController::class, 'getPublicKey'])->name('api.v1.push.public-key');
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/register-token', [\App\Http\Controllers\API\NotificationController::class, 'registerToken'])->name('api.notifications.register');
     Route::post('/notifications/unregister-token', [\App\Http\Controllers\API\NotificationController::class, 'unregisterToken'])->name('api.notifications.unregister');
     Route::get('/notifications/tokens', [\App\Http\Controllers\API\NotificationController::class, 'getTokens'])->name('api.notifications.tokens');
     Route::get('/notifications/preferences', [\App\Http\Controllers\API\NotificationController::class, 'getPreferences'])->name('api.notifications.preferences.get');
     Route::put('/notifications/preferences', [\App\Http\Controllers\API\NotificationController::class, 'updatePreferences'])->name('api.notifications.preferences.update');
+
+    // Push Notification Routes
+    Route::prefix('v1/push')->group(function () {
+        Route::post('/subscribe', [PushNotificationController::class, 'subscribe'])->name('api.v1.push.subscribe');
+        Route::post('/unsubscribe', [PushNotificationController::class, 'unsubscribe'])->name('api.v1.push.unsubscribe');
+        Route::get('/subscriptions', [PushNotificationController::class, 'getSubscriptions'])->name('api.v1.push.subscriptions');
+        Route::delete('/subscriptions/{subscription}', [PushNotificationController::class, 'revokeSubscription'])->name('api.v1.push.revoke');
+        Route::post('/test', [PushNotificationController::class, 'sendTest'])->name('api.v1.push.test');
+        Route::post('/preferences', [PushNotificationController::class, 'updatePreferences'])->name('api.v1.push.preferences');
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| External Integration API (API Key Authentication for n8n, Zapier, etc.)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/external')->middleware('throttle:60,1')->group(function () {
+    // Lead creation endpoint for automation tools (n8n, Zapier, Make)
+    Route::post('/leads', [\App\Http\Controllers\API\V1\ExternalLeadController::class, 'store'])
+        ->name('api.v1.external.leads.store');
+
+    // Webhook for lead status updates
+    Route::post('/leads/{lead}/status', [\App\Http\Controllers\API\V1\ExternalLeadController::class, 'updateStatus'])
+        ->name('api.v1.external.leads.status');
+
+    // Get available sites (for automation configuration)
+    Route::get('/sites', [\App\Http\Controllers\API\V1\ExternalLeadController::class, 'getSites'])
+        ->name('api.v1.external.sites');
 });
 
 Route::prefix('v1')->group(function () {
     /*
     |--------------------------------------------------------------------------
-    | Authentication Routes
+    | Authentication Routes (with rate limiting for security)
     |--------------------------------------------------------------------------
     */
-    Route::post('/auth/login', [AuthController::class, 'login'])->name('api.v1.auth.login');
-    Route::post('/auth/register', [AuthController::class, 'register'])->name('api.v1.auth.register');
+    Route::middleware('throttle:login')->group(function () {
+        Route::post('/auth/login', [AuthController::class, 'login'])->name('api.v1.auth.login');
+        Route::post('/auth/register', [AuthController::class, 'register'])->name('api.v1.auth.register');
+    });
 
     /*
     |--------------------------------------------------------------------------
     | Protected Routes (Require Authentication)
     |--------------------------------------------------------------------------
     */
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'throttle:api'])->group(function () {
         // Auth
         Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.v1.auth.logout');
         Route::get('/auth/user', [AuthController::class, 'user'])->name('api.v1.auth.user');

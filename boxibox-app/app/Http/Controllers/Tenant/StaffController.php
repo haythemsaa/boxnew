@@ -15,29 +15,69 @@ use Carbon\Carbon;
 
 class StaffController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $tenantId = Auth::user()->tenant_id;
 
-        $staff = StaffProfile::whereHas('user', fn($q) => $q->where('tenant_id', $tenantId))
-            ->with(['user', 'site'])
-            ->get();
+        $query = StaffProfile::whereHas('user', fn($q) => $q->where('tenant_id', $tenantId))
+            ->with(['user', 'site']);
+
+        // Search filter
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('user', fn($q) => $q->where('name', 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%"));
+        }
+
+        // Role filter
+        if ($request->filled('role')) {
+            $query->where('position', $request->role);
+        }
+
+        $staffProfiles = $query->paginate(15)->withQueryString();
+
+        // Calculate hours worked this week
+        $weekStart = now()->startOfWeek();
+        $hoursThisWeek = StaffShift::where('tenant_id', $tenantId)
+            ->where('shift_date', '>=', $weekStart)
+            ->where('status', 'completed')
+            ->get()
+            ->sum('duration_hours');
 
         $stats = [
-            'total_staff' => $staff->count(),
-            'active_today' => StaffShift::where('tenant_id', $tenantId)
-                ->forDate(now())
+            'total_staff' => StaffProfile::whereHas('user', fn($q) => $q->where('tenant_id', $tenantId))->count(),
+            'on_shift_today' => StaffShift::where('tenant_id', $tenantId)
+                ->whereDate('shift_date', now())
+                ->whereIn('status', ['scheduled', 'confirmed', 'in_progress'])
                 ->count(),
-            'pending_tasks' => StaffTask::where('tenant_id', $tenantId)->where('status', 'pending')->count(),
-            'overdue_tasks' => StaffTask::where('tenant_id', $tenantId)
-                ->where('status', 'pending')
-                ->where('due_date', '<', now())
+            'active_tasks' => StaffTask::where('tenant_id', $tenantId)
+                ->whereIn('status', ['pending', 'in_progress'])
                 ->count(),
+            'hours_this_week' => round($hoursThisWeek, 1),
         ];
 
+        // Today's shifts
+        $todayShifts = StaffShift::where('tenant_id', $tenantId)
+            ->whereDate('shift_date', now())
+            ->with(['user', 'site'])
+            ->orderBy('start_time')
+            ->get()
+            ->map(fn($shift) => [
+                'id' => $shift->id,
+                'staff' => [
+                    'user' => $shift->user,
+                ],
+                'site' => $shift->site,
+                'start_time' => $shift->start_time,
+                'end_time' => $shift->end_time,
+                'shift_type' => $shift->type ?? 'regular',
+            ]);
+
         return Inertia::render('Tenant/Staff/Index', [
-            'staff' => $staff,
+            'staffProfiles' => $staffProfiles,
             'stats' => $stats,
+            'todayShifts' => $todayShifts,
+            'filters' => $request->only(['search', 'role']),
         ]);
     }
 
@@ -46,7 +86,7 @@ class StaffController extends Controller
         $tenantId = Auth::user()->tenant_id;
 
         return Inertia::render('Tenant/Staff/Create', [
-            'users' => User::where('tenant_id', $tenantId)
+            'availableUsers' => User::where('tenant_id', $tenantId)
                 ->whereDoesntHave('staffProfile')
                 ->get(['id', 'name', 'email']),
             'sites' => Site::where('tenant_id', $tenantId)->get(['id', 'name']),
@@ -55,26 +95,62 @@ class StaffController extends Controller
 
     public function store(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
+        // Determine if we're creating a new user or using an existing one
+        $createNewUser = $request->boolean('create_new_user');
+
+        if ($createNewUser) {
+            // Validate new user fields
+            $request->validate([
+                'new_user_name' => 'required|string|max:255',
+                'new_user_email' => 'required|email|unique:users,email',
+                'new_user_password' => 'required|string|min:8|confirmed',
+            ]);
+
+            // Create the new user
+            $user = User::create([
+                'tenant_id' => $tenantId,
+                'name' => $request->new_user_name,
+                'email' => $request->new_user_email,
+                'password' => bcrypt($request->new_user_password),
+            ]);
+
+            $userId = $user->id;
+        } else {
+            $request->validate([
+                'user_id' => 'required|exists:users,id|unique:staff_profiles,user_id',
+            ]);
+            $userId = $request->user_id;
+        }
+
+        // Validate staff profile fields
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id|unique:staff_profiles,user_id',
             'site_id' => 'nullable|exists:sites,id',
             'position' => 'required|string|max:255',
             'department' => 'nullable|string|max:255',
             'employee_number' => 'nullable|string|max:50',
-            'hire_date' => 'required|date',
-            'contract_type' => 'required|in:full_time,part_time,contractor,intern',
+            'hire_date' => 'nullable|date',
             'hourly_rate' => 'nullable|numeric|min:0',
             'monthly_salary' => 'nullable|numeric|min:0',
             'emergency_contact_name' => 'nullable|string|max:255',
             'emergency_contact_phone' => 'nullable|string|max:20',
             'skills' => 'nullable|array',
-            'notes' => 'nullable|string',
         ]);
+
+        // Map employee_number to employee_id (database column name)
+        if (isset($validated['employee_number'])) {
+            $validated['employee_id'] = $validated['employee_number'];
+            unset($validated['employee_number']);
+        }
+
+        $validated['user_id'] = $userId;
+        $validated['tenant_id'] = $tenantId;
 
         StaffProfile::create($validated);
 
         return redirect()->route('tenant.staff.index')
-            ->with('success', 'Profil employé créé.');
+            ->with('success', 'Profil employé créé avec succès.');
     }
 
     public function show(StaffProfile $staff)

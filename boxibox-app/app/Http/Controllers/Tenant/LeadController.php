@@ -63,9 +63,30 @@ class LeadController extends Controller
 
         $lead->load(['site', 'assignedTo']);
 
+        // Get recent interactions
+        $recentInteractions = $lead->interactions()
+            ->with('user')
+            ->orderBy('created_at', 'desc')
+            ->limit(5)
+            ->get()
+            ->map(fn($i) => [
+                'id' => $i->id,
+                'type' => $i->type,
+                'formatted_type' => $i->formatted_type,
+                'icon' => $i->icon,
+                'color' => $i->color,
+                'subject' => $i->subject,
+                'content' => $i->content,
+                'outcome' => $i->outcome,
+                'created_at' => $i->created_at->format('d/m/Y H:i'),
+                'created_at_human' => $i->created_at->diffForHumans(),
+                'user' => $i->user ? ['id' => $i->user->id, 'name' => $i->user->name] : null,
+            ]);
+
         return Inertia::render('Tenant/CRM/Leads/Show', [
             'lead' => $lead,
-            'activities' => [], // Could be lead activities/history
+            'recentInteractions' => $recentInteractions,
+            'interactionCount' => $lead->interactions()->count(),
             'users' => User::where('tenant_id', $request->user()->tenant_id)->get(['id', 'name']),
         ]);
     }
@@ -127,7 +148,6 @@ class LeadController extends Controller
      */
     public function update(Request $request, Lead $lead)
     {
-        $this->authorize('edit_leads');
 
         $validated = $request->validate([
             'first_name' => 'sometimes|string|max:255',
@@ -150,7 +170,6 @@ class LeadController extends Controller
      */
     public function convertToCustomer(Request $request, Lead $lead)
     {
-        $this->authorize('edit_leads');
 
         $validated = $request->validate([
             'address' => 'required|string',
@@ -177,5 +196,187 @@ class LeadController extends Controller
         return Inertia::render('Tenant/CRM/ChurnRisk', [
             'at_risk' => $atRisk,
         ]);
+    }
+
+    /**
+     * Kanban board view for leads pipeline
+     */
+    public function kanban(Request $request)
+    {
+        $this->authorize('viewAny', Lead::class);
+        $tenantId = $request->user()->tenant_id;
+
+        // Group leads by status
+        $statuses = ['new', 'contacted', 'qualified', 'negotiation', 'converted', 'lost'];
+
+        $columns = [];
+        foreach ($statuses as $status) {
+            $leads = Lead::where('tenant_id', $tenantId)
+                ->where('status', $status)
+                ->with(['site', 'assignedTo'])
+                ->orderByDesc('priority')
+                ->orderByDesc('score')
+                ->get()
+                ->map(fn($lead) => [
+                    'id' => $lead->id,
+                    'name' => "{$lead->first_name} {$lead->last_name}",
+                    'email' => $lead->email,
+                    'phone' => $lead->phone,
+                    'company' => $lead->company,
+                    'source' => $lead->source,
+                    'score' => $lead->score,
+                    'priority' => $lead->priority,
+                    'site' => $lead->site?->name,
+                    'assigned_to' => $lead->assignedTo?->name,
+                    'budget_min' => $lead->budget_min,
+                    'budget_max' => $lead->budget_max,
+                    'move_in_date' => $lead->move_in_date?->format('d/m/Y'),
+                    'last_contacted_at' => $lead->last_contacted_at?->format('d/m'),
+                    'created_at' => $lead->created_at->format('d/m/Y'),
+                    'days_in_status' => $lead->updated_at->diffInDays(now()),
+                ]);
+
+            $columns[$status] = [
+                'name' => $this->getStatusLabel($status),
+                'color' => $this->getStatusColor($status),
+                'leads' => $leads,
+                'count' => $leads->count(),
+                'value' => $leads->sum(fn($l) => $l['budget_max'] ?? $l['budget_min'] ?? 0),
+            ];
+        }
+
+        // Pipeline metrics
+        $metrics = [
+            'total_leads' => Lead::where('tenant_id', $tenantId)->count(),
+            'new_this_week' => Lead::where('tenant_id', $tenantId)
+                ->where('created_at', '>=', now()->startOfWeek())
+                ->count(),
+            'conversion_rate' => $this->calculateConversionRate($tenantId),
+            'avg_time_to_convert' => $this->calculateAvgTimeToConvert($tenantId),
+            'pipeline_value' => Lead::where('tenant_id', $tenantId)
+                ->whereNotIn('status', ['converted', 'lost'])
+                ->sum('budget_max'),
+        ];
+
+        return Inertia::render('Tenant/CRM/Leads/Kanban', [
+            'columns' => $columns,
+            'metrics' => $metrics,
+            'users' => User::where('tenant_id', $tenantId)->get(['id', 'name']),
+        ]);
+    }
+
+    /**
+     * Update lead status (for drag & drop)
+     */
+    public function updateStatus(Request $request, Lead $lead)
+    {
+        $this->authorize('update', $lead);
+
+        $validated = $request->validate([
+            'status' => 'required|in:new,contacted,qualified,negotiation,converted,lost',
+            'position' => 'nullable|integer',
+        ]);
+
+        $lead->update([
+            'status' => $validated['status'],
+        ]);
+
+        // Update score based on status change
+        $lead->updateScore();
+
+        return response()->json([
+            'success' => true,
+            'lead' => $lead->fresh(),
+        ]);
+    }
+
+    /**
+     * Bulk update leads
+     */
+    public function bulkUpdate(Request $request)
+    {
+        $this->authorize('update', Lead::class);
+
+        $validated = $request->validate([
+            'lead_ids' => 'required|array',
+            'lead_ids.*' => 'exists:leads,id',
+            'status' => 'nullable|in:new,contacted,qualified,negotiation,converted,lost',
+            'assigned_to' => 'nullable|exists:users,id',
+            'priority' => 'nullable|in:cold,lukewarm,warm,hot,very_hot',
+        ]);
+
+        $leads = Lead::whereIn('id', $validated['lead_ids'])
+            ->where('tenant_id', $request->user()->tenant_id)
+            ->get();
+
+        foreach ($leads as $lead) {
+            $updateData = [];
+            if (isset($validated['status'])) $updateData['status'] = $validated['status'];
+            if (isset($validated['assigned_to'])) $updateData['assigned_to'] = $validated['assigned_to'];
+            if (isset($validated['priority'])) $updateData['priority'] = $validated['priority'];
+
+            if (!empty($updateData)) {
+                $lead->update($updateData);
+            }
+        }
+
+        return response()->json(['success' => true, 'updated' => $leads->count()]);
+    }
+
+    protected function getStatusLabel(string $status): string
+    {
+        return match ($status) {
+            'new' => 'Nouveau',
+            'contacted' => 'Contacté',
+            'qualified' => 'Qualifié',
+            'negotiation' => 'Négociation',
+            'converted' => 'Converti',
+            'lost' => 'Perdu',
+            default => ucfirst($status),
+        };
+    }
+
+    protected function getStatusColor(string $status): string
+    {
+        return match ($status) {
+            'new' => 'blue',
+            'contacted' => 'cyan',
+            'qualified' => 'amber',
+            'negotiation' => 'purple',
+            'converted' => 'emerald',
+            'lost' => 'gray',
+            default => 'gray',
+        };
+    }
+
+    protected function calculateConversionRate(int $tenantId): float
+    {
+        $total = Lead::where('tenant_id', $tenantId)
+            ->whereIn('status', ['converted', 'lost'])
+            ->count();
+
+        if ($total === 0) return 0;
+
+        $converted = Lead::where('tenant_id', $tenantId)
+            ->where('status', 'converted')
+            ->count();
+
+        return round($converted / $total * 100, 1);
+    }
+
+    protected function calculateAvgTimeToConvert(int $tenantId): ?int
+    {
+        $converted = Lead::where('tenant_id', $tenantId)
+            ->where('status', 'converted')
+            ->whereNotNull('converted_at')
+            ->get();
+
+        if ($converted->isEmpty()) return null;
+
+        $totalDays = $converted->sum(function ($lead) {
+            return $lead->created_at->diffInDays($lead->converted_at);
+        });
+
+        return round($totalDays / $converted->count());
     }
 }

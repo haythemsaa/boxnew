@@ -1,0 +1,27 @@
+includes:
+    - ./vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 5
+
+    paths:
+        - app/
+
+    excludePaths:
+        - app/Console/Kernel.php
+        - app/Exceptions/Handler.php
+
+    ignoreErrors:
+        # Ignore dynamic property access on Eloquent models
+        - '#Access to an undefined property App\\Models\\[a-zA-Z0-9_]+::\$[a-zA-Z0-9_]+#'
+
+        # Ignore undefined methods on Builder (common with scopes)
+        - '#Call to an undefined method Illuminate\\Database\\Eloquent\\Builder<[^>]+>::[a-zA-Z0-9_]+\(\)#'
+
+        # Ignore mixed return types in service classes (temporary)
+        - '#Method App\\Services\\[a-zA-Z0-9_]+::[a-zA-Z0-9_]+\(\) has no return type specified#'
+
+    reportUnmatchedIgnoredErrors: false
+
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false

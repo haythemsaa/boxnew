@@ -154,7 +154,6 @@ class ReminderController extends Controller
      */
     public function send(PaymentReminder $reminder)
     {
-        $this->authorize('send_notifications');
 
         if ($reminder->status !== 'pending') {
             return redirect()->back()
@@ -206,7 +205,6 @@ class ReminderController extends Controller
      */
     public function destroy(PaymentReminder $reminder)
     {
-        $this->authorize('send_notifications');
 
         $reminder->delete();
 

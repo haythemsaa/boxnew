@@ -1,0 +1,48 @@
+angular.module('BUXIDA').controller('SuiviController', ['$rootScope', '$scope', '$http', '$timeout', 
+function($rootScope, $scope, $http, $timeout) {
+    
+    // Initialiser le thème
+    $scope.currentTheme = 'light';
+    
+    // Fonction d'initialisation du widget
+    function initWidget() {
+        // Vérifier que BuxidaChangelog est bien chargé
+        if (typeof BuxidaChangelog === 'undefined') {
+            console.error('BuxidaChangelog n\'est pas chargé');
+            return;
+        }
+        
+        try {
+            BuxidaChangelog.init({
+                apiUrl: 'https://admin.buxida.com/cl/api/changelog.php',
+                container: '#buxida-changelog',
+                limit: 10,
+                theme: $scope.currentTheme,
+                showFilters: true,
+                showSearch: true,
+                groupByVersion: false,
+                animations: true,
+                locale: 'fr'
+            });
+            
+            console.log('Widget BuxidaChangelog initialisé avec succès');
+        } catch(error) {
+            console.error('Erreur lors de l\'initialisation du widget:', error);
+        }
+    }
+    
+    // Initialiser après le chargement de la vue
+    $scope.$on('$viewContentLoaded', function() {
+        // Utiliser $timeout pour s'assurer que le DOM et le script sont prêts
+        $timeout(function() {
+            initWidget();
+        }, 100);
+    });
+    
+    // Fonction pour changer de thème (optionnel)
+    $scope.switchTheme = function(theme) {
+        $scope.currentTheme = theme;
+        initWidget();
+    };
+    
+}]);

@@ -310,6 +310,332 @@ class PlanController extends Controller
     }
 
     /**
+     * Display the enhanced interactive plan with real-time features
+     */
+    public function interactiveEnhanced(Request $request)
+    {
+        $tenant = auth()->user()->tenant;
+        $siteId = $request->get('site_id');
+
+        $sites = Site::where('tenant_id', $tenant->id)
+            ->select('id', 'name', 'code')
+            ->get();
+
+        $currentSite = $siteId
+            ? Site::where('id', $siteId)->where('tenant_id', $tenant->id)->first()
+            : $sites->first();
+
+        if (!$currentSite) {
+            return Inertia::render('Tenant/Plan/InteractiveEnhanced', [
+                'sites' => $sites,
+                'currentSite' => null,
+                'boxes' => [],
+                'elements' => [],
+                'configuration' => null,
+                'statistics' => null,
+                'floors' => [],
+            ]);
+        }
+
+        $floors = Floor::where('site_id', $currentSite->id)
+            ->orderBy('floor_number')
+            ->get()
+            ->map(fn($f) => [
+                'id' => $f->id,
+                'name' => $f->name,
+                'level' => $f->floor_number,
+            ]);
+
+        // Get plan elements with full box and contract details
+        $elements = PlanElement::where('site_id', $currentSite->id)
+            ->with(['box.contracts' => function ($query) {
+                $query->where('status', 'active')
+                    ->with('customer')
+                    ->latest();
+            }])
+            ->orderBy('z_index')
+            ->get()
+            ->map(function ($el) {
+                $status = 'available';
+                $contract = null;
+                $customer = null;
+                $endDate = null;
+                $price = $el->box?->current_price ?? $el->box?->base_price ?? 0;
+
+                if ($el->box) {
+                    $activeContract = $el->box->contracts->first();
+                    if ($activeContract) {
+                        $status = 'occupied';
+                        $endDate = $activeContract->end_date;
+                        if ($endDate && $endDate->diffInDays(now()) <= 30) {
+                            $status = 'ending';
+                        }
+                        $contract = [
+                            'id' => $activeContract->id,
+                            'contract_number' => $activeContract->contract_number,
+                            'start_date' => $activeContract->start_date?->format('Y-m-d'),
+                            'end_date' => $endDate?->format('Y-m-d'),
+                        ];
+                        $customer = $activeContract->customer ? [
+                            'id' => $activeContract->customer->id,
+                            'name' => $activeContract->customer->full_name,
+                            'email' => $activeContract->customer->email,
+                        ] : null;
+                    } elseif ($el->box->status === 'reserved') {
+                        $status = 'reserved';
+                    } elseif ($el->box->status === 'maintenance') {
+                        $status = 'maintenance';
+                    } elseif ($el->box->status === 'unavailable') {
+                        $status = 'unavailable';
+                    }
+                }
+
+                return [
+                    'id' => $el->id,
+                    'type' => $el->element_type,
+                    'x' => (float) $el->x,
+                    'y' => (float) $el->y,
+                    'w' => (float) $el->width,
+                    'h' => (float) $el->height,
+                    'fill' => $el->fill_color ?? '#10B981',
+                    'z' => $el->z_index ?? 100,
+                    'name' => $el->label ?? '',
+                    'vol' => $el->properties['volume'] ?? ($el->box?->volume ?? 0),
+                    'price' => $price,
+                    'status' => $status,
+                    'floor' => $el->floor_id,
+                    'boxId' => $el->box_id,
+                    'contract' => $contract,
+                    'customer' => $customer,
+                    'endDate' => $endDate?->format('Y-m-d'),
+                    'features' => $el->box?->features ?? [],
+                ];
+            });
+
+        // Get boxes with their contracts
+        $boxes = Box::where('site_id', $currentSite->id)
+            ->with(['contracts' => function ($query) {
+                $query->where('status', 'active')->with('customer');
+            }])
+            ->orderBy('number')
+            ->get();
+
+        $configuration = PlanConfiguration::firstOrCreate(
+            ['site_id' => $currentSite->id],
+            [
+                'canvas_width' => 1200,
+                'canvas_height' => 700,
+            ]
+        );
+
+        // Calculate detailed statistics
+        $statsSource = $elements->count() > 0
+            ? $elements->filter(fn($e) => $e['type'] === 'box')
+            : $boxes;
+
+        $statistics = [
+            'total' => $statsSource->count(),
+            'occupied' => $statsSource->where('status', 'occupied')->count(),
+            'available' => $statsSource->where('status', 'available')->count(),
+            'reserved' => $statsSource->where('status', 'reserved')->count(),
+            'maintenance' => $statsSource->where('status', 'maintenance')->count(),
+            'ending' => $statsSource->where('status', 'ending')->count(),
+            'totalVolume' => $boxes->sum('volume'),
+            'occupiedVolume' => $boxes->filter(fn($b) => $b->contracts->isNotEmpty())->sum('volume'),
+            'monthlyRevenue' => $boxes->filter(fn($b) => $b->contracts->isNotEmpty())
+                ->sum(fn($b) => $b->contracts->first()?->monthly_price ?? 0),
+        ];
+        $statistics['occupancyRate'] = $statistics['total'] > 0
+            ? round(($statistics['occupied'] + $statistics['ending']) / $statistics['total'] * 100, 1)
+            : 0;
+
+        return Inertia::render('Tenant/Plan/InteractiveEnhanced', [
+            'sites' => $sites,
+            'currentSite' => $currentSite,
+            'boxes' => $boxes,
+            'elements' => $elements,
+            'configuration' => $configuration,
+            'statistics' => $statistics,
+            'floors' => $floors,
+        ]);
+    }
+
+    /**
+     * Display the Pro interactive plan with all advanced features
+     */
+    public function interactivePro(Request $request)
+    {
+        $tenant = auth()->user()->tenant;
+        $siteId = $request->get('site_id');
+
+        $sites = Site::where('tenant_id', $tenant->id)
+            ->select('id', 'name', 'code')
+            ->get();
+
+        $currentSite = $siteId
+            ? Site::where('id', $siteId)->where('tenant_id', $tenant->id)->first()
+            : $sites->first();
+
+        if (!$currentSite) {
+            return Inertia::render('Tenant/Plan/InteractivePro', [
+                'sites' => $sites,
+                'currentSite' => null,
+                'boxes' => [],
+                'elements' => [],
+                'configuration' => null,
+                'statistics' => null,
+                'floors' => [],
+            ]);
+        }
+
+        $floors = Floor::where('site_id', $currentSite->id)
+            ->orderBy('floor_number')
+            ->get()
+            ->map(fn($f) => [
+                'id' => $f->id,
+                'name' => $f->name,
+                'level' => $f->floor_number,
+            ]);
+
+        // Get plan elements with full box, contract, and invoice details for alerts
+        $elements = PlanElement::where('site_id', $currentSite->id)
+            ->with(['box.contracts' => function ($query) {
+                $query->where('status', 'active')
+                    ->with(['customer', 'invoices' => function ($q) {
+                        $q->where('status', 'pending')
+                            ->where('due_date', '<', now());
+                    }])
+                    ->latest();
+            }])
+            ->orderBy('z_index')
+            ->get()
+            ->map(function ($el) {
+                $status = 'available';
+                $contract = null;
+                $customer = null;
+                $endDate = null;
+                $hasOverdue = false;
+                $daysUntilEnd = null;
+                $price = $el->box?->current_price ?? $el->box?->base_price ?? 0;
+
+                if ($el->box) {
+                    $activeContract = $el->box->contracts->first();
+                    if ($activeContract) {
+                        $status = 'occupied';
+                        $endDate = $activeContract->end_date;
+
+                        // Check for ending soon
+                        if ($endDate) {
+                            $daysUntilEnd = now()->diffInDays($endDate, false);
+                            if ($daysUntilEnd >= 0 && $daysUntilEnd <= 30) {
+                                $status = 'ending';
+                            }
+                        }
+
+                        // Check for overdue invoices
+                        $hasOverdue = $activeContract->invoices->isNotEmpty();
+
+                        $contract = [
+                            'id' => $activeContract->id,
+                            'contract_number' => $activeContract->contract_number,
+                            'start_date' => $activeContract->start_date?->format('Y-m-d'),
+                            'end_date' => $endDate?->format('Y-m-d'),
+                        ];
+                        $customer = $activeContract->customer ? [
+                            'id' => $activeContract->customer->id,
+                            'name' => $activeContract->customer->full_name,
+                            'email' => $activeContract->customer->email,
+                        ] : null;
+                    } elseif ($el->box->status === 'reserved') {
+                        $status = 'reserved';
+                    } elseif ($el->box->status === 'maintenance') {
+                        $status = 'maintenance';
+                    } elseif ($el->box->status === 'unavailable') {
+                        $status = 'unavailable';
+                    } elseif ($el->box->status === 'litigation') {
+                        $status = 'litigation';
+                    }
+                }
+
+                return [
+                    'id' => $el->id,
+                    'type' => $el->element_type,
+                    'x' => (float) $el->x,
+                    'y' => (float) $el->y,
+                    'w' => (float) $el->width,
+                    'h' => (float) $el->height,
+                    'fill' => $el->fill_color ?? '#10B981',
+                    'z' => $el->z_index ?? 100,
+                    'name' => $el->label ?? '',
+                    'vol' => $el->properties['volume'] ?? ($el->box?->volume ?? 0),
+                    'price' => $price,
+                    'status' => $status,
+                    'floor' => $el->floor_id,
+                    'boxId' => $el->box_id,
+                    'contract' => $contract,
+                    'customer' => $customer,
+                    'endDate' => $endDate?->format('Y-m-d'),
+                    'hasOverdue' => $hasOverdue,
+                    'daysUntilEnd' => $daysUntilEnd > 0 ? $daysUntilEnd : null,
+                ];
+            });
+
+        // Get boxes with their contracts
+        $boxes = Box::where('site_id', $currentSite->id)
+            ->with(['contracts' => function ($query) {
+                $query->where('status', 'active')->with('customer');
+            }])
+            ->orderBy('number')
+            ->get();
+
+        $configuration = PlanConfiguration::firstOrCreate(
+            ['site_id' => $currentSite->id],
+            [
+                'canvas_width' => 1200,
+                'canvas_height' => 700,
+            ]
+        );
+
+        // Calculate detailed statistics
+        $statsSource = $elements->count() > 0
+            ? $elements->filter(fn($e) => $e['type'] === 'box')
+            : $boxes;
+
+        $occupiedRevenue = $boxes->filter(fn($b) => $b->contracts->isNotEmpty())
+            ->sum(fn($b) => $b->contracts->first()?->monthly_price ?? $b->current_price ?? $b->base_price ?? 0);
+
+        $potentialRevenue = $boxes->sum(fn($b) => $b->current_price ?? $b->base_price ?? 0);
+
+        $statistics = [
+            'total' => $statsSource->count(),
+            'occupied' => $statsSource->where('status', 'occupied')->count(),
+            'available' => $statsSource->where('status', 'available')->count(),
+            'reserved' => $statsSource->where('status', 'reserved')->count(),
+            'maintenance' => $statsSource->where('status', 'maintenance')->count(),
+            'ending' => $statsSource->where('status', 'ending')->count(),
+            'litigation' => $statsSource->where('status', 'litigation')->count(),
+            'totalVolume' => $boxes->sum('volume'),
+            'occupiedVolume' => $boxes->filter(fn($b) => $b->contracts->isNotEmpty())->sum('volume'),
+            'monthlyRevenue' => $occupiedRevenue,
+            'potentialRevenue' => $potentialRevenue,
+            'overdueCount' => $elements->where('hasOverdue', true)->count(),
+        ];
+        $statistics['occupancyRate'] = $statistics['total'] > 0
+            ? round(($statistics['occupied'] + $statistics['ending'] + $statistics['reserved']) / $statistics['total'] * 100, 1)
+            : 0;
+
+        return Inertia::render('Tenant/Plan/InteractivePro', [
+            'sites' => $sites,
+            'currentSite' => $currentSite,
+            'boxes' => $boxes,
+            'elements' => $elements,
+            'configuration' => $configuration,
+            'statistics' => $statistics,
+            'floors' => $floors,
+        ]);
+    }
+
+    /**
      * Display the plan editor
      */
     public function editor(Request $request)
@@ -388,6 +714,85 @@ class PlanController extends Controller
             'boxes' => $boxes,
             'unplacedBoxes' => $unplacedBoxes->values(),
             'floors' => $floors,
+        ]);
+    }
+
+    /**
+     * Editor Pro - Advanced plan editor with layers, guides, and more
+     */
+    public function editorPro(Request $request)
+    {
+        $tenant = auth()->user()->tenant;
+        $siteId = $request->get('site_id');
+
+        $sites = Site::where('tenant_id', $tenant->id)
+            ->select('id', 'name', 'code')
+            ->get();
+
+        $currentSite = $siteId
+            ? Site::where('id', $siteId)->where('tenant_id', $tenant->id)->first()
+            : $sites->first();
+
+        if (!$currentSite) {
+            return Inertia::render('Tenant/Plan/EditorPro', [
+                'sites' => $sites,
+                'currentSite' => null,
+                'elements' => [],
+                'configuration' => null,
+                'boxes' => [],
+                'unplacedBoxes' => [],
+            ]);
+        }
+
+        $elements = PlanElement::where('site_id', $currentSite->id)
+            ->orderBy('z_index')
+            ->get()
+            ->map(function ($el) {
+                return [
+                    'id' => $el->id,
+                    'type' => $el->element_type,
+                    'x' => (float) $el->x,
+                    'y' => (float) $el->y,
+                    'w' => (float) $el->width,
+                    'h' => (float) $el->height,
+                    'fill' => $el->fill_color ?? '#4CAF50',
+                    'z' => $el->z_index ?? 100,
+                    'name' => $el->label ?? '',
+                    'vol' => $el->properties['volume'] ?? 0,
+                    'status' => $el->properties['status'] ?? 'available',
+                    'locked' => $el->is_locked ?? false,
+                    'visible' => $el->is_visible ?? true,
+                    'boxId' => $el->box_id,
+                    'rotation' => $el->properties['rotation'] ?? 0,
+                    'layer' => $el->properties['layer'] ?? 'main',
+                ];
+            });
+
+        $configuration = PlanConfiguration::firstOrCreate(
+            ['site_id' => $currentSite->id],
+            [
+                'canvas_width' => 1600,
+                'canvas_height' => 1000,
+            ]
+        );
+
+        $boxes = Box::where('site_id', $currentSite->id)
+            ->select('id', 'number', 'volume', 'length', 'width', 'height', 'current_price', 'base_price', 'status')
+            ->get();
+
+        $boxesOnPlan = PlanElement::where('site_id', $currentSite->id)
+            ->whereNotNull('box_id')
+            ->pluck('box_id');
+
+        $unplacedBoxes = $boxes->whereNotIn('id', $boxesOnPlan);
+
+        return Inertia::render('Tenant/Plan/EditorPro', [
+            'sites' => $sites,
+            'currentSite' => $currentSite,
+            'elements' => $elements,
+            'configuration' => $configuration,
+            'boxes' => $boxes,
+            'unplacedBoxes' => $unplacedBoxes->values(),
         ]);
     }
 

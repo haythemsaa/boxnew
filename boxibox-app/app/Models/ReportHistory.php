@@ -19,12 +19,18 @@ class ReportHistory extends Model
         'format',
         'file_path',
         'file_size',
+        'row_count',
+        'generation_time_ms',
+        'parameters_used',
         'error_message',
         'status',
     ];
 
     protected $casts = [
         'file_size' => 'integer',
+        'row_count' => 'integer',
+        'generation_time_ms' => 'float',
+        'parameters_used' => 'array',
         'generated_at' => 'datetime',
     ];
 
@@ -39,6 +45,11 @@ class ReportHistory extends Model
     }
 
     public function generator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'generated_by');
+    }
+
+    public function generatedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'generated_by');
     }

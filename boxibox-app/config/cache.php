@@ -15,7 +15,11 @@ return [
     |
     */
 
-    'default' => env('CACHE_STORE', 'database'),
+    /*
+     * In production, Redis is strongly recommended for performance.
+     * The 'failover' store provides automatic fallback to database if Redis fails.
+     */
+    'default' => env('CACHE_STORE', env('APP_ENV') === 'production' ? 'failover' : 'database'),
 
     /*
     |--------------------------------------------------------------------------
@@ -94,8 +98,8 @@ return [
         'failover' => [
             'driver' => 'failover',
             'stores' => [
+                'redis',
                 'database',
-                'array',
             ],
         ],
 

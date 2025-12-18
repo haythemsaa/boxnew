@@ -96,7 +96,7 @@ class BulkInvoiceController extends Controller
                 'contract_number' => $contract->contract_number ?? '-',
                 'customer_name' => $customerName,
                 'customer_email' => $contract->customer?->email ?? '-',
-                'box_code' => $contract->box?->code ?? 'N/A',
+                'box_code' => $contract->box?->number ?? 'N/A',
                 'box_size' => $contract->box?->size ?? '-',
                 'site_name' => $contract->site?->name ?? '-',
                 'period_start' => $validated['period_start'],
@@ -158,7 +158,7 @@ class BulkInvoiceController extends Controller
             $total = $subtotal + $taxAmount;
 
             // Build invoice items
-            $boxCode = $contract->box?->code ?? 'N/A';
+            $boxCode = $contract->box?->number ?? 'N/A';
             $boxSize = $contract->box?->size ?? '';
             $items = [
                 [

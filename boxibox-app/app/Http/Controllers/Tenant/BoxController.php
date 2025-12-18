@@ -21,8 +21,6 @@ class BoxController extends Controller
      */
     public function plan(Request $request): Response
     {
-        $this->authorize('view_boxes');
-
         $tenantId = $request->user()->tenant_id;
         $tenant = $request->user()->tenant;
 
@@ -76,8 +74,6 @@ class BoxController extends Controller
      */
     public function planEdit(Request $request): Response
     {
-        $this->authorize('edit_boxes');
-
         $tenantId = $request->user()->tenant_id;
         $tenant = $request->user()->tenant;
 
@@ -110,8 +106,6 @@ class BoxController extends Controller
      */
     public function planSave(Request $request): RedirectResponse
     {
-        $this->authorize('edit_boxes');
-
         $validated = $request->validate([
             'boxes' => 'required|array',
             'boxes.*.id' => 'required|exists:boxes,id',
@@ -146,8 +140,6 @@ class BoxController extends Controller
      */
     public function index(Request $request): Response
     {
-        $this->authorize('view_boxes');
-
         $tenantId = $request->user()->tenant_id;
 
         $boxes = Box::where('tenant_id', $tenantId)
@@ -197,8 +189,6 @@ class BoxController extends Controller
      */
     public function create(Request $request): Response
     {
-        $this->authorize('create_boxes');
-
         $tenantId = $request->user()->tenant_id;
 
         $sites = Site::where('tenant_id', $tenantId)
@@ -264,8 +254,6 @@ class BoxController extends Controller
      */
     public function show(Box $box): Response
     {
-        $this->authorize('view_boxes');
-
         $box->load(['site', 'building', 'floor', 'contract.customer', 'contracts' => function ($query) {
             $query->latest()->limit(5);
         }]);
@@ -288,8 +276,6 @@ class BoxController extends Controller
      */
     public function edit(Request $request, Box $box): Response
     {
-        $this->authorize('edit_boxes');
-
         $tenantId = $request->user()->tenant_id;
 
         $sites = Site::where('tenant_id', $tenantId)
@@ -341,8 +327,6 @@ class BoxController extends Controller
      */
     public function destroy(Box $box): RedirectResponse
     {
-        $this->authorize('delete_boxes');
-
         $box->delete();
 
         // Update tenant statistics

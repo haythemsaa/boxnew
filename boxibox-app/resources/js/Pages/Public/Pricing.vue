@@ -8,29 +8,45 @@ import {
     BuildingOffice2Icon,
     RocketLaunchIcon,
     BuildingLibraryIcon,
+    ChevronDownIcon,
+    EnvelopeIcon,
+    DevicePhoneMobileIcon,
+    CubeIcon,
+    UsersIcon,
+    MapPinIcon,
+    UserGroupIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
-    plans: Object,
-    widgets: Object,
-    featureLabels: Object,
-    supportLabels: Object,
+    plans: Array,
+    faqs: Array,
 })
 
 const billingPeriod = ref('monthly')
+const openFaq = ref(null)
 
-const getPlanIcon = (slug) => {
+const getPlanIcon = (code) => {
     const icons = {
         starter: RocketLaunchIcon,
         professional: SparklesIcon,
         business: BuildingOffice2Icon,
         enterprise: BuildingLibraryIcon,
     }
-    return icons[slug] || SparklesIcon
+    return icons[code] || SparklesIcon
+}
+
+const getPlanColor = (code) => {
+    const colors = {
+        starter: 'blue',
+        professional: 'purple',
+        business: 'orange',
+        enterprise: 'indigo',
+    }
+    return colors[code] || 'purple'
 }
 
 const formatPrice = (price) => {
-    if (price === null) return 'Sur devis'
+    if (price === null || price === undefined) return 'Sur devis'
     return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
         currency: 'EUR',
@@ -40,49 +56,33 @@ const formatPrice = (price) => {
 
 const getDisplayPrice = (plan) => {
     if (billingPeriod.value === 'yearly') {
-        return plan.price_yearly ? Math.round(plan.price_yearly / 12) : null
+        return plan.yearly_price ? Math.round(plan.yearly_price / 12) : plan.monthly_price
     }
-    return plan.price_monthly
+    return plan.monthly_price
 }
 
 const getSavings = (plan) => {
-    if (!plan.price_monthly || !plan.price_yearly) return 0
-    return (plan.price_monthly * 12) - plan.price_yearly
+    if (!plan.monthly_price || !plan.yearly_price) return 0
+    return (plan.monthly_price * 12) - plan.yearly_price
 }
 
-const mainFeatures = [
-    'boxes_management',
-    'customers_management',
-    'contracts_management',
-    'invoicing',
-    'payment_reminders',
-    'electronic_signature',
-    'sepa_direct_debit',
-    'crm_prospects',
-    'advanced_analytics',
-    'interactive_plan',
-    'multi_site',
-    'api_access',
-    'booking_widget',
-    'dynamic_pricing',
-]
+const formatNumber = (num) => {
+    if (!num) return 'Illimité'
+    return new Intl.NumberFormat('fr-FR').format(num)
+}
 
-const getFeatureValue = (plan, feature) => {
-    const value = plan.features[feature]
-    if (typeof value === 'boolean') return value
-    if (typeof value === 'number') {
-        if (value === -1) return 'Illimité'
-        if (value === 0) return false
-        return `${value}/mois`
+const toggleFaq = (index) => {
+    openFaq.value = openFaq.value === index ? null : index
+}
+
+const getSupportLabel = (level) => {
+    const labels = {
+        'none': 'Communauté uniquement',
+        'email': 'Support par email',
+        'priority': 'Support prioritaire',
+        'dedicated': 'Account manager dédié',
     }
-    if (typeof value === 'string') {
-        if (value === 'read') return 'Lecture'
-        if (value === 'full') return 'Complet'
-        if (value === 'addon') return 'Add-on'
-        if (value === 'basic') return 'Basic inclus'
-        if (value === 'pro') return 'Pro inclus'
-    }
-    return value
+    return labels[level] || level
 }
 </script>
 
@@ -100,6 +100,12 @@ const getFeatureValue = (plan, feature) => {
                         </div>
                         <span class="text-xl font-bold text-white">Boxibox</span>
                     </Link>
+                    <div class="hidden md:flex items-center gap-8">
+                        <Link href="/" class="text-gray-400 hover:text-white transition-colors">Accueil</Link>
+                        <Link href="/features" class="text-gray-400 hover:text-white transition-colors">Fonctionnalités</Link>
+                        <Link href="/pricing" class="text-white font-medium">Tarifs</Link>
+                        <Link href="/contact" class="text-gray-400 hover:text-white transition-colors">Contact</Link>
+                    </div>
                     <div class="flex items-center gap-4">
                         <Link href="/login" class="text-gray-300 hover:text-white transition-colors">
                             Connexion
@@ -115,11 +121,14 @@ const getFeatureValue = (plan, feature) => {
         <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
             <!-- Hero -->
             <div class="text-center mb-16">
+                <span class="px-4 py-1.5 bg-purple-500/20 text-purple-400 rounded-full text-sm font-medium mb-6 inline-block">
+                    14 jours d'essai gratuit
+                </span>
                 <h1 class="text-4xl sm:text-5xl font-bold text-white mb-4">
                     Des tarifs simples et transparents
                 </h1>
                 <p class="text-xl text-gray-400 max-w-2xl mx-auto">
-                    Choisissez le plan adapté à votre centre de self-stockage. Évoluez à tout moment.
+                    Choisissez le plan adapté à votre centre de self-stockage. Évoluez à tout moment sans frais cachés.
                 </p>
 
                 <!-- Billing Toggle -->
@@ -140,7 +149,7 @@ const getFeatureValue = (plan, feature) => {
                     <span :class="billingPeriod === 'yearly' ? 'text-white' : 'text-gray-400'" class="text-sm font-medium">
                         Annuel
                         <span class="ml-1 px-2 py-0.5 bg-green-500/20 text-green-400 text-xs rounded-full">
-                            -2 mois
+                            -20%
                         </span>
                     </span>
                 </div>
@@ -149,15 +158,15 @@ const getFeatureValue = (plan, feature) => {
             <!-- Pricing Cards -->
             <div class="grid grid-cols-1 gap-8 lg:grid-cols-4">
                 <div
-                    v-for="(plan, slug) in plans"
-                    :key="slug"
+                    v-for="plan in plans"
+                    :key="plan.id"
                     :class="[
-                        plan.popular ? 'ring-2 ring-purple-500 scale-105' : 'ring-1 ring-gray-700',
+                        plan.is_popular ? 'ring-2 ring-purple-500 lg:scale-105' : 'ring-1 ring-gray-700',
                         'relative bg-gray-800 rounded-2xl p-8 flex flex-col'
                     ]"
                 >
                     <!-- Popular Badge -->
-                    <div v-if="plan.popular" class="absolute -top-4 left-1/2 -translate-x-1/2">
+                    <div v-if="plan.is_popular" class="absolute -top-4 left-1/2 -translate-x-1/2">
                         <span class="px-4 py-1 bg-purple-600 text-white text-sm font-medium rounded-full">
                             Le plus populaire
                         </span>
@@ -166,10 +175,10 @@ const getFeatureValue = (plan, feature) => {
                     <!-- Plan Header -->
                     <div class="text-center mb-6">
                         <div :class="[
-                            plan.popular ? 'bg-purple-600/20 text-purple-400' : 'bg-gray-700/50 text-gray-400',
+                            plan.is_popular ? 'bg-purple-600/20 text-purple-400' : 'bg-gray-700/50 text-gray-400',
                             'inline-flex p-3 rounded-xl mb-4'
                         ]">
-                            <component :is="getPlanIcon(slug)" class="h-8 w-8" />
+                            <component :is="getPlanIcon(plan.code)" class="h-8 w-8" />
                         </div>
                         <h3 class="text-xl font-bold text-white">{{ plan.name }}</h3>
                         <p class="mt-2 text-sm text-gray-400">{{ plan.description }}</p>
@@ -179,127 +188,135 @@ const getFeatureValue = (plan, feature) => {
                     <div class="text-center mb-6">
                         <div class="flex items-baseline justify-center gap-1">
                             <span class="text-4xl font-bold text-white">
-                                {{ getDisplayPrice(plan) !== null ? formatPrice(getDisplayPrice(plan)) : 'Sur devis' }}
+                                {{ formatPrice(getDisplayPrice(plan)) }}
                             </span>
-                            <span v-if="getDisplayPrice(plan) !== null" class="text-gray-400">/mois</span>
+                            <span class="text-gray-400">/mois</span>
                         </div>
                         <p v-if="billingPeriod === 'yearly' && getSavings(plan) > 0" class="mt-1 text-sm text-green-400">
                             Économisez {{ formatPrice(getSavings(plan)) }}/an
                         </p>
-                        <p v-if="plan.price_yearly && billingPeriod === 'yearly'" class="mt-1 text-xs text-gray-500">
-                            Facturé {{ formatPrice(plan.price_yearly) }}/an
+                        <p v-if="billingPeriod === 'yearly'" class="mt-1 text-xs text-gray-500">
+                            Facturé {{ formatPrice(plan.yearly_price) }}/an
                         </p>
                     </div>
 
                     <!-- Limits -->
-                    <div class="mb-6 p-4 bg-gray-900/50 rounded-xl space-y-2">
+                    <div class="mb-6 p-4 bg-gray-900/50 rounded-xl space-y-3">
                         <div class="flex items-center justify-between text-sm">
-                            <span class="text-gray-400">Boxes</span>
+                            <div class="flex items-center gap-2 text-gray-400">
+                                <CubeIcon class="h-4 w-4" />
+                                <span>Boxes</span>
+                            </div>
                             <span class="text-white font-medium">
-                                {{ plan.max_units === -1 ? 'Illimité' : `≤ ${plan.max_units}` }}
+                                {{ plan.max_boxes ? `≤ ${formatNumber(plan.max_boxes)}` : 'Illimité' }}
                             </span>
                         </div>
                         <div class="flex items-center justify-between text-sm">
-                            <span class="text-gray-400">Sites</span>
+                            <div class="flex items-center gap-2 text-gray-400">
+                                <MapPinIcon class="h-4 w-4" />
+                                <span>Sites</span>
+                            </div>
                             <span class="text-white font-medium">
-                                {{ plan.max_sites === -1 ? 'Illimité' : plan.max_sites }}
+                                {{ plan.max_sites ? plan.max_sites : 'Illimité' }}
                             </span>
                         </div>
                         <div class="flex items-center justify-between text-sm">
-                            <span class="text-gray-400">Utilisateurs</span>
+                            <div class="flex items-center gap-2 text-gray-400">
+                                <UsersIcon class="h-4 w-4" />
+                                <span>Utilisateurs</span>
+                            </div>
                             <span class="text-white font-medium">
-                                {{ plan.max_users === -1 ? 'Illimité' : plan.max_users }}
+                                {{ plan.max_users ? plan.max_users : 'Illimité' }}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center gap-2 text-gray-400">
+                                <UserGroupIcon class="h-4 w-4" />
+                                <span>Clients</span>
+                            </div>
+                            <span class="text-white font-medium">
+                                {{ plan.max_customers ? formatNumber(plan.max_customers) : 'Illimité' }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Quotas -->
+                    <div class="mb-6 p-4 bg-gray-900/50 rounded-xl space-y-3">
+                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Quotas inclus</p>
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center gap-2 text-gray-400">
+                                <EnvelopeIcon class="h-4 w-4" />
+                                <span>Emails/mois</span>
+                            </div>
+                            <span class="text-white font-medium">
+                                {{ formatNumber(plan.emails_per_month) }}
+                            </span>
+                        </div>
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center gap-2 text-gray-400">
+                                <DevicePhoneMobileIcon class="h-4 w-4" />
+                                <span>SMS/mois</span>
+                            </div>
+                            <span class="text-white font-medium">
+                                {{ formatNumber(plan.sms_per_month) }}
                             </span>
                         </div>
                     </div>
 
                     <!-- CTA -->
                     <Link
-                        :href="plan.price_monthly ? `/register?plan=${slug}` : '/contact'"
+                        :href="`/register?plan=${plan.code}`"
                         :class="[
-                            plan.popular
+                            plan.is_popular
                                 ? 'bg-purple-600 hover:bg-purple-700 text-white'
                                 : 'bg-gray-700 hover:bg-gray-600 text-white',
                             'w-full py-3 px-4 rounded-xl font-medium text-center transition-colors mb-6'
                         ]"
                     >
-                        {{ plan.price_monthly ? 'Commencer' : 'Nous contacter' }}
+                        Essai gratuit 14 jours
                     </Link>
 
                     <!-- Features List -->
                     <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-300 mb-4">Inclus :</p>
-                        <ul class="space-y-3">
-                            <li class="flex items-start gap-3 text-sm">
+                        <p class="text-sm font-medium text-gray-300 mb-4">
+                            {{ plan.modules_count }} modules inclus :
+                        </p>
+                        <ul class="space-y-2.5">
+                            <li class="flex items-start gap-2 text-sm">
                                 <CheckIcon class="h-5 w-5 text-green-400 flex-shrink-0" />
-                                <span class="text-gray-300">{{ supportLabels[plan.support] }}</span>
+                                <span class="text-gray-300">{{ getSupportLabel(plan.support_level) }}</span>
                             </li>
-                            <li v-for="feature in mainFeatures.slice(0, 8)" :key="feature" class="flex items-start gap-3 text-sm">
-                                <template v-if="getFeatureValue(plan, feature)">
-                                    <CheckIcon class="h-5 w-5 text-green-400 flex-shrink-0" />
-                                    <span class="text-gray-300">
-                                        {{ featureLabels[feature] }}
-                                        <span v-if="typeof getFeatureValue(plan, feature) === 'string'" class="text-gray-500">
-                                            ({{ getFeatureValue(plan, feature) }})
-                                        </span>
-                                    </span>
-                                </template>
-                                <template v-else>
-                                    <XMarkIcon class="h-5 w-5 text-gray-600 flex-shrink-0" />
-                                    <span class="text-gray-500">{{ featureLabels[feature] }}</span>
-                                </template>
+                            <li v-for="module in plan.modules.slice(0, 6)" :key="module" class="flex items-start gap-2 text-sm">
+                                <CheckIcon class="h-5 w-5 text-green-400 flex-shrink-0" />
+                                <span class="text-gray-300">{{ module }}</span>
+                            </li>
+                            <li v-if="plan.modules.length > 6" class="flex items-start gap-2 text-sm">
+                                <CheckIcon class="h-5 w-5 text-green-400 flex-shrink-0" />
+                                <span class="text-gray-300">+ {{ plan.modules.length - 6 }} autres modules</span>
+                            </li>
+                            <li v-if="plan.api_access" class="flex items-start gap-2 text-sm">
+                                <CheckIcon class="h-5 w-5 text-purple-400 flex-shrink-0" />
+                                <span class="text-purple-300">Accès API complet</span>
+                            </li>
+                            <li v-if="plan.whitelabel" class="flex items-start gap-2 text-sm">
+                                <CheckIcon class="h-5 w-5 text-purple-400 flex-shrink-0" />
+                                <span class="text-purple-300">Marque blanche</span>
                             </li>
                         </ul>
                     </div>
                 </div>
             </div>
 
-            <!-- Widget Addons Section -->
-            <div class="mt-24">
-                <div class="text-center mb-12">
-                    <h2 class="text-3xl font-bold text-white mb-4">Widget de Réservation</h2>
-                    <p class="text-gray-400 max-w-2xl mx-auto">
-                        Permettez à vos clients de réserver directement depuis votre site web, 24h/24 et 7j/7
-                    </p>
-                </div>
-
-                <div class="grid grid-cols-1 gap-8 md:grid-cols-3">
-                    <div
-                        v-for="(widget, slug) in widgets"
-                        :key="slug"
-                        class="bg-gray-800 rounded-2xl p-8 ring-1 ring-gray-700"
-                    >
-                        <h3 class="text-xl font-bold text-white mb-2">{{ widget.name }}</h3>
-                        <p class="text-sm text-gray-400 mb-4">{{ widget.description }}</p>
-
-                        <div class="flex items-baseline gap-1 mb-6">
-                            <span class="text-3xl font-bold text-white">{{ formatPrice(widget.price_monthly) }}</span>
-                            <span class="text-gray-400">/mois</span>
-                        </div>
-
-                        <div v-if="widget.included_in?.length" class="mb-4 p-3 bg-green-500/10 rounded-lg">
-                            <p class="text-sm text-green-400">
-                                Inclus dans : {{ widget.included_in.map(p => plans[p]?.name).join(', ') }}
-                            </p>
-                        </div>
-
-                        <ul class="space-y-3">
-                            <li
-                                v-for="(value, feature) in widget.features"
-                                :key="feature"
-                                class="flex items-start gap-3 text-sm"
-                            >
-                                <template v-if="value">
-                                    <CheckIcon class="h-5 w-5 text-green-400 flex-shrink-0" />
-                                    <span class="text-gray-300">{{ featureLabels[feature] }}</span>
-                                </template>
-                                <template v-else>
-                                    <XMarkIcon class="h-5 w-5 text-gray-600 flex-shrink-0" />
-                                    <span class="text-gray-500">{{ featureLabels[feature] }}</span>
-                                </template>
-                            </li>
-                        </ul>
+            <!-- Enterprise CTA -->
+            <div class="mt-16 bg-gradient-to-r from-gray-800 to-gray-800/50 rounded-2xl p-8 ring-1 ring-gray-700">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div>
+                        <h3 class="text-2xl font-bold text-white mb-2">Besoin d'une solution sur mesure ?</h3>
+                        <p class="text-gray-400">Contactez notre équipe commerciale pour un devis personnalisé et une démonstration dédiée.</p>
                     </div>
+                    <Link href="/contact" class="px-8 py-3 bg-white hover:bg-gray-100 text-gray-900 font-medium rounded-xl transition-colors whitespace-nowrap">
+                        Contacter les ventes
+                    </Link>
                 </div>
             </div>
 
@@ -307,24 +324,33 @@ const getFeatureValue = (plan, feature) => {
             <div class="mt-24">
                 <div class="text-center mb-12">
                     <h2 class="text-3xl font-bold text-white mb-4">Questions fréquentes</h2>
+                    <p class="text-gray-400">Tout ce que vous devez savoir sur nos tarifs</p>
                 </div>
 
                 <div class="max-w-3xl mx-auto space-y-4">
-                    <div class="bg-gray-800 rounded-xl p-6">
-                        <h3 class="text-lg font-medium text-white mb-2">Puis-je changer de plan à tout moment ?</h3>
-                        <p class="text-gray-400">Oui, vous pouvez upgrader ou downgrader votre plan à tout moment. Le changement est effectif immédiatement et la facturation est ajustée au prorata.</p>
-                    </div>
-                    <div class="bg-gray-800 rounded-xl p-6">
-                        <h3 class="text-lg font-medium text-white mb-2">Y a-t-il un engagement ?</h3>
-                        <p class="text-gray-400">Non, tous nos plans sont sans engagement. Vous pouvez résilier à tout moment sans frais.</p>
-                    </div>
-                    <div class="bg-gray-800 rounded-xl p-6">
-                        <h3 class="text-lg font-medium text-white mb-2">Proposez-vous un essai gratuit ?</h3>
-                        <p class="text-gray-400">Oui, nous offrons 14 jours d'essai gratuit sur tous les plans, sans carte bancaire requise.</p>
-                    </div>
-                    <div class="bg-gray-800 rounded-xl p-6">
-                        <h3 class="text-lg font-medium text-white mb-2">Que se passe-t-il si je dépasse mes limites ?</h3>
-                        <p class="text-gray-400">Nous vous préviendrons à l'approche de vos limites. Vous pourrez alors choisir d'upgrader votre plan ou de rester sur votre plan actuel.</p>
+                    <div
+                        v-for="(faq, index) in faqs"
+                        :key="index"
+                        class="bg-gray-800 rounded-xl overflow-hidden ring-1 ring-gray-700"
+                    >
+                        <button
+                            @click="toggleFaq(index)"
+                            class="w-full px-6 py-4 flex items-center justify-between text-left"
+                        >
+                            <h3 class="text-lg font-medium text-white">{{ faq.question }}</h3>
+                            <ChevronDownIcon
+                                :class="[
+                                    openFaq === index ? 'rotate-180' : '',
+                                    'h-5 w-5 text-gray-400 transition-transform'
+                                ]"
+                            />
+                        </button>
+                        <div
+                            v-show="openFaq === index"
+                            class="px-6 pb-4"
+                        >
+                            <p class="text-gray-400">{{ faq.answer }}</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -334,13 +360,13 @@ const getFeatureValue = (plan, feature) => {
                 <div class="bg-gradient-to-r from-purple-600/20 to-indigo-600/20 rounded-2xl p-12 ring-1 ring-purple-500/30">
                     <h2 class="text-3xl font-bold text-white mb-4">Prêt à digitaliser votre centre ?</h2>
                     <p class="text-gray-400 mb-8 max-w-xl mx-auto">
-                        Rejoignez les centaines d'opérateurs qui font confiance à Boxibox pour gérer leur activité.
+                        Rejoignez les centaines d'opérateurs qui font confiance à Boxibox pour gérer leur activité de self-stockage.
                     </p>
-                    <div class="flex items-center justify-center gap-4">
+                    <div class="flex items-center justify-center gap-4 flex-wrap">
                         <Link href="/register" class="px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-xl transition-colors">
                             Commencer gratuitement
                         </Link>
-                        <Link href="/contact" class="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl transition-colors">
+                        <Link href="/demo" class="px-8 py-3 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-xl transition-colors">
                             Demander une démo
                         </Link>
                     </div>
@@ -351,14 +377,19 @@ const getFeatureValue = (plan, feature) => {
         <!-- Footer -->
         <footer class="border-t border-gray-800 mt-24">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-col md:flex-row items-center justify-between gap-4">
                     <div class="flex items-center gap-2">
                         <div class="h-8 w-8 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
                             <span class="text-white font-bold">B</span>
                         </div>
                         <span class="text-lg font-bold text-white">Boxibox</span>
                     </div>
-                    <p class="text-gray-500 text-sm">© 2024 Boxibox. Tous droits réservés.</p>
+                    <div class="flex items-center gap-6 text-sm text-gray-400">
+                        <Link href="/legal" class="hover:text-white transition-colors">Mentions légales</Link>
+                        <Link href="/privacy" class="hover:text-white transition-colors">Confidentialité</Link>
+                        <Link href="/terms" class="hover:text-white transition-colors">CGV</Link>
+                    </div>
+                    <p class="text-gray-500 text-sm">© 2025 Boxibox. Tous droits réservés.</p>
                 </div>
             </div>
         </footer>

@@ -26,22 +26,37 @@ class Prospect extends Model
         'country',
         'status',
         'source',
+        'score',
+        'priority',
+        'conversion_probability',
+        'score_breakdown',
+        'score_factors',
         'box_size_interested',
         'move_in_date',
         'budget',
         'notes',
+        'metadata',
         'follow_up_count',
         'last_contact_at',
+        'last_activity_at',
         'converted_at',
         'customer_id',
+        'score_calculated_at',
     ];
 
     protected $casts = [
         'move_in_date' => 'date',
         'budget' => 'decimal:2',
+        'score' => 'integer',
+        'conversion_probability' => 'decimal:2',
+        'score_breakdown' => 'array',
+        'score_factors' => 'array',
+        'metadata' => 'array',
         'last_contact_at' => 'datetime',
+        'last_activity_at' => 'datetime',
         'converted_at' => 'datetime',
         'follow_up_count' => 'integer',
+        'score_calculated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
 
@@ -80,6 +95,16 @@ class Prospect extends Model
     public function scopeLost($query)
     {
         return $query->where('status', 'lost');
+    }
+
+    public function scopeHot($query)
+    {
+        return $query->where('priority', 'hot');
+    }
+
+    public function scopeWarm($query)
+    {
+        return $query->where('priority', 'warm');
     }
 
     public function scopeByStatus($query, string $status)

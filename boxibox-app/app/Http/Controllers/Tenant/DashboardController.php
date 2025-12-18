@@ -12,14 +12,22 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\Prospect;
 use App\Models\Signature;
+use App\Services\DashboardCacheService;
 use App\Services\DynamicPricingService;
+use App\Services\SelfStorageKPIService;
 use Illuminate\Http\Request;
+use Illuminate\Http\JsonResponse;
 use Inertia\Inertia;
 use Inertia\Response;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
+    public function __construct(
+        protected DashboardCacheService $cacheService,
+        protected SelfStorageKPIService $kpiService
+    ) {}
+
     /**
      * Display the tenant dashboard.
      */
@@ -27,155 +35,11 @@ class DashboardController extends Controller
     {
         $tenantId = $request->user()->tenant_id;
 
-        // Get comprehensive statistics
-        $stats = [
-            // Sites
-            'total_sites' => Site::where('tenant_id', $tenantId)->count(),
-            'active_sites' => Site::where('tenant_id', $tenantId)->where('is_active', true)->count(),
+        // Get cached stats (auto-invalidated when models change)
+        $stats = $this->cacheService->getStats($tenantId);
 
-            // Boxes
-            'total_boxes' => Box::where('tenant_id', $tenantId)->count(),
-            'available_boxes' => Box::where('tenant_id', $tenantId)->available()->count(),
-            'occupied_boxes' => Box::where('tenant_id', $tenantId)->occupied()->count(),
-            'maintenance_boxes' => Box::where('tenant_id', $tenantId)->where('status', 'maintenance')->count(),
-
-            // Customers
-            'total_customers' => Customer::where('tenant_id', $tenantId)->count(),
-            'active_customers' => Customer::where('tenant_id', $tenantId)->where('status', 'active')->count(),
-            'individual_customers' => Customer::where('tenant_id', $tenantId)->where('type', 'individual')->count(),
-            'company_customers' => Customer::where('tenant_id', $tenantId)->where('type', 'company')->count(),
-
-            // Contracts
-            'active_contracts' => Contract::where('tenant_id', $tenantId)->active()->count(),
-            'expiring_soon' => Contract::where('tenant_id', $tenantId)
-                ->where('status', 'active')
-                ->whereBetween('end_date', [now(), now()->addDays(30)])
-                ->count(),
-
-            // Financial
-            'monthly_revenue' => Contract::where('tenant_id', $tenantId)
-                ->active()
-                ->sum('monthly_price'),
-            'annual_revenue_projection' => Contract::where('tenant_id', $tenantId)
-                ->active()
-                ->sum('monthly_price') * 12,
-
-            // Invoices
-            'total_invoices' => Invoice::where('tenant_id', $tenantId)->count(),
-            'pending_invoices' => Invoice::where('tenant_id', $tenantId)
-                ->whereIn('status', ['sent', 'overdue'])
-                ->count(),
-            'overdue_invoices' => Invoice::where('tenant_id', $tenantId)
-                ->where('status', 'overdue')
-                ->count(),
-            'paid_invoices' => Invoice::where('tenant_id', $tenantId)
-                ->where('status', 'paid')
-                ->count(),
-
-            // Payments
-            'total_payments' => Payment::where('tenant_id', $tenantId)
-                ->where('status', 'completed')
-                ->where('type', 'payment')
-                ->count(),
-            'total_collected' => Payment::where('tenant_id', $tenantId)
-                ->where('status', 'completed')
-                ->where('type', 'payment')
-                ->sum('amount'),
-            'pending_payments' => Payment::where('tenant_id', $tenantId)
-                ->where('status', 'pending')
-                ->count(),
-        ];
-
-        // Calculate occupation rate
-        $stats['occupation_rate'] = $stats['total_boxes'] > 0
-            ? round(($stats['occupied_boxes'] / $stats['total_boxes']) * 100, 2)
-            : 0;
-
-        // Additional stats for new Dashboard
-        $stats['reserved_boxes'] = Box::where('tenant_id', $tenantId)->where('status', 'reserved')->count();
-
-        // Overdue amount
-        $stats['overdue_amount'] = Invoice::where('tenant_id', $tenantId)
-            ->where('status', 'overdue')
-            ->sum('total');
-
-        // Last month revenue for comparison
-        $lastMonthStart = now()->subMonth()->startOfMonth();
-        $lastMonthEnd = now()->subMonth()->endOfMonth();
-        $stats['last_month_revenue'] = Payment::where('tenant_id', $tenantId)
-            ->where('status', 'completed')
-            ->where('type', 'payment')
-            ->whereBetween('paid_at', [$lastMonthStart, $lastMonthEnd])
-            ->sum('amount');
-
-        // New customers this month
-        $monthStart = now()->startOfMonth();
-        $stats['new_customers_this_month'] = Customer::where('tenant_id', $tenantId)
-            ->where('created_at', '>=', $monthStart)
-            ->count();
-
-        // Pending actions count (expiring contracts + overdue invoices + pending signatures)
-        $stats['pending_actions'] = $stats['expiring_soon'] + $stats['overdue_invoices'];
-
-        // Advanced KPIs
-        // RevPAU - Revenue Per Available Unit
-        $stats['revpau'] = $stats['total_boxes'] > 0
-            ? round($stats['monthly_revenue'] / $stats['total_boxes'], 2)
-            : 0;
-
-        // Average contract value
-        $stats['average_contract_value'] = $stats['active_contracts'] > 0
-            ? round($stats['monthly_revenue'] / $stats['active_contracts'], 2)
-            : 0;
-
-        // Churn rate (contracts terminated this month / total active contracts)
-        $terminatedThisMonth = Contract::where('tenant_id', $tenantId)
-            ->where('status', 'terminated')
-            ->where('actual_end_date', '>=', now()->startOfMonth())
-            ->count();
-        $stats['churn_rate'] = $stats['active_contracts'] > 0
-            ? round(($terminatedThisMonth / ($stats['active_contracts'] + $terminatedThisMonth)) * 100, 2)
-            : 0;
-
-        // Customer Acquisition Cost (simplified - based on marketing spend if available)
-        $stats['cac'] = 0; // Placeholder - would need marketing data
-
-        // Average duration of contracts (in months)
-        $avgDuration = Contract::where('tenant_id', $tenantId)
-            ->where('status', 'active')
-            ->whereNotNull('start_date')
-            ->get()
-            ->avg(fn($c) => $c->start_date->diffInMonths(now()));
-        $stats['avg_contract_duration'] = round($avgDuration ?? 0, 1);
-
-        // Prospects/Leads stats
-        $stats['total_prospects'] = Prospect::where('tenant_id', $tenantId)->count();
-        $stats['hot_prospects'] = Prospect::where('tenant_id', $tenantId)
-            ->where('status', 'hot')
-            ->count();
-        $stats['prospects_this_month'] = Prospect::where('tenant_id', $tenantId)
-            ->where('created_at', '>=', now()->startOfMonth())
-            ->count();
-
-        // Conversion rate (prospects converted to customers this month)
-        $convertedThisMonth = Prospect::where('tenant_id', $tenantId)
-            ->where('status', 'converted')
-            ->where('converted_at', '>=', now()->startOfMonth())
-            ->count();
-        $totalProspectsMonthBefore = Prospect::where('tenant_id', $tenantId)
-            ->where('created_at', '<', now()->startOfMonth())
-            ->count();
-        $stats['conversion_rate'] = $totalProspectsMonthBefore > 0
-            ? round(($convertedThisMonth / $totalProspectsMonthBefore) * 100, 1)
-            : 0;
-
-        // Signatures pending
-        $stats['pending_signatures'] = Signature::where('tenant_id', $tenantId)
-            ->whereIn('status', ['pending', 'sent', 'viewed'])
-            ->count();
-
-        // Get monthly revenue trend (last 6 months)
-        $revenueTrend = $this->getMonthlyRevenueTrend($tenantId, 6);
+        // Get cached revenue trend
+        $revenueTrend = $this->cacheService->getRevenueTrend($tenantId, 6);
 
         // Get monthly summary (current month)
         $monthlySummary = $this->getMonthlySummary($tenantId);
@@ -269,6 +133,9 @@ class DashboardController extends Controller
                 ];
             });
 
+        // Get key KPIs for dashboard header
+        $keyKpis = $this->getKeyKpis($tenantId);
+
         return Inertia::render('Tenant/Dashboard', [
             'stats' => $stats,
             'monthlySummary' => $monthlySummary,
@@ -277,7 +144,69 @@ class DashboardController extends Controller
             'expiringContracts' => $expiringContracts,
             'overdueInvoices' => $overdueInvoices,
             'recentPayments' => $recentPayments,
+            'keyKpis' => $keyKpis,
         ]);
+    }
+
+    /**
+     * Display the advanced KPI dashboard.
+     */
+    public function kpiDashboard(Request $request): Response
+    {
+        $tenantId = $request->user()->tenant_id;
+        $siteId = $request->input('site_id');
+
+        // Get all KPIs
+        $kpis = $this->kpiService->getAllKPIs($tenantId, $siteId);
+
+        // Get sites for filter
+        $sites = Site::where('tenant_id', $tenantId)
+            ->where('is_active', true)
+            ->select('id', 'name', 'code')
+            ->get();
+
+        return Inertia::render('Tenant/Analytics/KPIDashboard', [
+            'kpis' => $kpis,
+            'sites' => $sites,
+            'selectedSiteId' => $siteId,
+        ]);
+    }
+
+    /**
+     * Get KPIs as JSON (for AJAX refresh).
+     */
+    public function getKpis(Request $request): JsonResponse
+    {
+        $tenantId = $request->user()->tenant_id;
+        $siteId = $request->input('site_id');
+
+        $kpis = $this->kpiService->getAllKPIs($tenantId, $siteId);
+
+        return response()->json($kpis);
+    }
+
+    /**
+     * Get key KPIs for dashboard header display.
+     */
+    private function getKeyKpis(int $tenantId): array
+    {
+        $occupancy = $this->kpiService->getOccupancyMetrics($tenantId);
+        $revenue = $this->kpiService->getRevenueMetrics($tenantId);
+        $operations = $this->kpiService->getOperationsMetrics($tenantId);
+        $financial = $this->kpiService->getFinancialMetrics($tenantId);
+
+        return [
+            'physical_occupancy' => $occupancy['physical_occupancy'] ?? 0,
+            'economic_occupancy' => $occupancy['economic_occupancy'] ?? 0,
+            'mrr' => $revenue['mrr'] ?? 0,
+            'noi' => $revenue['noi'] ?? 0,
+            'noi_margin' => $financial['noi_margin'] ?? 0,
+            'revpasf' => $revenue['revpasf'] ?? 0,
+            'churn_rate' => $operations['churn_rate'] ?? 0,
+            'avg_length_of_stay' => $operations['avg_length_of_stay'] ?? 0,
+            'delinquency_rate' => $financial['delinquency_rate'] ?? 0,
+            'collection_rate' => $financial['collection_rate'] ?? 0,
+        ];
     }
 
     /**

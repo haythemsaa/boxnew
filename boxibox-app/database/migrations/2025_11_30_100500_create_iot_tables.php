@@ -198,7 +198,7 @@ return new class extends Migration
             $table->integer('duration_seconds')->nullable(); // Durée avant déclenchement
 
             $table->enum('severity', ['info', 'warning', 'critical'])->default('warning');
-            $table->json('notification_channels')->default('["email"]');
+            $table->json('notification_channels')->nullable();
             $table->json('notify_users')->nullable(); // IDs des utilisateurs à notifier
 
             $table->boolean('is_active')->default(true);

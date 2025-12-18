@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Box;
 use App\Models\Site;
+use App\Models\CalculatorWidget;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -82,7 +83,7 @@ class BoxCalculatorController extends Controller
     {
         // Get available sites for location selection
         $sites = Site::select('id', 'name', 'city', 'address')
-            ->where('status', 'active')
+            ->where('is_active', true)
             ->get();
 
         // Group items by category
@@ -170,7 +171,7 @@ class BoxCalculatorController extends Controller
                 ->map(fn($box) => [
                     'id' => $box->id,
                     'name' => $box->name,
-                    'code' => $box->code,
+                    'code' => $box->number,
                     'dimensions' => $box->formatted_dimensions,
                     'volume' => $box->volume,
                     'price' => $box->current_price,
@@ -187,6 +188,56 @@ class BoxCalculatorController extends Controller
             ],
             'recommendation' => $recommendedSize,
             'available_boxes' => $availableBoxes,
+        ]);
+    }
+
+    /**
+     * Display embedded widget calculator.
+     */
+    public function widget(string $embedCode)
+    {
+        $widget = CalculatorWidget::where('embed_code', $embedCode)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$widget) {
+            abort(404, 'Widget not found');
+        }
+
+        // Get sites for this tenant
+        $query = Site::where('tenant_id', $widget->tenant_id);
+
+        if ($widget->site_id) {
+            $query->where('id', $widget->site_id);
+        }
+
+        $sites = $query->get(['id', 'name', 'city', 'address']);
+
+        // Group items by category
+        $categories = [
+            'living_room' => ['name' => 'Salon', 'icon' => 'home'],
+            'bedroom' => ['name' => 'Chambre', 'icon' => 'bed'],
+            'dining' => ['name' => 'Salle a manger', 'icon' => 'utensils'],
+            'kitchen' => ['name' => 'Cuisine', 'icon' => 'kitchen'],
+            'office' => ['name' => 'Bureau', 'icon' => 'briefcase'],
+            'boxes' => ['name' => 'Cartons', 'icon' => 'box'],
+            'sports' => ['name' => 'Sports & Loisirs', 'icon' => 'dumbbell'],
+        ];
+
+        $itemsByCategory = [];
+        foreach ($categories as $key => $category) {
+            $itemsByCategory[$key] = [
+                'name' => $category['name'],
+                'icon' => $category['icon'],
+                'items' => array_filter($this->itemCatalog, fn($item) => $item['category'] === $key),
+            ];
+        }
+
+        return Inertia::render('Calculator/Widget', [
+            'widget' => $widget,
+            'sites' => $sites,
+            'itemsByCategory' => $itemsByCategory,
+            'boxSizes' => $this->boxSizes,
         ]);
     }
 }

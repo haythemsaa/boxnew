@@ -1,5 +1,5 @@
 <template>
-    <AppLayout title="Access Control Dashboard">
+    <TenantLayout title="Controle d'Acces">
         <div class="py-12">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <!-- Header -->
@@ -176,14 +176,14 @@
                 </div>
             </div>
         </div>
-    </AppLayout>
+    </TenantLayout>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { Chart, registerables } from 'chart.js';
-import AppLayout from '@/Layouts/AppLayout.vue';
+import TenantLayout from '@/Layouts/TenantLayout.vue';
 
 Chart.register(...registerables);
 

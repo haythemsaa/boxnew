@@ -9,28 +9,22 @@ class ContractPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('view_contracts') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id !== null;
     }
 
     public function view(User $user, Contract $contract): bool
     {
-        if ($user->tenant_id !== $contract->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('view_contracts') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id === $contract->tenant_id;
     }
 
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create_contracts') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id !== null;
     }
 
     public function update(User $user, Contract $contract): bool
     {
-        if ($user->tenant_id !== $contract->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('edit_contracts') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id === $contract->tenant_id;
     }
 
     public function delete(User $user, Contract $contract): bool
@@ -42,31 +36,22 @@ class ContractPolicy
         if ($contract->status === 'active' && $contract->invoices()->exists()) {
             return false;
         }
-        return $user->hasPermissionTo('delete_contracts') || $user->hasRole(['admin', 'super-admin']);
+        return true;
     }
 
     public function terminate(User $user, Contract $contract): bool
     {
-        if ($user->tenant_id !== $contract->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('terminate_contracts') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id === $contract->tenant_id;
     }
 
     public function renew(User $user, Contract $contract): bool
     {
-        if ($user->tenant_id !== $contract->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('renew_contracts') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id === $contract->tenant_id;
     }
 
     public function sign(User $user, Contract $contract): bool
     {
-        if ($user->tenant_id !== $contract->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('sign_contracts') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id === $contract->tenant_id;
     }
 
     public function restore(User $user, Contract $contract): bool

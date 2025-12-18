@@ -9,20 +9,17 @@ class InvoicePolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('view_invoices') || $user->hasRole(['admin', 'super-admin', 'manager', 'accountant']);
+        return $user->tenant_id !== null;
     }
 
     public function view(User $user, Invoice $invoice): bool
     {
-        if ($user->tenant_id !== $invoice->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('view_invoices') || $user->hasRole(['admin', 'super-admin', 'manager', 'accountant']);
+        return $user->tenant_id === $invoice->tenant_id;
     }
 
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create_invoices') || $user->hasRole(['admin', 'super-admin', 'manager', 'accountant']);
+        return $user->tenant_id !== null;
     }
 
     public function update(User $user, Invoice $invoice): bool
@@ -30,11 +27,11 @@ class InvoicePolicy
         if ($user->tenant_id !== $invoice->tenant_id) {
             return false;
         }
-        // Cannot update paid or cancelled invoices
+        // Cannot update paid or cancelled invoices (safety check)
         if (in_array($invoice->status, ['paid', 'cancelled'])) {
-            return $user->hasRole(['admin', 'super-admin']);
+            return false;
         }
-        return $user->hasPermissionTo('edit_invoices') || $user->hasRole(['admin', 'super-admin', 'manager', 'accountant']);
+        return true;
     }
 
     public function delete(User $user, Invoice $invoice): bool
@@ -42,44 +39,35 @@ class InvoicePolicy
         if ($user->tenant_id !== $invoice->tenant_id) {
             return false;
         }
-        // Cannot delete paid invoices
+        // Cannot delete paid invoices (safety check)
         if ($invoice->status === 'paid') {
             return false;
         }
-        return $user->hasPermissionTo('delete_invoices') || $user->hasRole(['admin', 'super-admin']);
+        return true;
     }
 
     public function sendReminder(User $user, Invoice $invoice): bool
     {
-        if ($user->tenant_id !== $invoice->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('send_reminders') || $user->hasRole(['admin', 'super-admin', 'manager', 'accountant']);
+        return $user->tenant_id === $invoice->tenant_id;
     }
 
     public function recordPayment(User $user, Invoice $invoice): bool
     {
-        if ($user->tenant_id !== $invoice->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('record_payments') || $user->hasRole(['admin', 'super-admin', 'manager', 'accountant']);
+        return $user->tenant_id === $invoice->tenant_id;
     }
 
     public function downloadPdf(User $user, Invoice $invoice): bool
     {
-        if ($user->tenant_id !== $invoice->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('view_invoices') || $user->hasRole(['admin', 'super-admin', 'manager', 'accountant']);
+        return $user->tenant_id === $invoice->tenant_id;
     }
 
     public function restore(User $user, Invoice $invoice): bool
     {
-        return $user->tenant_id === $invoice->tenant_id && $user->hasRole(['admin', 'super-admin']);
+        return $user->tenant_id === $invoice->tenant_id;
     }
 
     public function forceDelete(User $user, Invoice $invoice): bool
     {
-        return $user->tenant_id === $invoice->tenant_id && $user->hasRole(['admin', 'super-admin']);
+        return $user->tenant_id === $invoice->tenant_id;
     }
 }

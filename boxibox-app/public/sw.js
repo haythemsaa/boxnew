@@ -1,15 +1,11 @@
 // Boxibox Service Worker
-const CACHE_NAME = 'boxibox-v2';
+const CACHE_NAME = 'boxibox-v4';
 const OFFLINE_URL = '/offline.html';
 
-// Assets to cache on install
+// Assets to cache on install - only static files that don't change
 const PRECACHE_ASSETS = [
-    '/',
-    '/mobile',
     '/offline.html',
     '/manifest.json',
-    '/build/assets/app.css',
-    '/build/assets/app.js',
 ];
 
 // Install event - precache essential assets
@@ -19,7 +15,14 @@ self.addEventListener('install', (event) => {
         caches.open(CACHE_NAME)
             .then((cache) => {
                 console.log('[SW] Precaching assets...');
-                return cache.addAll(PRECACHE_ASSETS);
+                // Use addAll with error handling for each asset
+                return Promise.allSettled(
+                    PRECACHE_ASSETS.map(url =>
+                        cache.add(url).catch(err => {
+                            console.warn('[SW] Failed to cache:', url, err);
+                        })
+                    )
+                );
             })
             .then(() => {
                 self.skipWaiting();
@@ -64,7 +67,7 @@ self.addEventListener('fetch', (event) => {
     }
 
     // API requests - network only with offline handling
-    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/mobile/')) {
+    if (url.pathname.startsWith('/api/') || url.pathname.startsWith('/mobile/') || url.pathname.startsWith('/portal/')) {
         event.respondWith(
             fetch(request)
                 .catch(() => {
@@ -111,8 +114,8 @@ self.addEventListener('fetch', (event) => {
         event.respondWith(
             fetch(request)
                 .then((response) => {
-                    // Cache successful navigation responses
-                    if (response.ok && url.pathname.startsWith('/mobile')) {
+                    // Cache successful navigation responses for portal and mobile
+                    if (response.ok && (url.pathname.startsWith('/mobile') || url.pathname.startsWith('/portal'))) {
                         const responseClone = response.clone();
                         caches.open(CACHE_NAME).then((cache) => {
                             cache.put(request, responseClone);
@@ -165,25 +168,73 @@ self.addEventListener('push', (event) => {
         }
     }
 
+    // Build notification options based on type
     const options = {
         body: data.body,
         icon: data.icon || '/images/icons/icon-192x192.png',
-        badge: '/images/icons/badge-72x72.png',
-        vibrate: [100, 50, 100],
+        badge: data.badge || '/images/icons/badge-72x72.png',
+        vibrate: getVibrationPattern(data.type),
+        tag: data.tag || 'boxibox-notification',
+        renotify: true,
+        requireInteraction: data.requireInteraction || false,
+        silent: data.silent || false,
         data: {
             dateOfArrival: Date.now(),
-            url: data.url || '/mobile',
+            url: data.url || '/tenant/dashboard',
+            type: data.type || 'general',
+            notificationId: data.notificationId,
         },
-        actions: data.actions || [
-            { action: 'open', title: 'Ouvrir' },
-            { action: 'close', title: 'Fermer' },
-        ],
+        actions: data.actions || getDefaultActions(data.type),
     };
+
+    // Add image if provided
+    if (data.image) {
+        options.image = data.image;
+    }
 
     event.waitUntil(
         self.registration.showNotification(data.title, options)
     );
 });
+
+// Get vibration pattern based on notification type
+function getVibrationPattern(type) {
+    const patterns = {
+        alert: [200, 100, 200, 100, 200],
+        payment: [100, 50, 100],
+        contract: [100, 50, 100],
+        iot: [300, 100, 300],
+        system: [100],
+        marketing: [50],
+    };
+    return patterns[type] || [100, 50, 100];
+}
+
+// Get default actions based on notification type
+function getDefaultActions(type) {
+    const actionSets = {
+        payment: [
+            { action: 'view', title: 'Voir facture' },
+            { action: 'dismiss', title: 'Plus tard' },
+        ],
+        contract: [
+            { action: 'view', title: 'Voir contrat' },
+            { action: 'dismiss', title: 'Ignorer' },
+        ],
+        booking: [
+            { action: 'view', title: 'Voir reservation' },
+            { action: 'confirm', title: 'Confirmer' },
+        ],
+        iot: [
+            { action: 'view', title: 'Voir alerte' },
+            { action: 'acknowledge', title: 'Vu' },
+        ],
+    };
+    return actionSets[type] || [
+        { action: 'open', title: 'Ouvrir' },
+        { action: 'close', title: 'Fermer' },
+    ];
+}
 
 // Notification click event
 self.addEventListener('notificationclick', (event) => {
@@ -191,18 +242,37 @@ self.addEventListener('notificationclick', (event) => {
 
     event.notification.close();
 
-    if (event.action === 'close') {
+    const action = event.action;
+    const notificationData = event.notification.data || {};
+
+    // Handle dismiss/close actions
+    if (action === 'close' || action === 'dismiss') {
         return;
     }
 
-    const urlToOpen = event.notification.data?.url || '/mobile';
+    // Track click for analytics
+    if (notificationData.notificationId) {
+        trackNotificationClick(notificationData.notificationId);
+    }
+
+    // Determine URL based on action
+    let urlToOpen = notificationData.url || '/tenant/dashboard';
+
+    // Handle specific actions
+    if (action === 'view' || action === 'open') {
+        urlToOpen = notificationData.url;
+    } else if (action === 'confirm' && notificationData.type === 'booking') {
+        urlToOpen = notificationData.url + '?action=confirm';
+    } else if (action === 'acknowledge' && notificationData.type === 'iot') {
+        urlToOpen = '/tenant/iot/alerts?acknowledge=' + notificationData.notificationId;
+    }
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true })
             .then((clientList) => {
                 // Check if app is already open
                 for (const client of clientList) {
-                    if (client.url.includes('/mobile') && 'focus' in client) {
+                    if ((client.url.includes('/tenant') || client.url.includes('/mobile')) && 'focus' in client) {
                         client.navigate(urlToOpen);
                         return client.focus();
                     }
@@ -214,6 +284,19 @@ self.addEventListener('notificationclick', (event) => {
             })
     );
 });
+
+// Track notification click for analytics
+async function trackNotificationClick(notificationId) {
+    try {
+        await fetch('/api/v1/push/track-click', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ notification_id: notificationId }),
+        });
+    } catch (e) {
+        console.log('[SW] Failed to track click:', e);
+    }
+}
 
 // Background sync event
 self.addEventListener('sync', (event) => {

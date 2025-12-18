@@ -5,11 +5,36 @@
         <div class="py-6">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <!-- Header -->
-                <div class="mb-8">
-                    <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Dynamic Pricing Dashboard</h1>
-                    <p class="mt-2 text-gray-600 dark:text-gray-400">
-                        AI-powered pricing optimization and revenue recommendations
-                    </p>
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+                            <svg class="w-8 h-8 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                            </svg>
+                            Dynamic Pricing IA
+                        </h1>
+                        <p class="mt-2 text-gray-600 dark:text-gray-400">
+                            Optimisation intelligente des prix avec ML et tests A/B
+                        </p>
+                    </div>
+                    <div class="mt-4 sm:mt-0 flex items-center gap-3">
+                        <select v-model="selectedSiteId" @change="changeSite"
+                            class="rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm">
+                            <option value="">Tous les sites</option>
+                            <option v-for="site in sites" :key="site.id" :value="site.id">{{ site.name }}</option>
+                        </select>
+                        <button @click="previewOptimization" :disabled="isOptimizing"
+                            class="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium">
+                            <svg v-if="isOptimizing" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <svg v-else class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                            </svg>
+                            Optimiser les prix
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Key Metrics -->
@@ -147,7 +172,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, watch } from 'vue';
 import { Head } from '@inertiajs/vue3';
 import { Chart, registerables } from 'chart.js';
 import { router } from '@inertiajs/vue3';
@@ -157,13 +182,65 @@ Chart.register(...registerables);
 
 const props = defineProps({
     analytics: Object,
+    sites: Array,
+    selectedSite: [Number, String],
+    activeExperiments: Array,
+    recentAdjustments: Array,
+    pricingHealth: Object,
 });
 
 const forecastChart = ref(null);
+const selectedSiteId = ref(props.selectedSite || '');
+const isOptimizing = ref(false);
+const previewResults = ref(null);
+const showPreview = ref(false);
+
 const simulator = reactive({
     targetOccupancy: 85,
     priceAdjustment: 0,
 });
+
+const changeSite = () => {
+    router.get(route('tenant.pricing.index'), {
+        site_id: selectedSiteId.value || undefined,
+    }, {
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+const previewOptimization = async () => {
+    isOptimizing.value = true;
+    try {
+        const response = await axios.post(route('tenant.pricing.preview-batch'), {
+            site_id: selectedSiteId.value || undefined,
+        });
+        previewResults.value = response.data;
+        showPreview.value = true;
+    } catch (error) {
+        console.error('Error previewing optimization:', error);
+    } finally {
+        isOptimizing.value = false;
+    }
+};
+
+const applyOptimization = async () => {
+    if (!confirm('Voulez-vous appliquer ces changements de prix ?')) return;
+
+    isOptimizing.value = true;
+    try {
+        await axios.post(route('tenant.pricing.apply-batch'), {
+            site_id: selectedSiteId.value || undefined,
+        });
+        showPreview.value = false;
+        previewResults.value = null;
+        router.reload();
+    } catch (error) {
+        console.error('Error applying optimization:', error);
+    } finally {
+        isOptimizing.value = false;
+    }
+};
 
 const formatNumber = (num) => {
     return new Intl.NumberFormat('fr-FR').format(num);

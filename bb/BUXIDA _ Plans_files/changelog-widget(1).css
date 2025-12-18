@@ -1,0 +1,460 @@
+/**
+ * BUXIDA Changelog Widget - Styles
+ */
+
+/* Variables CSS */
+:root {
+    --buxida-primary: #3598dc;
+    --buxida-success: #198754;
+    --buxida-danger: #dc3545;
+    --buxida-warning: #ffc107;
+    --buxida-info: #0dcaf0;
+    --buxida-purple: #6f42c1;
+    --buxida-orange: #fd7e14;
+
+    --buxida-light-bg: #ffffff;
+    --buxida-light-text: #697882;
+    --buxida-light-border: #dee2e6;
+    --buxida-light-hover: #f8f9fa;
+
+    --buxida-dark-bg: #1a1a1a;
+    --buxida-dark-text: #e0e0e0;
+    --buxida-dark-border: #333333;
+    --buxida-dark-hover: #252525;
+}
+
+/* Container principal */
+.buxida-changelog {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Thème clair */
+.buxida-changelog-light {
+    background-color: var(--buxida-light-bg);
+    color: var(--buxida-light-text);
+}
+
+/* Thème sombre */
+.buxida-changelog-dark {
+    background-color: var(--buxida-dark-bg);
+    color: var(--buxida-dark-text);
+}
+
+/* En-tête */
+.buxida-changelog-header {
+    margin-bottom: 30px;
+    border-bottom: 2px solid var(--buxida-primary);
+    padding-bottom: 15px;
+}
+
+.buxida-changelog-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    color: var(--buxida-primary);
+}
+
+.buxida-changelog-title i {
+    margin-right: 10px;
+}
+
+/* Contrôles (recherche et filtres) */
+.buxida-changelog-controls {
+    margin-bottom: 30px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+/* Recherche */
+.buxida-changelog-search {
+    position: relative;
+    flex: 1;
+    min-width: 250px;
+}
+
+.buxida-search-input {
+    width: 100%;
+    padding: 12px 40px 12px 15px;
+    border: 2px solid var(--buxida-light-border);
+    border-radius: 8px;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.buxida-changelog-dark .buxida-search-input {
+    background-color: var(--buxida-dark-hover);
+    border-color: var(--buxida-dark-border);
+    color: var(--buxida-dark-text);
+}
+
+.buxida-search-input:focus {
+    outline: none;
+    border-color: var(--buxida-primary);
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+}
+
+.buxida-changelog-search i {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+}
+
+/* Filtres */
+.buxida-changelog-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.buxida-filter-btn {
+    padding: 8px 16px;
+    border: 2px solid var(--buxida-light-border);
+    background-color: transparent;
+    color: var(--buxida-light-text);
+    border-radius: 20px;
+    font-size: 1.3rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.buxida-changelog-dark .buxida-filter-btn {
+    border-color: var(--buxida-dark-border);
+    color: var(--buxida-dark-text);
+}
+
+.buxida-filter-btn:hover {
+    background-color: var(--buxida-light-hover);
+    border-color: var(--buxida-primary);
+}
+
+.buxida-changelog-dark .buxida-filter-btn:hover {
+    background-color: var(--buxida-dark-hover);
+}
+
+.buxida-filter-btn.active {
+    background-color: var(--buxida-primary);
+    color: white;
+    border-color: var(--buxida-primary);
+}
+
+.buxida-filter-btn i {
+    margin-right: 5px;
+}
+
+/* Liste des entrées */
+.buxida-changelog-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Entrée */
+.buxida-changelog-entry {
+    background-color: white;
+    border: 1px solid var(--buxida-light-border);
+    border-left: 4px solid var(--buxida-primary);
+    border-radius: 8px;
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.buxida-changelog-dark .buxida-changelog-entry {
+    background-color: var(--buxida-dark-hover);
+    border-color: var(--buxida-dark-border);
+}
+
+.buxida-changelog-entry:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+}
+
+/* Types d'entrée */
+.buxida-type-feature {
+    border-left-color: var(--buxida-primary);
+}
+
+.buxida-type-bugfix {
+    border-left-color: var(--buxida-danger);
+}
+
+.buxida-type-improvement {
+    border-left-color: var(--buxida-success);
+}
+
+.buxida-type-security {
+    border-left-color: var(--buxida-orange);
+}
+
+.buxida-type-breaking {
+    border-left-color: var(--buxida-purple);
+}
+
+/* En-tête de l'entrée */
+.buxida-entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.buxida-entry-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.buxida-version {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--buxida-primary);
+}
+
+.buxida-version i {
+    margin-right: 5px;
+}
+
+/* Badges de type */
+.buxida-type-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: white;
+}
+
+.buxida-badge-feature {
+    background-color: var(--buxida-primary);
+}
+
+.buxida-badge-bugfix {
+    background-color: var(--buxida-danger);
+}
+
+.buxida-badge-improvement {
+    background-color: var(--buxida-success);
+}
+
+.buxida-badge-security {
+    background-color: var(--buxida-orange);
+}
+
+.buxida-badge-breaking {
+    background-color: var(--buxida-purple);
+}
+
+.buxida-type-badge i {
+    margin-right: 5px;
+}
+
+/* Date */
+.buxida-entry-date {
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+.buxida-entry-date i {
+    margin-right: 5px;
+}
+
+/* Titre de l'entrée */
+.buxida-entry-title {
+    font-size: 2.3rem;
+    font-weight: 700;
+    margin: 0 0 10px 0;
+    color: inherit;
+}
+
+/* Description */
+.buxida-entry-description {
+    font-size: 1.5rem;
+    color: #6c757d;
+    margin-bottom: 15px;
+}
+
+/* Contenu */
+.buxida-entry-content {
+    line-height: 1.6;
+    max-height: 150px;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.buxida-entry-content.expanded {
+    max-height: none;
+}
+
+.buxida-entry-content h1,
+.buxida-entry-content h2,
+.buxida-entry-content h3,
+.buxida-entry-content h4 {
+    margin-top: 15px;
+    margin-bottom: 10px;
+}
+
+.buxida-entry-content ul,
+.buxida-entry-content ol {
+    padding-left: 25px;
+    margin: 10px 0;
+}
+
+.buxida-entry-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 15px 0;
+}
+
+.buxida-entry-content code {
+    background-color: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+}
+
+.buxida-changelog-dark .buxida-entry-content code {
+    background-color: #2d2d2d;
+}
+
+/* Bouton "Lire plus" */
+.buxida-read-more {
+    background: none;
+    border: none;
+    color: var(--buxida-primary);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 8px 0;
+    margin-top: 10px;
+    font-size: 1.2rem;
+    transition: all 0.3s ease;
+}
+
+.buxida-read-more:hover {
+    color: #0a58ca;
+}
+
+.buxida-read-more i {
+    margin-left: 5px;
+    font-size: 1.2rem;
+}
+
+/* Tags */
+.buxida-entry-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.buxida-tag {
+    display: inline-block;
+    padding: 4px 12px;
+    background-color: #e9ecef;
+    color: #495057;
+    border-radius: 12px;
+    font-size: 1.2rem;
+}
+
+.buxida-changelog-dark .buxida-tag {
+    background-color: #2d2d2d;
+    color: #b0b0b0;
+}
+
+/* État vide */
+.buxida-changelog-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.buxida-changelog-empty i {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    opacity: 0.3;
+}
+
+.buxida-changelog-empty p {
+    font-size: 1.2rem;
+}
+
+/* Erreur */
+.buxida-changelog-error {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--buxida-danger);
+}
+
+.buxida-changelog-error i {
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.buxida-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+    opacity: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .buxida-changelog {
+        padding: 15px;
+    }
+
+    .buxida-changelog-title {
+        font-size: 1.5rem;
+    }
+
+    .buxida-changelog-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .buxida-changelog-search {
+        width: 100%;
+    }
+
+    .buxida-changelog-filters {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .buxida-entry-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .buxida-entry-title {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .buxida-filter-btn {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+    }
+}

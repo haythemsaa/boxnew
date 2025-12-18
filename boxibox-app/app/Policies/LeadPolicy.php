@@ -9,45 +9,36 @@ class LeadPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->hasPermissionTo('view_leads') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id !== null;
     }
 
     public function view(User $user, Lead $lead): bool
     {
-        if ($user->tenant_id !== $lead->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('view_leads') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id === $lead->tenant_id;
     }
 
     public function create(User $user): bool
     {
-        return $user->hasPermissionTo('create_leads') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id !== null;
     }
 
     public function update(User $user, Lead $lead): bool
     {
-        if ($user->tenant_id !== $lead->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('edit_leads') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id === $lead->tenant_id;
     }
 
     public function delete(User $user, Lead $lead): bool
     {
-        if ($user->tenant_id !== $lead->tenant_id) {
-            return false;
-        }
-        return $user->hasPermissionTo('delete_leads') || $user->hasRole(['admin', 'super-admin', 'manager']);
+        return $user->tenant_id === $lead->tenant_id;
     }
 
     public function restore(User $user, Lead $lead): bool
     {
-        return $user->tenant_id === $lead->tenant_id && $user->hasRole(['admin', 'super-admin']);
+        return $user->tenant_id === $lead->tenant_id;
     }
 
     public function forceDelete(User $user, Lead $lead): bool
     {
-        return $user->tenant_id === $lead->tenant_id && $user->hasRole(['admin', 'super-admin']);
+        return $user->tenant_id === $lead->tenant_id;
     }
 }

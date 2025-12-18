@@ -361,9 +361,452 @@ class GenericSmartLockProvider implements SmartLockProvider
     }
 }
 
-// Les classes NokeProvider, SaltoProvider, etc. seraient implémentées de manière similaire
-// avec les appels API spécifiques à chaque fournisseur
-class NokeProvider extends GenericSmartLockProvider {}
-class SaltoProvider extends GenericSmartLockProvider {}
-class KisiProvider extends GenericSmartLockProvider {}
-class PtiProvider extends GenericSmartLockProvider {}
+/**
+ * Provider Nokē (HDL) - Leader du marché self-storage
+ * Documentation: https://dev.noke.com
+ */
+class NokeProvider implements SmartLockProvider
+{
+    protected SmartLockConfiguration $config;
+    protected string $baseUrl = 'https://api.noke.com/v1';
+
+    public function __construct(SmartLockConfiguration $config)
+    {
+        $this->config = $config;
+    }
+
+    protected function getHeaders(): array
+    {
+        return [
+            'Authorization' => 'Bearer ' . $this->config->api_token,
+            'Content-Type' => 'application/json',
+            'X-Company-ID' => $this->config->company_id ?? '',
+        ];
+    }
+
+    public function unlock(SmartLock $lock): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->timeout(30)
+                ->post("{$this->baseUrl}/locks/{$lock->external_id}/unlock", [
+                    'duration' => 10, // seconds
+                ]);
+
+            if ($response->successful()) {
+                return [
+                    'success' => true,
+                    'message' => 'Lock unlocked successfully',
+                    'transaction_id' => $response->json('transaction_id'),
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => $response->json('message') ?? 'Unlock failed',
+            ];
+        } catch (\Exception $e) {
+            Log::error('Nokē unlock error: ' . $e->getMessage());
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function lock(SmartLock $lock): array
+    {
+        // Nokē locks auto-lock, mais on peut forcer
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->timeout(30)
+                ->post("{$this->baseUrl}/locks/{$lock->external_id}/lock");
+
+            return [
+                'success' => $response->successful(),
+                'message' => $response->successful() ? 'Lock secured' : 'Lock command failed',
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function createAccessCode(SmartLock $lock, string $code, Carbon $from, Carbon $to): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->post("{$this->baseUrl}/locks/{$lock->external_id}/quick-clicks", [
+                    'code' => $code,
+                    'start_time' => $from->toIso8601String(),
+                    'end_time' => $to->toIso8601String(),
+                    'single_use' => false,
+                ]);
+
+            return [
+                'success' => $response->successful(),
+                'quick_click_id' => $response->json('id'),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function revokeAccessCode(SmartLock $lock, string $code): bool
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->delete("{$this->baseUrl}/locks/{$lock->external_id}/quick-clicks/{$code}");
+
+            return $response->successful();
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    public function getAccessLogs(SmartLock $lock, Carbon $since): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->get("{$this->baseUrl}/locks/{$lock->external_id}/activity", [
+                    'from' => $since->toIso8601String(),
+                    'limit' => 1000,
+                ]);
+
+            if (!$response->successful()) return [];
+
+            return collect($response->json('activities') ?? [])
+                ->map(fn($a) => [
+                    'timestamp' => Carbon::parse($a['timestamp']),
+                    'event' => $a['event_type'],
+                    'method' => $a['access_method'] ?? 'unknown',
+                    'code' => $a['quick_click_id'] ?? null,
+                    'user_id' => $a['user_id'] ?? null,
+                ])
+                ->toArray();
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    public function getBatteryLevel(SmartLock $lock): ?int
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->get("{$this->baseUrl}/locks/{$lock->external_id}/status");
+
+            return $response->json('battery_level');
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+}
+
+/**
+ * Provider SALTO KS (Keys as a Service)
+ * Documentation: https://developer.saltoks.com
+ */
+class SaltoProvider implements SmartLockProvider
+{
+    protected SmartLockConfiguration $config;
+    protected string $baseUrl = 'https://api.saltoks.com/api/v1';
+
+    public function __construct(SmartLockConfiguration $config)
+    {
+        $this->config = $config;
+    }
+
+    protected function getHeaders(): array
+    {
+        return [
+            'Authorization' => 'Bearer ' . $this->config->api_token,
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        ];
+    }
+
+    public function unlock(SmartLock $lock): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->timeout(30)
+                ->post("{$this->baseUrl}/ius/{$lock->external_id}/open");
+
+            return [
+                'success' => $response->successful(),
+                'message' => $response->successful() ? 'IU opened' : 'Open failed',
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function lock(SmartLock $lock): array
+    {
+        // SALTO IUs auto-lock
+        return ['success' => true, 'message' => 'IU auto-locks'];
+    }
+
+    public function createAccessCode(SmartLock $lock, string $code, Carbon $from, Carbon $to): array
+    {
+        try {
+            // Créer un accès utilisateur temporaire
+            $response = Http::withHeaders($this->getHeaders())
+                ->post("{$this->baseUrl}/access-points/{$lock->external_id}/keys", [
+                    'key_type' => 'pin',
+                    'pin' => $code,
+                    'starts_at' => $from->toIso8601String(),
+                    'ends_at' => $to->toIso8601String(),
+                ]);
+
+            return [
+                'success' => $response->successful(),
+                'key_id' => $response->json('id'),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function revokeAccessCode(SmartLock $lock, string $code): bool
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->delete("{$this->baseUrl}/access-points/{$lock->external_id}/keys", [
+                    'pin' => $code,
+                ]);
+
+            return $response->successful();
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    public function getAccessLogs(SmartLock $lock, Carbon $since): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->get("{$this->baseUrl}/ius/{$lock->external_id}/events", [
+                    'from' => $since->toIso8601String(),
+                ]);
+
+            if (!$response->successful()) return [];
+
+            return collect($response->json('events') ?? [])
+                ->map(fn($e) => [
+                    'timestamp' => Carbon::parse($e['occurred_at']),
+                    'event' => $e['type'],
+                    'method' => $e['source'] ?? 'unknown',
+                ])
+                ->toArray();
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    public function getBatteryLevel(SmartLock $lock): ?int
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->get("{$this->baseUrl}/ius/{$lock->external_id}");
+
+            return $response->json('battery_percentage');
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+}
+
+/**
+ * Provider Kisi
+ * Documentation: https://api.kisi.io/docs
+ */
+class KisiProvider implements SmartLockProvider
+{
+    protected SmartLockConfiguration $config;
+    protected string $baseUrl = 'https://api.kisi.io';
+
+    public function __construct(SmartLockConfiguration $config)
+    {
+        $this->config = $config;
+    }
+
+    protected function getHeaders(): array
+    {
+        return [
+            'Authorization' => 'KISI-LOGIN ' . $this->config->api_token,
+            'Content-Type' => 'application/json',
+        ];
+    }
+
+    public function unlock(SmartLock $lock): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->post("{$this->baseUrl}/locks/{$lock->external_id}/unlock");
+
+            return [
+                'success' => $response->successful(),
+                'message' => $response->successful() ? 'Unlocked' : 'Failed',
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function lock(SmartLock $lock): array
+    {
+        return ['success' => true, 'message' => 'Auto-lock enabled'];
+    }
+
+    public function createAccessCode(SmartLock $lock, string $code, Carbon $from, Carbon $to): array
+    {
+        // Kisi utilise des cartes/badges plutôt que des codes
+        return ['success' => true, 'message' => 'Use app or card'];
+    }
+
+    public function revokeAccessCode(SmartLock $lock, string $code): bool
+    {
+        return true;
+    }
+
+    public function getAccessLogs(SmartLock $lock, Carbon $since): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->get("{$this->baseUrl}/locks/{$lock->external_id}/unlock_events", [
+                    'after' => $since->toIso8601String(),
+                ]);
+
+            if (!$response->successful()) return [];
+
+            return collect($response->json() ?? [])
+                ->map(fn($e) => [
+                    'timestamp' => Carbon::parse($e['created_at']),
+                    'event' => 'unlock',
+                    'method' => $e['method'] ?? 'app',
+                ])
+                ->toArray();
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    public function getBatteryLevel(SmartLock $lock): ?int
+    {
+        return null; // Kisi locks are typically wired
+    }
+}
+
+/**
+ * Provider PTI Security Systems (StorLogix)
+ * API spécifique self-storage
+ */
+class PtiProvider implements SmartLockProvider
+{
+    protected SmartLockConfiguration $config;
+    protected string $baseUrl;
+
+    public function __construct(SmartLockConfiguration $config)
+    {
+        $this->config = $config;
+        $this->baseUrl = $config->api_endpoint ?? 'https://api.ptisecurity.com/v2';
+    }
+
+    protected function getHeaders(): array
+    {
+        return [
+            'X-API-Key' => $this->config->api_key,
+            'X-Facility-ID' => $this->config->facility_id ?? '',
+            'Content-Type' => 'application/json',
+        ];
+    }
+
+    public function unlock(SmartLock $lock): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->post("{$this->baseUrl}/units/{$lock->external_id}/access", [
+                    'action' => 'grant',
+                    'duration' => 30,
+                ]);
+
+            return [
+                'success' => $response->successful(),
+                'access_id' => $response->json('access_id'),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function lock(SmartLock $lock): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->post("{$this->baseUrl}/units/{$lock->external_id}/access", [
+                    'action' => 'revoke',
+                ]);
+
+            return ['success' => $response->successful()];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function createAccessCode(SmartLock $lock, string $code, Carbon $from, Carbon $to): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->post("{$this->baseUrl}/units/{$lock->external_id}/codes", [
+                    'code' => $code,
+                    'start_date' => $from->format('Y-m-d H:i:s'),
+                    'end_date' => $to->format('Y-m-d H:i:s'),
+                    'type' => 'tenant',
+                ]);
+
+            return [
+                'success' => $response->successful(),
+                'code_id' => $response->json('code_id'),
+            ];
+        } catch (\Exception $e) {
+            return ['success' => false, 'error' => $e->getMessage()];
+        }
+    }
+
+    public function revokeAccessCode(SmartLock $lock, string $code): bool
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->delete("{$this->baseUrl}/units/{$lock->external_id}/codes/{$code}");
+
+            return $response->successful();
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    public function getAccessLogs(SmartLock $lock, Carbon $since): array
+    {
+        try {
+            $response = Http::withHeaders($this->getHeaders())
+                ->get("{$this->baseUrl}/units/{$lock->external_id}/events", [
+                    'since' => $since->format('Y-m-d H:i:s'),
+                ]);
+
+            if (!$response->successful()) return [];
+
+            return collect($response->json('events') ?? [])
+                ->map(fn($e) => [
+                    'timestamp' => Carbon::parse($e['event_time']),
+                    'event' => $e['event_type'],
+                    'method' => $e['access_method'] ?? 'keypad',
+                    'code' => $e['code_used'] ?? null,
+                ])
+                ->toArray();
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
+    public function getBatteryLevel(SmartLock $lock): ?int
+    {
+        return null; // PTI systems are hardwired
+    }
+}

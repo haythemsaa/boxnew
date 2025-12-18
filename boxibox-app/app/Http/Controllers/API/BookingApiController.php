@@ -106,7 +106,7 @@ class BookingApiController extends Controller
                 return [
                     'id' => $box->id,
                     'name' => $box->name,
-                    'code' => $box->code,
+                    'code' => $box->number,
                     'volume' => (float) $box->volume,
                     'length' => (float) $box->length,
                     'width' => (float) $box->width,
@@ -318,7 +318,7 @@ class BookingApiController extends Controller
                 'box' => [
                     'id' => $booking->box->id,
                     'name' => $booking->box->name,
-                    'code' => $booking->box->code,
+                    'code' => $booking->box->number,
                 ],
                 'dates' => [
                     'start_date' => $booking->start_date->format('Y-m-d'),

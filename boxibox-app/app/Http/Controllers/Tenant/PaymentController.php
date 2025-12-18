@@ -21,7 +21,6 @@ class PaymentController extends Controller
      */
     public function index(Request $request): Response
     {
-        $this->authorize('view_payments');
 
         $tenantId = $request->user()->tenant_id;
 
@@ -83,7 +82,6 @@ class PaymentController extends Controller
      */
     public function create(Request $request): Response
     {
-        $this->authorize('create_payments');
 
         $tenantId = $request->user()->tenant_id;
 
@@ -163,7 +161,6 @@ class PaymentController extends Controller
      */
     public function show(Payment $payment): Response
     {
-        $this->authorize('view_payments');
 
         // Ensure tenant can only view their own payments
         if ($payment->tenant_id !== auth()->user()->tenant_id) {
@@ -182,7 +179,6 @@ class PaymentController extends Controller
      */
     public function edit(Request $request, Payment $payment): Response
     {
-        $this->authorize('update_payments');
 
         // Ensure tenant can only edit their own payments
         if ($payment->tenant_id !== $request->user()->tenant_id) {
@@ -278,7 +274,6 @@ class PaymentController extends Controller
      */
     public function destroy(Request $request, Payment $payment): RedirectResponse
     {
-        $this->authorize('delete_payments');
 
         // Ensure tenant can only delete their own payments
         if ($payment->tenant_id !== $request->user()->tenant_id) {

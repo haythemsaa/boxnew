@@ -89,7 +89,6 @@ class SiteController extends Controller
      */
     public function show(Site $site): Response
     {
-        $this->authorize('view_sites');
 
         $site->load(['boxes' => function ($query) {
             $query->withCount('contracts');
@@ -113,7 +112,6 @@ class SiteController extends Controller
      */
     public function edit(Site $site): Response
     {
-        $this->authorize('edit_sites');
 
         return Inertia::render('Tenant/Sites/Edit', [
             'site' => $site,
@@ -137,7 +135,6 @@ class SiteController extends Controller
      */
     public function destroy(Site $site): RedirectResponse
     {
-        $this->authorize('delete_sites');
 
         $site->delete();
 

@@ -36,7 +36,7 @@ return new class extends Migration
             $table->string('transfer_phone')->nullable();
 
             // Langues supportées
-            $table->json('languages')->default('["fr"]'); // ["fr", "en", "es", "de"]
+            $table->json('languages')->nullable(); // ["fr", "en", "es", "de"]
             $table->string('default_language')->default('fr');
 
             // Intégrations

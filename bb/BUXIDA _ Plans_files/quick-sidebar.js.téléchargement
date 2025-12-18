@@ -1,0 +1,116 @@
+var QuickSidebar = function () 
+{
+    var bopen = false;
+    var handleQuickSidebarToggler = function () 
+    {
+        $('.dropdown-quick-sidebar-toggler a, .page-quick-sidebar-toggler, .quick-sidebar-toggler').click(function (e) {
+            $('body').toggleClass('page-quick-sidebar-open'); 
+            bopen = !bopen;
+        });
+    };
+
+
+    var handleQuickSidebarsuivi = function ($scope,$rootScope,$http) 
+    {
+        $http({
+            url : "php/table.TB_SUIVIS.php?all=3&ui="+$rootScope.soc.UI,
+            headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'}
+        })
+        .success(function (data, status, headers, config) 
+        {        
+            $scope.suivis = [];
+            $.each(data.data,function(key,value)
+            {
+                $scope.suivis.push({color:value.color,icon:value.icon,C_CLI:value.C_CLI,DATE:value.DATE,M_memo:value.M_memo});
+            });
+            var wrapper = $('.page-quick-sidebar-wrapper');
+
+            var initAlertsSlimScroll = function () {
+                var alertList = wrapper.find('.page-quick-sidebar-suivi');
+                var alertListHeight;
+
+                alertListHeight = wrapper.height() - 80 - wrapper.find('.nav-justified > .nav-tabs').outerHeight();
+
+                // alerts list 
+                App.destroySlimScroll(alertList);
+                alertList.attr("data-height", alertListHeight);
+                App.initSlimScroll(alertList);
+            };
+
+            initAlertsSlimScroll();
+            App.addResizeHandler(initAlertsSlimScroll); // reinitialize on window resize
+            
+        })
+        .error(function (data, status, headers, config) 
+        {
+          console.log(status);
+          alert('Erreur de connexion au serveur ');
+        });
+
+    };
+    var handleQuickSidebarlogeden = function ($scope,$rootScope,$http) 
+    {
+        $http({
+            url : "php/control_eden.php",
+            method: "POST",
+            headers : {'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+            data : {id:'2', CUI:$rootScope.soc.UI}
+        })
+        .success(function (data, status, headers, config) 
+        {        
+            $scope.historiques = [];
+            $.each(data.data,function(key,value)
+            {
+                $scope.historiques.push({color:value.color,icon:value.icon,nature:value.nature,entity:value.entity,readerName:value.readerName,unitName:value.unitName, date:value.datee, dateev:value.dateTimeEvent,automatismName:value.automatismName});
+            });
+            var wrapper = $('.page-quick-sidebar-wrapper');
+
+            var initAlertsSlimScroll = function () {
+                var alertList = wrapper.find('.page-quick-sidebar-alerts-list');
+                var alertListHeight;
+
+                alertListHeight = wrapper.height() - 80 - wrapper.find('.nav-justified > .nav-tabs').outerHeight();
+
+                // alerts list 
+                App.destroySlimScroll(alertList);
+                alertList.attr("data-height", alertListHeight);
+                App.initSlimScroll(alertList);
+            };
+
+            initAlertsSlimScroll();
+            App.addResizeHandler(initAlertsSlimScroll); // reinitialize on window resize
+            
+        })
+        .error(function (data, status, headers, config) 
+        {
+          console.log(status);
+          alert('Erreur de connexion au serveur ');
+        });
+
+    };
+
+    return {
+        init: function ($scope,$rootScope,$http,$interval) 
+        {
+            handleQuickSidebarToggler(); 
+            handleQuickSidebarsuivi($scope,$rootScope,$http);
+            handleQuickSidebarlogeden($scope,$rootScope,$http); 
+            $interval(function() 
+            {
+                if (bopen)
+                {
+                  handleQuickSidebarsuivi($scope,$rootScope,$http);
+                  handleQuickSidebarlogeden($scope,$rootScope,$http); 
+                }                     
+             }, 30000);
+              
+        }
+    };
+
+}();
+
+if (App.isAngularJsApp() === false) { 
+    jQuery(document).ready(function() {    
+       QuickSidebar.init(); 
+    });
+}

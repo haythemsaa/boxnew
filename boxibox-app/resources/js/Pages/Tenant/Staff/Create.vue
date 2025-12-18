@@ -3,8 +3,42 @@
         <div class="max-w-3xl mx-auto">
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <form @submit.prevent="submit" class="space-y-6">
-                    <!-- User Selection or Creation -->
-                    <div>
+                    <!-- User Selection or Creation Toggle -->
+                    <div v-if="availableUsers.length > 0" class="flex gap-4 mb-4">
+                        <button
+                            type="button"
+                            @click="createNewUser = false"
+                            :class="!createNewUser ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'"
+                            class="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                        >
+                            Utilisateur existant
+                        </button>
+                        <button
+                            type="button"
+                            @click="createNewUser = true"
+                            :class="createNewUser ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700'"
+                            class="px-4 py-2 rounded-xl text-sm font-medium transition-colors"
+                        >
+                            Créer un utilisateur
+                        </button>
+                    </div>
+
+                    <!-- Alert if no users available -->
+                    <div v-if="availableUsers.length === 0 && !createNewUser" class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                        <div class="flex items-start gap-3">
+                            <ExclamationTriangleIcon class="w-5 h-5 text-amber-500 mt-0.5" />
+                            <div>
+                                <p class="text-amber-800 font-medium">Aucun utilisateur disponible</p>
+                                <p class="text-amber-600 text-sm mt-1">
+                                    Tous les utilisateurs ont déjà un profil employé ou aucun utilisateur n'existe.
+                                    Créez un nouvel utilisateur ci-dessous.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Select Existing User -->
+                    <div v-if="!createNewUser && availableUsers.length > 0">
                         <label class="block text-sm font-medium text-gray-700 mb-2">Utilisateur *</label>
                         <select v-model="form.user_id" class="w-full rounded-xl border-gray-200" required>
                             <option value="">Sélectionner un utilisateur existant</option>
@@ -15,72 +49,96 @@
                         <p v-if="form.errors.user_id" class="text-red-500 text-sm mt-1">{{ form.errors.user_id }}</p>
                     </div>
 
-                    <!-- Role -->
+                    <!-- Create New User Section -->
+                    <div v-if="createNewUser || availableUsers.length === 0" class="space-y-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <h3 class="font-medium text-blue-900 flex items-center gap-2">
+                            <UserPlusIcon class="w-5 h-5" />
+                            Nouvel utilisateur
+                        </h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Nom complet *</label>
+                                <input
+                                    v-model="form.new_user_name"
+                                    type="text"
+                                    class="w-full rounded-xl border-gray-200"
+                                    placeholder="Jean Dupont"
+                                />
+                                <p v-if="form.errors.new_user_name" class="text-red-500 text-sm mt-1">{{ form.errors.new_user_name }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+                                <input
+                                    v-model="form.new_user_email"
+                                    type="email"
+                                    class="w-full rounded-xl border-gray-200"
+                                    placeholder="jean@exemple.com"
+                                />
+                                <p v-if="form.errors.new_user_email" class="text-red-500 text-sm mt-1">{{ form.errors.new_user_email }}</p>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Mot de passe *</label>
+                                <input
+                                    v-model="form.new_user_password"
+                                    type="password"
+                                    class="w-full rounded-xl border-gray-200"
+                                    placeholder="••••••••"
+                                />
+                                <p v-if="form.errors.new_user_password" class="text-red-500 text-sm mt-1">{{ form.errors.new_user_password }}</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Confirmer *</label>
+                                <input
+                                    v-model="form.new_user_password_confirmation"
+                                    type="password"
+                                    class="w-full rounded-xl border-gray-200"
+                                    placeholder="••••••••"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Position/Role -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Rôle *</label>
-                        <select v-model="form.role" class="w-full rounded-xl border-gray-200" required>
-                            <option value="">Sélectionner un rôle</option>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Poste *</label>
+                        <select v-model="form.position" class="w-full rounded-xl border-gray-200" required>
+                            <option value="">Sélectionner un poste</option>
                             <option value="manager">Manager</option>
                             <option value="technician">Technicien</option>
                             <option value="receptionist">Réceptionniste</option>
                             <option value="security">Agent de sécurité</option>
                             <option value="cleaner">Agent d'entretien</option>
                         </select>
-                        <p v-if="form.errors.role" class="text-red-500 text-sm mt-1">{{ form.errors.role }}</p>
+                        <p v-if="form.errors.position" class="text-red-500 text-sm mt-1">{{ form.errors.position }}</p>
                     </div>
 
-                    <!-- Sites -->
+                    <!-- Site Assignment -->
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Sites assignés *</label>
-                        <div class="grid grid-cols-2 gap-3">
-                            <label v-for="site in sites" :key="site.id" class="flex items-center gap-2 p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100">
-                                <input
-                                    type="checkbox"
-                                    :value="site.id"
-                                    v-model="form.site_ids"
-                                    class="rounded text-primary-600"
-                                />
-                                <span class="text-sm text-gray-700">{{ site.name }}</span>
-                            </label>
-                        </div>
-                        <p v-if="form.errors.site_ids" class="text-red-500 text-sm mt-1">{{ form.errors.site_ids }}</p>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Site assigné</label>
+                        <select v-model="form.site_id" class="w-full rounded-xl border-gray-200">
+                            <option value="">Aucun site spécifique</option>
+                            <option v-for="site in sites" :key="site.id" :value="site.id">
+                                {{ site.name }}
+                            </option>
+                        </select>
+                        <p v-if="form.errors.site_id" class="text-red-500 text-sm mt-1">{{ form.errors.site_id }}</p>
                     </div>
 
-                    <!-- Contact Info -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Téléphone</label>
-                            <input
-                                v-model="form.phone"
-                                type="tel"
-                                class="w-full rounded-xl border-gray-200"
-                                placeholder="+33 6 00 00 00 00"
-                            />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Téléphone urgence</label>
-                            <input
-                                v-model="form.emergency_phone"
-                                type="tel"
-                                class="w-full rounded-xl border-gray-200"
-                                placeholder="+33 6 00 00 00 00"
-                            />
-                        </div>
+                    <!-- Employment Info -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Date d'embauche</label>
+                        <input
+                            v-model="form.hire_date"
+                            type="date"
+                            class="w-full rounded-xl border-gray-200"
+                        />
+                        <p v-if="form.errors.hire_date" class="text-red-500 text-sm mt-1">{{ form.errors.hire_date }}</p>
                     </div>
 
-                    <!-- Work Schedule -->
+                    <!-- Salary Info -->
                     <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Heures par semaine</label>
-                            <input
-                                v-model="form.hours_per_week"
-                                type="number"
-                                min="0"
-                                max="60"
-                                class="w-full rounded-xl border-gray-200"
-                                placeholder="35"
-                            />
-                        </div>
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Taux horaire (€)</label>
                             <input
@@ -92,26 +150,38 @@
                                 placeholder="15.00"
                             />
                         </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Salaire mensuel (€)</label>
+                            <input
+                                v-model="form.monthly_salary"
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                class="w-full rounded-xl border-gray-200"
+                                placeholder="2500.00"
+                            />
+                        </div>
                     </div>
 
-                    <!-- Employment Dates -->
+                    <!-- Emergency Contact -->
                     <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Date d'embauche</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Contact urgence - Nom</label>
                             <input
-                                v-model="form.hire_date"
-                                type="date"
+                                v-model="form.emergency_contact_name"
+                                type="text"
                                 class="w-full rounded-xl border-gray-200"
+                                placeholder="Marie Dupont"
                             />
                         </div>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Type de contrat</label>
-                            <select v-model="form.contract_type" class="w-full rounded-xl border-gray-200">
-                                <option value="cdi">CDI</option>
-                                <option value="cdd">CDD</option>
-                                <option value="interim">Intérim</option>
-                                <option value="freelance">Freelance</option>
-                            </select>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Contact urgence - Téléphone</label>
+                            <input
+                                v-model="form.emergency_contact_phone"
+                                type="tel"
+                                class="w-full rounded-xl border-gray-200"
+                                placeholder="+33 6 00 00 00 00"
+                            />
                         </div>
                     </div>
 
@@ -119,30 +189,17 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Compétences</label>
                         <div class="flex flex-wrap gap-2">
-                            <label v-for="skill in availableSkills" :key="skill" class="inline-flex items-center gap-1 px-3 py-1 bg-gray-100 rounded-full cursor-pointer hover:bg-gray-200">
+                            <label v-for="skill in availableSkills" :key="skill" class="inline-flex items-center gap-1 px-3 py-1 rounded-full cursor-pointer transition-colors" :class="form.skills.includes(skill) ? 'bg-primary-100 text-primary-700' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'">
                                 <input
                                     type="checkbox"
                                     :value="skill"
                                     v-model="form.skills"
                                     class="hidden"
                                 />
-                                <span :class="form.skills.includes(skill) ? 'text-primary-600 font-medium' : 'text-gray-600'" class="text-sm">
-                                    {{ skill }}
-                                </span>
-                                <CheckIcon v-if="form.skills.includes(skill)" class="w-4 h-4 text-primary-600" />
+                                <span class="text-sm">{{ skill }}</span>
+                                <CheckIcon v-if="form.skills.includes(skill)" class="w-4 h-4" />
                             </label>
                         </div>
-                    </div>
-
-                    <!-- Notes -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Notes</label>
-                        <textarea
-                            v-model="form.notes"
-                            rows="3"
-                            class="w-full rounded-xl border-gray-200"
-                            placeholder="Notes internes sur l'employé..."
-                        ></textarea>
                     </div>
 
                     <!-- Actions -->
@@ -152,7 +209,7 @@
                         </Link>
                         <button type="submit" :disabled="form.processing" class="btn-primary">
                             <span v-if="form.processing">Création...</span>
-                            <span v-else>Créer le profil</span>
+                            <span v-else>Créer le profil employé</span>
                         </button>
                     </div>
                 </form>
@@ -162,27 +219,37 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { Link, useForm } from '@inertiajs/vue3'
 import TenantLayout from '@/Layouts/TenantLayout.vue'
-import { CheckIcon } from '@heroicons/vue/24/outline'
+import { CheckIcon, ExclamationTriangleIcon, UserPlusIcon } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     availableUsers: Array,
     sites: Array,
 })
 
+const createNewUser = ref(props.availableUsers.length === 0)
+
 const form = useForm({
     user_id: '',
-    role: '',
-    site_ids: [],
-    phone: '',
-    emergency_phone: '',
-    hours_per_week: 35,
+    // New user fields
+    new_user_name: '',
+    new_user_email: '',
+    new_user_password: '',
+    new_user_password_confirmation: '',
+    create_new_user: false,
+    // Staff profile fields
+    site_id: '',
+    position: '',
+    department: '',
+    employee_number: '',
+    hire_date: new Date().toISOString().split('T')[0],
     hourly_rate: '',
-    hire_date: '',
-    contract_type: 'cdi',
+    monthly_salary: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
     skills: [],
-    notes: '',
 })
 
 const availableSkills = [
@@ -198,6 +265,7 @@ const availableSkills = [
 ]
 
 const submit = () => {
+    form.create_new_user = createNewUser.value || props.availableUsers.length === 0
     form.post(route('tenant.staff.store'))
 }
 </script>

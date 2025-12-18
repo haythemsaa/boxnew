@@ -5,20 +5,25 @@ namespace App\Services;
 use App\Models\Conversation;
 use App\Models\Message;
 use App\Models\Lead;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 class ChatbotService
 {
-    protected string $apiKey;
-    protected string $model;
+    protected AIService $aiService;
     protected array $knowledgeBase;
 
-    public function __construct()
+    public function __construct(AIService $aiService)
     {
-        $this->apiKey = config('services.openai.api_key', env('OPENAI_API_KEY'));
-        $this->model = 'gpt-4';
+        $this->aiService = $aiService;
         $this->knowledgeBase = $this->loadKnowledgeBase();
+    }
+
+    /**
+     * Get current AI provider info
+     */
+    public function getProviderInfo(): array
+    {
+        return $this->aiService->getProviderInfo();
     }
 
     /**
@@ -35,13 +40,19 @@ class ChatbotService
         $userMessage = $this->storeMessage($conversation, 'user', $message);
 
         // Build context from conversation history
-        $context = $this->buildContext($conversation);
+        $conversationContext = $this->buildConversationContext($conversation);
 
-        // Call OpenAI API
-        $aiResponse = $this->callOpenAI($context, $message);
+        // Build business context
+        $businessContext = $this->buildBusinessContext($tenantId);
+
+        // Enhance message with system prompt
+        $enhancedMessage = $this->getSystemPrompt() . "\n\nHistorique de conversation:\n" . $conversationContext . "\n\nMessage du visiteur: " . $message;
+
+        // Call AI Service (Groq, Gemini, etc.)
+        $aiResponse = $this->aiService->chat($enhancedMessage, $businessContext);
 
         // Store AI response
-        $botMessage = $this->storeMessage($conversation, 'assistant', $aiResponse['content']);
+        $botMessage = $this->storeMessage($conversation, 'assistant', $aiResponse['message']);
 
         // Extract intent and entities
         $intent = $this->detectIntent($message);
@@ -52,59 +63,12 @@ class ChatbotService
 
         return [
             'conversation_id' => $conversation->id,
-            'message' => $aiResponse['content'],
+            'message' => $aiResponse['message'],
             'intent' => $intent,
             'entities' => $entities,
             'suggestions' => $this->generateSuggestions($intent),
+            'provider' => $aiResponse['provider'] ?? 'unknown',
         ];
-    }
-
-    /**
-     * Call OpenAI GPT-4 API
-     */
-    protected function callOpenAI(array $context, string $userMessage): array
-    {
-        if (!$this->apiKey) {
-            // Fallback response when no API key configured
-            return $this->fallbackResponse($userMessage);
-        }
-
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->apiKey,
-                'Content-Type' => 'application/json',
-            ])->timeout(30)->post('https://api.openai.com/v1/chat/completions', [
-                'model' => $this->model,
-                'messages' => array_merge([
-                    [
-                        'role' => 'system',
-                        'content' => $this->getSystemPrompt(),
-                    ],
-                ], $context, [
-                    [
-                        'role' => 'user',
-                        'content' => $userMessage,
-                    ],
-                ]),
-                'temperature' => 0.7,
-                'max_tokens' => 500,
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-                return [
-                    'content' => $data['choices'][0]['message']['content'] ?? 'Désolé, je n\'ai pas compris.',
-                    'usage' => $data['usage'] ?? [],
-                ];
-            }
-
-            Log::error('OpenAI API Error', ['response' => $response->body()]);
-            return $this->fallbackResponse($userMessage);
-
-        } catch (\Exception $e) {
-            Log::error('Chatbot Exception', ['error' => $e->getMessage()]);
-            return $this->fallbackResponse($userMessage);
-        }
     }
 
     /**
@@ -146,41 +110,42 @@ Réponds toujours en français.";
     }
 
     /**
-     * Fallback response when API is not available
+     * Build conversation context string
      */
-    protected function fallbackResponse(string $message): array
+    protected function buildConversationContext(Conversation $conversation): string
     {
-        // Rule-based fallback responses
-        $message = strtolower($message);
+        $messages = $conversation->messages()
+            ->latest()
+            ->take(10)
+            ->get()
+            ->reverse();
 
-        if (str_contains($message, 'prix') || str_contains($message, 'tarif') || str_contains($message, 'coût')) {
-            return [
-                'content' => "Nos tarifs varient selon la taille:\n• Petites boxes (1-3m²): 40-60€/mois\n• Moyennes boxes (4-7m²): 80-120€/mois\n• Grandes boxes (8-15m²): 150-300€/mois\n\n🎁 Premier mois à -50% pour nouveaux clients!\n\nQuelle taille vous intéresserait?",
-            ];
+        $context = '';
+        foreach ($messages as $msg) {
+            $role = $msg->sender_type === 'user' ? 'Visiteur' : 'Assistant';
+            $context .= "{$role}: {$msg->content}\n";
         }
 
-        if (str_contains($message, 'taille') || str_contains($message, 'm²') || str_contains($message, 'espace')) {
-            return [
-                'content' => "Pour vous conseiller, dites-moi ce que vous souhaitez stocker?\n\nExemples:\n• Vêtements/archives → Petite box (1-3m²)\n• Mobilier studio/F2 → Moyenne box (4-7m²)\n• Mobilier F3+ ou stock → Grande box (8-15m²)",
-            ];
+        return $context;
+    }
+
+    /**
+     * Build business context for AI
+     */
+    protected function buildBusinessContext(?int $tenantId): array
+    {
+        if (!$tenantId) {
+            return [];
         }
 
-        if (str_contains($message, 'visite') || str_contains($message, 'rdv') || str_contains($message, 'rendez-vous')) {
+        try {
             return [
-                'content' => "Excellente idée! Les visites permettent de mieux visualiser les espaces.\n\nJe peux vous proposer un créneau. Quel jour vous conviendrait le mieux?",
+                'available_boxes' => \App\Models\Box::where('tenant_id', $tenantId)->where('status', 'available')->count(),
+                'total_boxes' => \App\Models\Box::where('tenant_id', $tenantId)->count(),
             ];
+        } catch (\Exception $e) {
+            return [];
         }
-
-        if (str_contains($message, 'réserv') || str_contains($message, 'louer') || str_contains($message, 'location')) {
-            return [
-                'content' => "Super! La réservation en ligne est simple et rapide (3 min).\n\nVous bénéficiez de:\n✅ -50% sur le 1er mois\n✅ Accès immédiat\n✅ Aucun engagement\n\nSouhaitez-vous que je vous guide pour réserver?",
-            ];
-        }
-
-        // Default response
-        return [
-            'content' => "Merci pour votre message! Je suis là pour vous aider avec:\n\n• Trouver la taille de box idéale\n• Calculer un devis personnalisé\n• Prendre rendez-vous pour une visite\n• Réserver en ligne\n\nQue puis-je faire pour vous?",
-        ];
     }
 
     /**
@@ -247,19 +212,16 @@ Réponds toujours en français.";
     {
         switch ($intent) {
             case 'booking':
-                // Create lead if email/phone provided
                 if (isset($entities['email']) || isset($entities['phone'])) {
                     $this->createLeadFromConversation($conversation, $entities);
                 }
                 break;
 
             case 'visit':
-                // Mark conversation as requiring appointment
                 $conversation->update(['requires_appointment' => true]);
                 break;
 
             case 'pricing':
-                // Track pricing interest
                 $conversation->update(['interested_in_pricing' => true]);
                 break;
         }
@@ -281,7 +243,7 @@ Réponds toujours en français.";
             'phone' => $entities['phone'] ?? null,
             'source' => 'chatbot',
             'status' => 'new',
-            'score' => 60, // Medium score for chatbot leads
+            'score' => 60,
             'notes' => 'Lead créé automatiquement via chatbot',
         ]);
 
@@ -324,25 +286,6 @@ Réponds toujours en français.";
         ];
 
         return $suggestions[$intent] ?? $suggestions['general'];
-    }
-
-    /**
-     * Build conversation context
-     */
-    protected function buildContext(Conversation $conversation): array
-    {
-        return $conversation->messages()
-            ->latest()
-            ->take(10)
-            ->get()
-            ->reverse()
-            ->map(function ($message) {
-                return [
-                    'role' => $message->sender_type === 'user' ? 'user' : 'assistant',
-                    'content' => $message->content,
-                ];
-            })
-            ->toArray();
     }
 
     /**
@@ -389,12 +332,6 @@ Réponds toujours en français.";
                 'Premier mois -50%',
                 'Sans engagement',
             ],
-            'faqs' => [
-                'Puis-je résilier quand je veux?' => 'Oui, sans engagement. Préavis de 1 mois seulement.',
-                'L\'assurance est-elle obligatoire?' => 'Non, elle est optionnelle à 10€/mois.',
-                'Puis-je accéder 24/7?' => 'Oui, accès illimité avec votre code personnel.',
-                'Y a-t-il des frais cachés?' => 'Non, tarif tout compris. Vous payez seulement le loyer mensuel.',
-            ],
         ];
     }
 
@@ -403,7 +340,6 @@ Réponds toujours en français.";
      */
     public function recommendBoxSize(array $items): array
     {
-        // Simple algorithm based on item types
         $volumeEstimate = 0;
 
         $itemVolumes = [

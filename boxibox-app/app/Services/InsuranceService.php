@@ -302,4 +302,455 @@ class InsuranceService
             ->where('status', 'active')
             ->first();
     }
+
+    // ========================================================================
+    // INSURANCE MARKETPLACE - Comparaison multi-assureurs
+    // ========================================================================
+
+    /**
+     * Comparer les offres de plusieurs assureurs
+     */
+    public function compareOffers(
+        int $tenantId,
+        float $declaredValue,
+        float $boxSize,
+        array $coverageTypes = ['theft', 'fire', 'water', 'vandalism']
+    ): array {
+        $offers = [];
+
+        // Récupérer tous les plans actifs des providers configurés
+        $plans = InsurancePlan::whereHas('provider', function ($q) use ($tenantId) {
+            $q->where('is_active', true);
+        })
+            ->where('is_active', true)
+            ->with('provider')
+            ->get();
+
+        foreach ($plans as $plan) {
+            $premium = $this->calculatePremium($plan, $declaredValue, $boxSize);
+
+            // Calculer le score de valeur (couverture par euro de prime)
+            $valueScore = $premium['monthly'] > 0
+                ? round($premium['coverage_amount'] / $premium['monthly'], 0)
+                : 0;
+
+            // Vérifier la couverture des risques demandés
+            $coveredRisks = $plan->covered_risks ?? [];
+            $matchingCoverage = count(array_intersect($coverageTypes, $coveredRisks));
+            $coverageMatch = count($coverageTypes) > 0
+                ? round(($matchingCoverage / count($coverageTypes)) * 100)
+                : 100;
+
+            $offers[] = [
+                'plan_id' => $plan->id,
+                'plan_name' => $plan->name,
+                'plan_code' => $plan->code,
+                'provider' => [
+                    'id' => $plan->provider->id,
+                    'name' => $plan->provider->name,
+                    'logo' => $plan->provider->logo_url,
+                    'rating' => $plan->provider->rating ?? 4.0,
+                    'claims_ratio' => $plan->provider->claims_ratio ?? 0,
+                ],
+                'premium' => $premium,
+                'features' => $plan->features ?? [],
+                'covered_risks' => $coveredRisks,
+                'coverage_match' => $coverageMatch,
+                'exclusions' => $plan->exclusions ?? [],
+                'value_score' => $valueScore,
+                'is_recommended' => $plan->is_recommended ?? false,
+                'is_default' => $plan->is_default ?? false,
+                'processing_time' => $plan->provider->avg_claim_processing_days ?? 14,
+            ];
+        }
+
+        // Trier par value_score décroissant
+        usort($offers, fn($a, $b) => $b['value_score'] - $a['value_score']);
+
+        // Marquer le meilleur rapport qualité/prix
+        if (count($offers) > 0) {
+            $offers[0]['best_value'] = true;
+        }
+
+        // Trouver la couverture la plus complète
+        $bestCoverage = collect($offers)->sortByDesc('coverage_match')->first();
+        if ($bestCoverage) {
+            $idx = array_search($bestCoverage, $offers);
+            if ($idx !== false) {
+                $offers[$idx]['best_coverage'] = true;
+            }
+        }
+
+        return [
+            'offers' => $offers,
+            'requested_coverage' => $coverageTypes,
+            'declared_value' => $declaredValue,
+            'box_size' => $boxSize,
+            'generated_at' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Souscrire via la marketplace avec comparaison
+     */
+    public function subscribeFromMarketplace(
+        Contract $contract,
+        int $planId,
+        float $declaredValue,
+        array $selectedCoverage = [],
+        string $paymentFrequency = 'monthly'
+    ): InsurancePolicy {
+        $plan = InsurancePlan::findOrFail($planId);
+
+        // Vérifier que le plan couvre les risques sélectionnés
+        $coveredRisks = $plan->covered_risks ?? [];
+        $missingCoverage = array_diff($selectedCoverage, $coveredRisks);
+
+        if (!empty($missingCoverage)) {
+            throw new \Exception('Le plan sélectionné ne couvre pas : ' . implode(', ', $missingCoverage));
+        }
+
+        return $this->subscribe($contract, $plan, $declaredValue, null, $paymentFrequency);
+    }
+
+    /**
+     * Obtenir les providers d'assurance configurés
+     */
+    public function getProviders(int $tenantId): \Illuminate\Database\Eloquent\Collection
+    {
+        return InsuranceProvider::where('is_active', true)
+            ->withCount(['plans' => fn($q) => $q->where('is_active', true)])
+            ->withAvg('policies', 'premium_monthly')
+            ->orderBy('order')
+            ->get();
+    }
+
+    /**
+     * Calculer la recommandation personnalisée
+     */
+    public function getPersonalizedRecommendation(
+        Contract $contract,
+        ?float $declaredValue = null
+    ): array {
+        $customer = $contract->customer;
+        $box = $contract->box;
+
+        // Estimation de la valeur si non fournie
+        if (!$declaredValue) {
+            $declaredValue = $this->estimateValue($box->size_m2 ?? $box->area ?? 5);
+        }
+
+        // Analyser le profil du client
+        $customerProfile = $this->analyzeCustomerProfile($customer);
+
+        // Obtenir les offres
+        $comparison = $this->compareOffers(
+            $contract->tenant_id,
+            $declaredValue,
+            $box->size_m2 ?? $box->area ?? 5,
+            $customerProfile['recommended_coverage']
+        );
+
+        // Sélectionner la meilleure recommandation
+        $recommended = collect($comparison['offers'])
+            ->filter(fn($o) => $o['coverage_match'] >= 80)
+            ->sortByDesc('value_score')
+            ->first();
+
+        return [
+            'customer_profile' => $customerProfile,
+            'estimated_value' => $declaredValue,
+            'recommended_plan' => $recommended,
+            'alternative_plans' => array_slice($comparison['offers'], 0, 3),
+            'reasons' => $this->getRecommendationReasons($recommended, $customerProfile),
+        ];
+    }
+
+    /**
+     * Analyser le profil client pour recommandation
+     */
+    protected function analyzeCustomerProfile(Customer $customer): array
+    {
+        $profile = [
+            'risk_level' => 'medium',
+            'recommended_coverage' => ['theft', 'fire', 'water'],
+            'factors' => [],
+        ];
+
+        // Entreprise = valeur plus élevée probable
+        if ($customer->company || $customer->is_professional) {
+            $profile['risk_level'] = 'high';
+            $profile['recommended_coverage'][] = 'business_interruption';
+            $profile['factors'][] = 'professional_use';
+        }
+
+        // Historique de sinistres
+        $previousClaims = InsuranceClaim::whereHas('policy', fn($q) => $q->where('customer_id', $customer->id))
+            ->count();
+
+        if ($previousClaims > 0) {
+            $profile['risk_level'] = 'high';
+            $profile['factors'][] = 'previous_claims';
+        }
+
+        // Durée de location
+        $activeContracts = Contract::where('customer_id', $customer->id)
+            ->where('status', 'active')
+            ->get();
+
+        $avgDuration = $activeContracts->avg(fn($c) => $c->start_date->diffInMonths(now()));
+        if ($avgDuration > 12) {
+            $profile['factors'][] = 'long_term_customer';
+        }
+
+        return $profile;
+    }
+
+    /**
+     * Estimer la valeur des biens stockés
+     */
+    protected function estimateValue(float $boxSizeM2): float
+    {
+        // Estimation basée sur la taille du box
+        // Moyenne France : ~500€/m² de valeur stockée
+        $baseValuePerM2 = 500;
+
+        // Ajustement selon la taille (boxes plus grands = densité plus faible)
+        if ($boxSizeM2 <= 3) {
+            $multiplier = 1.5; // Affaires personnelles de valeur
+        } elseif ($boxSizeM2 <= 10) {
+            $multiplier = 1.0; // Mobilier standard
+        } else {
+            $multiplier = 0.7; // Stockage volumineux, moins dense
+        }
+
+        return round($boxSizeM2 * $baseValuePerM2 * $multiplier, -2); // Arrondi à la centaine
+    }
+
+    /**
+     * Générer les raisons de la recommandation
+     */
+    protected function getRecommendationReasons(array $plan, array $profile): array
+    {
+        $reasons = [];
+
+        if ($plan['best_value'] ?? false) {
+            $reasons[] = 'Meilleur rapport qualité/prix du marché';
+        }
+
+        if ($plan['coverage_match'] >= 100) {
+            $reasons[] = 'Couvre tous les risques recommandés pour votre profil';
+        }
+
+        if (in_array('long_term_customer', $profile['factors'])) {
+            $reasons[] = 'Adapté aux clients fidèles avec couverture étendue';
+        }
+
+        if (in_array('professional_use', $profile['factors'])) {
+            $reasons[] = 'Inclut la protection des biens professionnels';
+        }
+
+        if (($plan['provider']['rating'] ?? 0) >= 4.5) {
+            $reasons[] = 'Assureur très bien noté par nos clients';
+        }
+
+        if (($plan['processing_time'] ?? 30) <= 7) {
+            $reasons[] = 'Traitement rapide des sinistres (moins de 7 jours)';
+        }
+
+        return $reasons;
+    }
+
+    /**
+     * Synchroniser avec l'API d'un assureur externe
+     */
+    public function syncWithExternalProvider(InsuranceProvider $provider): array
+    {
+        $result = [
+            'plans_updated' => 0,
+            'plans_created' => 0,
+            'errors' => [],
+        ];
+
+        if (!$provider->api_endpoint || !$provider->api_key) {
+            return $result;
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => 'Bearer ' . $provider->api_key,
+                'Accept' => 'application/json',
+            ])
+                ->timeout(30)
+                ->get($provider->api_endpoint . '/plans');
+
+            if (!$response->successful()) {
+                $result['errors'][] = 'API returned ' . $response->status();
+                return $result;
+            }
+
+            $externalPlans = $response->json('plans') ?? [];
+
+            foreach ($externalPlans as $externalPlan) {
+                $plan = InsurancePlan::updateOrCreate(
+                    [
+                        'provider_id' => $provider->id,
+                        'external_id' => $externalPlan['id'],
+                    ],
+                    [
+                        'name' => $externalPlan['name'],
+                        'code' => $externalPlan['code'] ?? Str::slug($externalPlan['name']),
+                        'description' => $externalPlan['description'] ?? '',
+                        'price_monthly' => $externalPlan['monthly_premium'] ?? 0,
+                        'price_yearly' => $externalPlan['annual_premium'] ?? null,
+                        'coverage_amount' => $externalPlan['coverage_limit'] ?? 0,
+                        'deductible' => $externalPlan['deductible'] ?? 0,
+                        'covered_risks' => $externalPlan['covered_perils'] ?? [],
+                        'exclusions' => $externalPlan['exclusions'] ?? [],
+                        'features' => $externalPlan['features'] ?? [],
+                        'is_active' => $externalPlan['is_available'] ?? true,
+                    ]
+                );
+
+                if ($plan->wasRecentlyCreated) {
+                    $result['plans_created']++;
+                } else {
+                    $result['plans_updated']++;
+                }
+            }
+
+            $provider->update(['last_sync_at' => now()]);
+
+        } catch (\Exception $e) {
+            $result['errors'][] = $e->getMessage();
+            Log::error('Insurance provider sync failed', [
+                'provider_id' => $provider->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * Soumettre un sinistre directement à l'assureur via API
+     */
+    public function submitClaimToProvider(InsuranceClaim $claim): array
+    {
+        $policy = $claim->policy;
+        $provider = $policy->plan->provider;
+
+        if (!$provider->api_endpoint || !$provider->api_key) {
+            return ['success' => false, 'message' => 'Provider API not configured'];
+        }
+
+        try {
+            $response = \Illuminate\Support\Facades\Http::withHeaders([
+                'Authorization' => 'Bearer ' . $provider->api_key,
+                'Accept' => 'application/json',
+                'Content-Type' => 'application/json',
+            ])
+                ->timeout(30)
+                ->post($provider->api_endpoint . '/claims', [
+                    'policy_number' => $policy->policy_number,
+                    'claim_number' => $claim->claim_number,
+                    'incident_date' => $claim->incident_date->format('Y-m-d'),
+                    'incident_type' => $claim->incident_type,
+                    'description' => $claim->incident_description,
+                    'claimed_amount' => $claim->claimed_amount,
+                    'customer' => [
+                        'name' => $policy->customer->full_name,
+                        'email' => $policy->customer->email,
+                        'phone' => $policy->customer->phone,
+                    ],
+                    'documents' => $claim->documents ?? [],
+                ]);
+
+            if ($response->successful()) {
+                $claim->update([
+                    'external_claim_id' => $response->json('claim_id'),
+                    'status' => 'submitted',
+                    'submitted_at' => now(),
+                ]);
+
+                return [
+                    'success' => true,
+                    'external_claim_id' => $response->json('claim_id'),
+                    'message' => 'Claim submitted to provider',
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $response->json('message') ?? 'Submission failed',
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Claim submission to provider failed', [
+                'claim_id' => $claim->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Obtenir les statistiques de la marketplace
+     */
+    public function getMarketplaceStats(int $tenantId): array
+    {
+        $policies = InsurancePolicy::where('tenant_id', $tenantId);
+
+        return [
+            'total_policies' => (clone $policies)->count(),
+            'active_policies' => (clone $policies)->where('status', 'active')->count(),
+            'total_coverage' => (clone $policies)->where('status', 'active')->sum('coverage_amount'),
+            'avg_premium' => round((clone $policies)->where('status', 'active')->avg('premium_monthly') ?? 0, 2),
+            'providers_used' => InsuranceProvider::whereHas('plans.policies', fn($q) => $q->where('tenant_id', $tenantId))->count(),
+            'conversion_rate' => $this->calculateInsuranceConversionRate($tenantId),
+            'by_provider' => $this->getStatsByProvider($tenantId),
+        ];
+    }
+
+    /**
+     * Calculer le taux de conversion assurance
+     */
+    protected function calculateInsuranceConversionRate(int $tenantId): float
+    {
+        $totalContracts = Contract::where('tenant_id', $tenantId)
+            ->where('status', 'active')
+            ->count();
+
+        $insuredContracts = InsurancePolicy::where('tenant_id', $tenantId)
+            ->where('status', 'active')
+            ->distinct('contract_id')
+            ->count('contract_id');
+
+        return $totalContracts > 0
+            ? round(($insuredContracts / $totalContracts) * 100, 1)
+            : 0;
+    }
+
+    /**
+     * Statistiques par provider
+     */
+    protected function getStatsByProvider(int $tenantId): array
+    {
+        return InsurancePolicy::where('tenant_id', $tenantId)
+            ->where('status', 'active')
+            ->with('plan.provider')
+            ->get()
+            ->groupBy('plan.provider.name')
+            ->map(function ($policies, $providerName) {
+                return [
+                    'provider' => $providerName,
+                    'policies_count' => $policies->count(),
+                    'total_coverage' => $policies->sum('coverage_amount'),
+                    'avg_premium' => round($policies->avg('premium_monthly'), 2),
+                ];
+            })
+            ->values()
+            ->toArray();
+    }
 }

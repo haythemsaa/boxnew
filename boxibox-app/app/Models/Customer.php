@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Notifications\Notifiable;
 
 class Customer extends Model
@@ -38,6 +39,13 @@ class Customer extends Model
         'outstanding_balance',
         'total_contracts',
         'total_revenue',
+        'password',
+    ];
+
+    protected $hidden = [
+        'password',
+        'id_number',
+        'id_document_path',
     ];
 
     protected $casts = [
@@ -50,11 +58,6 @@ class Customer extends Model
         'same_billing_address' => 'boolean',
         'gdpr_consent_at' => 'datetime',
         'deleted_at' => 'datetime',
-    ];
-
-    protected $hidden = [
-        'id_number',
-        'id_document_path',
     ];
 
     // Relationships
@@ -91,6 +94,11 @@ class Customer extends Model
     public function valetOrders(): HasMany
     {
         return $this->hasMany(ValetOrder::class);
+    }
+
+    public function interactions(): MorphMany
+    {
+        return $this->morphMany(CrmInteraction::class, 'interactable');
     }
 
     // Scopes

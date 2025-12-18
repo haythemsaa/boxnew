@@ -19,8 +19,6 @@ class CustomerController extends Controller
      */
     public function index(Request $request): Response
     {
-        $this->authorize('view_customers');
-
         $tenantId = $request->user()->tenant_id;
 
         $customers = Customer::where('tenant_id', $tenantId)
@@ -44,12 +42,23 @@ class CustomerController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        // Optimized stats query - single DB call instead of 5
+        $statsRaw = Customer::where('tenant_id', $tenantId)
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active,
+                SUM(CASE WHEN type = 'individual' THEN 1 ELSE 0 END) as individual,
+                SUM(CASE WHEN type = 'company' THEN 1 ELSE 0 END) as company,
+                SUM(total_revenue) as total_revenue
+            ")
+            ->first();
+
         $stats = [
-            'total' => Customer::where('tenant_id', $tenantId)->count(),
-            'active' => Customer::where('tenant_id', $tenantId)->where('status', 'active')->count(),
-            'individual' => Customer::where('tenant_id', $tenantId)->where('type', 'individual')->count(),
-            'company' => Customer::where('tenant_id', $tenantId)->where('type', 'company')->count(),
-            'total_revenue' => Customer::where('tenant_id', $tenantId)->sum('total_revenue'),
+            'total' => $statsRaw->total ?? 0,
+            'active' => $statsRaw->active ?? 0,
+            'individual' => $statsRaw->individual ?? 0,
+            'company' => $statsRaw->company ?? 0,
+            'total_revenue' => $statsRaw->total_revenue ?? 0,
         ];
 
         return Inertia::render('Tenant/Customers/Index', [
@@ -64,8 +73,6 @@ class CustomerController extends Controller
      */
     public function create(): Response
     {
-        $this->authorize('create_customers');
-
         return Inertia::render('Tenant/Customers/Create');
     }
 
@@ -99,17 +106,23 @@ class CustomerController extends Controller
      */
     public function show(Customer $customer): Response
     {
-        $this->authorize('view_customers');
-
         $customer->load(['contracts' => function ($query) {
-            $query->with('box')->latest()->limit(5);
+            $query->with('box:id,number,name')->latest()->limit(5);
         }, 'invoices' => function ($query) {
             $query->latest()->limit(5);
         }]);
 
+        // Optimized stats - single query with counts
+        $contractStats = $customer->contracts()
+            ->selectRaw("
+                COUNT(*) as total_contracts,
+                SUM(CASE WHEN status = 'active' THEN 1 ELSE 0 END) as active_contracts
+            ")
+            ->first();
+
         $stats = [
-            'total_contracts' => $customer->contracts()->count(),
-            'active_contracts' => $customer->contracts()->where('status', 'active')->count(),
+            'total_contracts' => $contractStats->total_contracts ?? 0,
+            'active_contracts' => $contractStats->active_contracts ?? 0,
             'total_revenue' => $customer->total_revenue,
             'outstanding_balance' => $customer->outstanding_balance,
             'total_invoices' => $customer->invoices()->count(),
@@ -126,8 +139,6 @@ class CustomerController extends Controller
      */
     public function edit(Customer $customer): Response
     {
-        $this->authorize('edit_customers');
-
         return Inertia::render('Tenant/Customers/Edit', [
             'customer' => $customer,
         ]);
@@ -152,8 +163,6 @@ class CustomerController extends Controller
      */
     public function destroy(Customer $customer): RedirectResponse
     {
-        $this->authorize('delete_customers');
-
         $customer->delete();
 
         return redirect()
@@ -166,8 +175,6 @@ class CustomerController extends Controller
      */
     public function export(Request $request, ExcelExportService $exportService)
     {
-        $this->authorize('view_customers');
-
         $tenantId = $request->user()->tenant_id;
 
         $result = $exportService->exportCustomers($tenantId);

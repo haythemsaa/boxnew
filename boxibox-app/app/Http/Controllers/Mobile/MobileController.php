@@ -252,7 +252,7 @@ class MobileController extends Controller
                     'id' => $box->id,
                     'site_id' => $box->site_id,
                     'name' => $box->name,
-                    'code' => $box->code,
+                    'code' => $box->number,
                     'area' => $box->area,
                     'volume' => $box->volume,
                     'dimensions' => $box->formatted_dimensions ?? "{$box->width}x{$box->length}x{$box->height}m",
