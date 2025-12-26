@@ -29,6 +29,26 @@ const kioskMode = ref(false);
 const kioskInterval = ref(null);
 const darkMode = ref(false);
 
+// Quick-Edit Mode (light editing without full editor)
+const quickEditMode = ref(false);
+const isDraggingBox = ref(false);
+const draggedBox = ref(null);
+const dragOffset = ref({ x: 0, y: 0 });
+
+// Multi-selection for batch operations
+const selectedBoxes = ref([]);
+const isMultiSelecting = ref(false);
+const selectionStart = ref({ x: 0, y: 0 });
+const selectionRect = ref({ x: 0, y: 0, w: 0, h: 0 });
+
+// Quick status change
+const showStatusModal = ref(false);
+const statusChangeTarget = ref(null); // single box or 'batch'
+
+// Saving state
+const isSaving = ref(false);
+const hasUnsavedChanges = ref(false);
+
 // Zoom & Pan state
 const zoom = ref(1);
 const panX = ref(0);
@@ -433,19 +453,35 @@ function onWheel(e) {
 
 // Box interaction handlers
 function handleBoxMouseEnter(box, event) {
-    if (box.isLift || isDragging.value || kioskMode.value) return;
+    if (box.isLift || isDragging.value || isDraggingBox.value || kioskMode.value) return;
     popupBox.value = box;
     updatePopupPosition(event);
     showPopup.value = true;
 }
 
 function handleBoxMouseLeave() {
-    showPopup.value = false;
-    popupBox.value = null;
+    if (!isDraggingBox.value) {
+        showPopup.value = false;
+        popupBox.value = null;
+    }
 }
 
-function handleBoxClick(box) {
+function handleBoxClick(box, event) {
     if (box.isLift || kioskMode.value) return;
+
+    // Multi-select with Ctrl/Cmd key
+    if (quickEditMode.value && (event.ctrlKey || event.metaKey)) {
+        toggleBoxSelection(box);
+        return;
+    }
+
+    // If in quick-edit mode and already selected, don't open modal
+    if (quickEditMode.value && selectedBoxes.value.includes(box.id)) {
+        return;
+    }
+
+    // Clear selection and open modal
+    selectedBoxes.value = [];
     modalBox.value = box;
     showModal.value = true;
     showPopup.value = false;
@@ -661,6 +697,214 @@ function printPlan() {
 }
 
 // ============================================
+// QUICK-EDIT MODE FUNCTIONS
+// ============================================
+
+function toggleQuickEditMode() {
+    quickEditMode.value = !quickEditMode.value;
+    if (!quickEditMode.value) {
+        selectedBoxes.value = [];
+        isDraggingBox.value = false;
+        draggedBox.value = null;
+    }
+}
+
+function toggleBoxSelection(box) {
+    const idx = selectedBoxes.value.indexOf(box.id);
+    if (idx > -1) {
+        selectedBoxes.value.splice(idx, 1);
+    } else {
+        selectedBoxes.value.push(box.id);
+    }
+}
+
+function selectAllBoxes() {
+    selectedBoxes.value = boxLayout.value.filter(b => !b.isLift).map(b => b.id);
+}
+
+function clearSelection() {
+    selectedBoxes.value = [];
+}
+
+function isBoxSelected(box) {
+    return selectedBoxes.value.includes(box.id);
+}
+
+// Box drag handlers for quick-edit mode
+function handleBoxMouseDown(box, event) {
+    if (!quickEditMode.value || box.isLift) return;
+
+    event.stopPropagation();
+    event.preventDefault();
+
+    // If not already selected, select this box
+    if (!selectedBoxes.value.includes(box.id)) {
+        if (!(event.ctrlKey || event.metaKey)) {
+            selectedBoxes.value = [];
+        }
+        selectedBoxes.value.push(box.id);
+    }
+
+    isDraggingBox.value = true;
+    draggedBox.value = box;
+    showPopup.value = false;
+
+    // Calculate offset from mouse to box position
+    const svg = document.getElementById('plan-svg');
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+    dragOffset.value = {
+        x: svgP.x - box.x,
+        y: svgP.y - box.y
+    };
+
+    // Store initial positions of all selected boxes
+    selectedBoxes.value.forEach(id => {
+        const b = boxLayout.value.find(bx => bx.id === id);
+        if (b) {
+            b._startX = b.x;
+            b._startY = b.y;
+        }
+    });
+
+    window.addEventListener('mousemove', onBoxDrag);
+    window.addEventListener('mouseup', onBoxDragEnd);
+}
+
+function onBoxDrag(event) {
+    if (!isDraggingBox.value || !draggedBox.value) return;
+
+    const svg = document.getElementById('plan-svg');
+    const pt = svg.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM().inverse());
+
+    const newX = svgP.x - dragOffset.value.x;
+    const newY = svgP.y - dragOffset.value.y;
+
+    const dx = newX - draggedBox.value._startX;
+    const dy = newY - draggedBox.value._startY;
+
+    // Move all selected boxes
+    selectedBoxes.value.forEach(id => {
+        const box = boxLayout.value.find(b => b.id === id);
+        if (box) {
+            box.x = Math.round(box._startX + dx);
+            box.y = Math.round(box._startY + dy);
+        }
+    });
+
+    hasUnsavedChanges.value = true;
+}
+
+function onBoxDragEnd() {
+    isDraggingBox.value = false;
+    draggedBox.value = null;
+    window.removeEventListener('mousemove', onBoxDrag);
+    window.removeEventListener('mouseup', onBoxDragEnd);
+
+    // Clean up temp properties
+    boxLayout.value.forEach(b => {
+        delete b._startX;
+        delete b._startY;
+    });
+}
+
+// ============================================
+// QUICK STATUS CHANGE
+// ============================================
+
+function openStatusChange(target = 'single') {
+    statusChangeTarget.value = target;
+    showStatusModal.value = true;
+}
+
+function changeBoxStatus(newStatus) {
+    if (statusChangeTarget.value === 'batch') {
+        // Change status for all selected boxes
+        selectedBoxes.value.forEach(id => {
+            const box = boxLayout.value.find(b => b.id === id);
+            if (box) {
+                box.status = newStatus;
+            }
+        });
+    } else if (modalBox.value) {
+        // Change status for single box
+        modalBox.value.status = newStatus;
+    }
+
+    hasUnsavedChanges.value = true;
+    showStatusModal.value = false;
+}
+
+async function saveChanges() {
+    if (!hasUnsavedChanges.value) return;
+
+    isSaving.value = true;
+
+    try {
+        // Prepare data for saving
+        const elementsToSave = boxLayout.value.map(box => ({
+            id: box.id,
+            x: box.x,
+            y: box.y,
+            w: box.w,
+            h: box.h,
+            status: box.status,
+            boxId: box.boxId,
+        }));
+
+        await router.post(route('tenant.plan.save'), {
+            site_id: selectedSite.value,
+            elements: elementsToSave,
+        }, {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                hasUnsavedChanges.value = false;
+                // Show success toast
+                showToast('Modifications enregistrees');
+            },
+            onError: () => {
+                showToast('Erreur lors de l\'enregistrement', 'error');
+            }
+        });
+    } catch (error) {
+        console.error('Save error:', error);
+    } finally {
+        isSaving.value = false;
+    }
+}
+
+function discardChanges() {
+    if (confirm('Annuler toutes les modifications non enregistrees ?')) {
+        router.reload();
+        hasUnsavedChanges.value = false;
+    }
+}
+
+// Simple toast notification
+function showToast(message, type = 'success') {
+    const toast = document.createElement('div');
+    toast.className = `quick-toast ${type}`;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.classList.add('show');
+    }, 10);
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+// ============================================
 // ANNOTATION FUNCTIONS
 // ============================================
 
@@ -761,7 +1005,27 @@ function onKeyDown(e) {
             showFilters.value = false;
             showStatsPanel.value = false;
             showSearchResults.value = false;
+            showStatusModal.value = false;
+            if (quickEditMode.value) {
+                selectedBoxes.value = [];
+            }
             if (kioskMode.value) toggleKioskMode();
+            break;
+        case 'e':
+            if (!kioskMode.value) toggleQuickEditMode();
+            break;
+        case 'a':
+            if (quickEditMode.value && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                selectAllBoxes();
+            }
+            break;
+        case 'Delete':
+        case 'Backspace':
+            if (quickEditMode.value && selectedBoxes.value.length > 0) {
+                e.preventDefault();
+                clearSelection();
+            }
             break;
         case 'm':
             showMinimap.value = !showMinimap.value;
@@ -845,9 +1109,9 @@ watch(darkMode, (val) => {
                     <span>Clients</span>
                 </Link>
                 <div class="nav-divider"></div>
-                <Link :href="route('tenant.plan.editor')" class="nav-item editor-link">
+                <Link :href="route('tenant.plan.editor-pro', { site_id: currentSite?.id })" class="nav-item editor-link">
                     <i class="fas fa-pencil-ruler"></i>
-                    <span>Editeur de Plan</span>
+                    <span>Editeur Pro</span>
                 </Link>
             </nav>
         </aside>
@@ -972,6 +1236,16 @@ watch(darkMode, (val) => {
                     </button>
                 </div>
 
+                <!-- Quick-Edit Mode Toggle -->
+                <button
+                    @click="toggleQuickEditMode"
+                    :class="['action-btn quick-edit-btn', { active: quickEditMode }]"
+                    :title="quickEditMode ? 'Quitter edition rapide' : 'Edition rapide (E)'"
+                >
+                    <i class="fas fa-edit"></i>
+                    <span v-if="quickEditMode" class="btn-label">Edition</span>
+                </button>
+
                 <button @click="darkMode = !darkMode" :class="['action-btn', { active: darkMode }]" title="Mode sombre (D)">
                     <i :class="darkMode ? 'fas fa-sun' : 'fas fa-moon'"></i>
                 </button>
@@ -998,7 +1272,7 @@ watch(darkMode, (val) => {
                     <i :class="isFullscreen ? 'fas fa-compress' : 'fas fa-expand'"></i>
                 </button>
 
-                <Link :href="route('tenant.plan.editor')" class="editor-btn">
+                <Link :href="route('tenant.plan.editor-pro', { site_id: currentSite?.id })" class="editor-btn">
                     <i class="fas fa-pencil-ruler"></i>
                     <span class="btn-text">Editer</span>
                 </Link>
@@ -1231,10 +1505,32 @@ watch(darkMode, (val) => {
                     v-for="box in boxLayout"
                     :key="box.id"
                     class="box-group"
+                    :class="{
+                        'quick-edit-mode': quickEditMode,
+                        'selected': isBoxSelected(box),
+                        'dragging': isDraggingBox && draggedBox?.id === box.id
+                    }"
                     @mouseenter="handleBoxMouseEnter(box, $event)"
                     @mouseleave="handleBoxMouseLeave"
-                    @click="handleBoxClick(box)"
+                    @click="handleBoxClick(box, $event)"
+                    @mousedown="handleBoxMouseDown(box, $event)"
+                    :style="{ cursor: quickEditMode && !box.isLift ? 'move' : 'pointer' }"
                 >
+                    <!-- Selection highlight (behind box) -->
+                    <rect
+                        v-if="isBoxSelected(box)"
+                        :x="box.x - 3"
+                        :y="box.y - 3"
+                        :width="box.w + 6"
+                        :height="box.h + 6"
+                        fill="none"
+                        stroke="#8B5CF6"
+                        stroke-width="2"
+                        stroke-dasharray="4,2"
+                        rx="5"
+                        class="selection-highlight"
+                    />
+
                     <!-- Box rect -->
                     <rect
                         :x="box.x"
@@ -1242,8 +1538,8 @@ watch(darkMode, (val) => {
                         :width="box.w"
                         :height="box.h"
                         :fill="getBoxColor(box)"
-                        :stroke="getBoxStroke(box)"
-                        :stroke-width="getBoxStrokeWidth(box)"
+                        :stroke="isBoxSelected(box) ? '#8B5CF6' : getBoxStroke(box)"
+                        :stroke-width="isBoxSelected(box) ? 2 : getBoxStrokeWidth(box)"
                         rx="3"
                         class="box-rect"
                         :class="{
@@ -1539,16 +1835,123 @@ watch(darkMode, (val) => {
         </div>
 
         <!-- Keyboard shortcuts hint -->
-        <div class="shortcuts-hint" v-if="!kioskMode">
+        <div class="shortcuts-hint" v-if="!kioskMode && !quickEditMode">
             <span><kbd>/</kbd> Rechercher</span>
             <span><kbd>K</kbd> Kiosque</span>
             <span><kbd>S</kbd> Stats</span>
             <span><kbd>D</kbd> Sombre</span>
+            <span><kbd>E</kbd> Editer</span>
         </div>
+
+        <!-- Quick-Edit Toolbar (appears at bottom when in edit mode) -->
+        <Transition name="slide-up">
+            <div v-if="quickEditMode && !kioskMode" class="quick-edit-toolbar">
+                <div class="edit-toolbar-content">
+                    <!-- Left: Selection info -->
+                    <div class="selection-info">
+                        <span v-if="selectedBoxes.length === 0" class="selection-hint">
+                            <i class="fas fa-info-circle"></i>
+                            Cliquez sur un box pour le selectionner, ou Ctrl+clic pour multi-selection
+                        </span>
+                        <span v-else class="selection-count">
+                            <i class="fas fa-check-square"></i>
+                            {{ selectedBoxes.length }} box{{ selectedBoxes.length > 1 ? 'es' : '' }} selectionne{{ selectedBoxes.length > 1 ? 's' : '' }}
+                        </span>
+                    </div>
+
+                    <!-- Center: Actions -->
+                    <div class="edit-actions" v-if="selectedBoxes.length > 0">
+                        <button @click="openStatusChange('batch')" class="edit-action-btn">
+                            <i class="fas fa-exchange-alt"></i>
+                            Changer statut
+                        </button>
+                        <button @click="selectAllBoxes" class="edit-action-btn">
+                            <i class="fas fa-check-double"></i>
+                            Tout selectionner
+                        </button>
+                        <button @click="clearSelection" class="edit-action-btn">
+                            <i class="fas fa-times"></i>
+                            Deselectionner
+                        </button>
+                    </div>
+
+                    <!-- Right: Save/Cancel -->
+                    <div class="edit-controls">
+                        <span v-if="hasUnsavedChanges" class="unsaved-badge">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Non enregistre
+                        </span>
+                        <button
+                            v-if="hasUnsavedChanges"
+                            @click="discardChanges"
+                            class="edit-control-btn cancel"
+                        >
+                            <i class="fas fa-undo"></i>
+                            Annuler
+                        </button>
+                        <button
+                            @click="saveChanges"
+                            :disabled="!hasUnsavedChanges || isSaving"
+                            class="edit-control-btn save"
+                            :class="{ 'has-changes': hasUnsavedChanges }"
+                        >
+                            <i :class="isSaving ? 'fas fa-spinner fa-spin' : 'fas fa-save'"></i>
+                            {{ isSaving ? 'Enregistrement...' : 'Enregistrer' }}
+                        </button>
+                        <button @click="toggleQuickEditMode" class="edit-control-btn exit">
+                            <i class="fas fa-times"></i>
+                            Quitter
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
+
+        <!-- Status Change Modal -->
+        <Transition name="modal">
+            <div v-if="showStatusModal" class="modal-overlay" @click.self="showStatusModal = false">
+                <div class="modal status-modal" :class="{ dark: darkMode }">
+                    <div class="modal-header">
+                        <h2>
+                            <i class="fas fa-exchange-alt"></i>
+                            Changer le statut
+                        </h2>
+                        <button @click="showStatusModal = false" class="modal-close">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="status-modal-info">
+                            <template v-if="statusChangeTarget === 'batch'">
+                                Changer le statut de <strong>{{ selectedBoxes.length }} boxes</strong>
+                            </template>
+                            <template v-else>
+                                Changer le statut du box <strong>{{ modalBox?.name }}</strong>
+                            </template>
+                        </p>
+                        <div class="status-grid">
+                            <button
+                                v-for="(config, status) in statusConfig"
+                                :key="status"
+                                @click="changeBoxStatus(status)"
+                                class="status-option"
+                                :style="{ '--status-color': config.color }"
+                            >
+                                <span class="status-dot" :style="{ background: config.color }"></span>
+                                <span class="status-label">{{ config.label }}</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button @click="showStatusModal = false" class="btn btn-ghost">Annuler</button>
+                    </div>
+                </div>
+            </div>
+        </Transition>
     </div>
 </template>
 
 <style scoped>
+@import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css');
+
 /* ============================================
    BASE LAYOUT
    ============================================ */
@@ -3484,5 +3887,358 @@ watch(darkMode, (val) => {
     .kiosk-stat-value {
         font-size: 36px;
     }
+
+    .quick-edit-toolbar {
+        padding: 8px 12px;
+    }
+
+    .edit-toolbar-content {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .edit-actions {
+        flex-wrap: wrap;
+    }
+}
+
+/* ============================================
+   QUICK-EDIT MODE
+   ============================================ */
+.quick-edit-btn.active {
+    background: #8B5CF6 !important;
+    color: #fff !important;
+}
+
+.quick-edit-btn .btn-label {
+    margin-left: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Selection highlight animation */
+.selection-highlight {
+    animation: selectionPulse 1.5s infinite ease-in-out;
+}
+
+@keyframes selectionPulse {
+    0%, 100% { opacity: 1; stroke-dasharray: 4,2; }
+    50% { opacity: 0.6; stroke-dasharray: 2,4; }
+}
+
+/* Box group in quick-edit mode */
+.box-group.quick-edit-mode {
+    cursor: move;
+}
+
+.box-group.quick-edit-mode:hover .box-rect {
+    filter: brightness(1.1);
+}
+
+.box-group.selected .box-rect {
+    filter: brightness(1.05);
+}
+
+.box-group.dragging {
+    opacity: 0.8;
+}
+
+.box-group.dragging .box-rect {
+    filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+}
+
+/* Quick-Edit Toolbar */
+.quick-edit-toolbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(249,250,251,0.98));
+    border-top: 2px solid #8B5CF6;
+    padding: 12px 20px;
+    z-index: 1000;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    backdrop-filter: blur(10px);
+}
+
+.dark .quick-edit-toolbar {
+    background: linear-gradient(180deg, rgba(31,41,55,0.98), rgba(17,24,39,0.98));
+}
+
+.edit-toolbar-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    max-width: 1400px;
+    margin: 0 auto;
+    gap: 20px;
+}
+
+.selection-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 280px;
+}
+
+.selection-hint {
+    color: #6B7280;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.dark .selection-hint {
+    color: #9CA3AF;
+}
+
+.selection-count {
+    color: #8B5CF6;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.edit-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    justify-content: center;
+}
+
+.edit-action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #F3F4F6;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    color: #374151;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dark .edit-action-btn {
+    background: #374151;
+    border-color: #4B5563;
+    color: #E5E7EB;
+}
+
+.edit-action-btn:hover {
+    background: #E5E7EB;
+    border-color: #D1D5DB;
+}
+
+.dark .edit-action-btn:hover {
+    background: #4B5563;
+}
+
+.edit-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.unsaved-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: #FEF3C7;
+    color: #B45309;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 20px;
+    animation: unsavedPulse 2s infinite;
+}
+
+@keyframes unsavedPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.dark .unsaved-badge {
+    background: #78350F;
+    color: #FDE68A;
+}
+
+.edit-control-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.edit-control-btn.save {
+    background: #D1D5DB;
+    color: #6B7280;
+}
+
+.edit-control-btn.save.has-changes {
+    background: linear-gradient(135deg, #8B5CF6, #7C3AED);
+    color: #fff;
+}
+
+.edit-control-btn.save.has-changes:hover {
+    background: linear-gradient(135deg, #7C3AED, #6D28D9);
+}
+
+.edit-control-btn.save:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.edit-control-btn.cancel {
+    background: #FEE2E2;
+    color: #DC2626;
+}
+
+.edit-control-btn.cancel:hover {
+    background: #FECACA;
+}
+
+.dark .edit-control-btn.cancel {
+    background: #7F1D1D;
+    color: #FCA5A5;
+}
+
+.edit-control-btn.exit {
+    background: #F3F4F6;
+    color: #6B7280;
+}
+
+.edit-control-btn.exit:hover {
+    background: #E5E7EB;
+}
+
+.dark .edit-control-btn.exit {
+    background: #374151;
+    color: #9CA3AF;
+}
+
+/* Status Change Modal */
+.status-modal .modal-body {
+    padding: 24px;
+}
+
+.status-modal-info {
+    margin: 0 0 20px;
+    text-align: center;
+    color: #6B7280;
+    font-size: 14px;
+}
+
+.dark .status-modal-info {
+    color: #9CA3AF;
+}
+
+.status-modal-info strong {
+    color: #111827;
+}
+
+.dark .status-modal-info strong {
+    color: #F9FAFB;
+}
+
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+}
+
+.status-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    background: #F9FAFB;
+    border: 2px solid transparent;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.dark .status-option {
+    background: #374151;
+}
+
+.status-option:hover {
+    background: #fff;
+    border-color: var(--status-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.dark .status-option:hover {
+    background: #4B5563;
+}
+
+.status-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+
+.status-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.dark .status-label {
+    color: #E5E7EB;
+}
+
+/* Slide-up transition for toolbar */
+.slide-up-enter-active,
+.slide-up-leave-active {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+    transform: translateY(100%);
+    opacity: 0;
+}
+
+/* Toast Notification */
+:global(.quick-toast) {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    padding: 12px 24px;
+    background: #10B981;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    z-index: 10000;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+:global(.quick-toast.show) {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+:global(.quick-toast.error) {
+    background: #EF4444;
 }
 </style>

@@ -526,7 +526,10 @@ class NotificationController extends Controller
             return response()->json(['error' => 'Notification non trouvée'], 404);
         }
 
-        $notification->update(['read_at' => now()]);
+        $notification->update([
+            'is_read' => true,
+            'read_at' => now(),
+        ]);
 
         return response()->json(['success' => true]);
     }
@@ -544,7 +547,10 @@ class NotificationController extends Controller
                     ->orWhereNull('user_id');
             })
             ->whereNull('read_at')
-            ->update(['read_at' => now()]);
+            ->update([
+                'is_read' => true,
+                'read_at' => now(),
+            ]);
 
         return response()->json(['success' => true]);
     }

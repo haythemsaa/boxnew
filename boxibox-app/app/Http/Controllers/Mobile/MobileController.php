@@ -7,9 +7,11 @@ use App\Models\Box;
 use App\Models\Contract;
 use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\Notification;
 use App\Models\Payment;
 use App\Models\Site;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
 use Inertia\Inertia;
 use Inertia\Response;
 use Carbon\Carbon;
@@ -17,16 +19,69 @@ use Carbon\Carbon;
 class MobileController extends Controller
 {
     /**
+     * Get the authenticated mobile customer
+     */
+    protected function getCustomer(): Customer
+    {
+        $customerId = session('mobile_customer_id');
+        return Customer::findOrFail($customerId);
+    }
+
+    /**
+     * Display login page
+     */
+    public function loginPage(): Response
+    {
+        // Redirect if already logged in
+        if (session('mobile_customer_id')) {
+            return redirect()->route('mobile.dashboard');
+        }
+
+        return Inertia::render('Mobile/Auth/Login');
+    }
+
+    /**
+     * Handle login
+     */
+    public function login(Request $request)
+    {
+        $validated = $request->validate([
+            'email' => 'required|email',
+            'password' => 'required|string',
+        ]);
+
+        $customer = Customer::where('email', $validated['email'])->first();
+
+        if (!$customer || !Hash::check($validated['password'], $customer->password ?? '')) {
+            return back()->withErrors([
+                'email' => 'Ces identifiants ne correspondent pas à nos enregistrements.'
+            ]);
+        }
+
+        // Store customer ID in session
+        session(['mobile_customer_id' => $customer->id]);
+
+        return redirect()->route('mobile.dashboard')
+            ->with('success', 'Bienvenue, ' . $customer->first_name . ' !');
+    }
+
+    /**
+     * Handle logout
+     */
+    public function logout(Request $request)
+    {
+        session()->forget('mobile_customer_id');
+
+        return redirect()->route('mobile.login')
+            ->with('success', 'Vous avez été déconnecté.');
+    }
+
+    /**
      * Mobile Dashboard
      */
     public function dashboard(Request $request): Response
     {
-        $user = $request->user();
-        $customer = $user->customer;
-
-        if (!$customer) {
-            abort(403, 'No customer record found.');
-        }
+        $customer = $this->getCustomer();
 
         $activeContracts = $customer->contracts()
             ->where('status', 'active')
@@ -50,18 +105,22 @@ class MobileController extends Controller
             ->where('status', 'overdue')
             ->get();
 
+        // Calculate outstanding balance (total - paid_amount for unpaid invoices)
+        $unpaidInvoices = $customer->invoices()
+            ->whereIn('status', ['sent', 'overdue'])
+            ->get();
+        $outstandingBalance = $unpaidInvoices->sum(function ($invoice) {
+            return $invoice->total - ($invoice->paid_amount ?? 0);
+        });
+
         $stats = [
             'active_contracts' => $activeContracts->count(),
             'total_invoices' => $customer->invoices()->count(),
-            'pending_invoices' => $customer->invoices()
-                ->whereIn('status', ['sent', 'overdue'])
-                ->count(),
+            'pending_invoices' => $unpaidInvoices->count(),
             'total_paid' => $customer->payments()
                 ->where('status', 'completed')
                 ->sum('amount'),
-            'outstanding_balance' => $customer->invoices()
-                ->whereIn('status', ['sent', 'overdue'])
-                ->sum('balance'),
+            'outstanding_balance' => $outstandingBalance,
         ];
 
         return Inertia::render('Mobile/Dashboard', [
@@ -79,7 +138,7 @@ class MobileController extends Controller
      */
     public function boxes(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         $contracts = $customer->contracts()
             ->with(['box.site'])
@@ -101,7 +160,7 @@ class MobileController extends Controller
      */
     public function invoices(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         $query = $customer->invoices()->with('contract.box');
 
@@ -142,7 +201,7 @@ class MobileController extends Controller
      */
     public function payments(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         $payments = $customer->payments()
             ->with('invoice')
@@ -186,7 +245,7 @@ class MobileController extends Controller
      */
     public function contracts(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         $contracts = $customer->contracts()
             ->with(['box.site', 'invoices'])
@@ -234,7 +293,7 @@ class MobileController extends Controller
      */
     public function reserve(Request $request): Response
     {
-        $sites = Site::where('status', 'active')
+        $sites = Site::where('is_active', true)
             ->withCount(['boxes as available_boxes' => function ($query) {
                 $query->where('status', 'available');
             }])
@@ -282,7 +341,7 @@ class MobileController extends Controller
             'accept_terms' => 'required|accepted',
         ]);
 
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
         $box = Box::findOrFail($validated['box_id']);
 
         // Check if box is still available
@@ -299,17 +358,43 @@ class MobileController extends Controller
             'tenant_id' => $customer->tenant_id,
             'customer_id' => $customer->id,
             'box_id' => $box->id,
+            'site_id' => $box->site_id,
             'contract_number' => 'CTR-' . strtoupper(uniqid()),
             'start_date' => $startDate,
             'end_date' => $endDate,
             'monthly_price' => $box->current_price ?? $box->base_price,
-            'deposit' => $box->deposit ?? 0,
-            'status' => 'pending',
-            'payment_mode' => 'monthly',
+            'status' => 'pending_signature',
         ]);
 
         // Update box status
         $box->update(['status' => 'reserved']);
+
+        // Create notification for tenant admins
+        Notification::create([
+            'tenant_id' => $customer->tenant_id,
+            'type' => Notification::TYPE_BOOKING,
+            'title' => 'Nouvelle réservation mobile',
+            'message' => "Le client {$customer->first_name} {$customer->last_name} a réservé le box {$box->name} depuis l'application mobile. Début: {$startDate->format('d/m/Y')}, Durée: {$validated['duration_months']} mois.",
+            'priority' => Notification::PRIORITY_HIGH,
+            'channels' => ['in_app'],
+            'status' => Notification::STATUS_SENT,
+            'sent_at' => now(),
+            'related_type' => Contract::class,
+            'related_id' => $contract->id,
+            'data' => [
+                'customer_id' => $customer->id,
+                'customer_name' => "{$customer->first_name} {$customer->last_name}",
+                'customer_email' => $customer->email,
+                'box_id' => $box->id,
+                'box_name' => $box->name,
+                'site_id' => $box->site_id,
+                'start_date' => $startDate->toDateString(),
+                'end_date' => $endDate->toDateString(),
+                'duration_months' => $validated['duration_months'],
+                'monthly_price' => $box->current_price ?? $box->base_price,
+                'source' => 'mobile_app',
+            ],
+        ]);
 
         return redirect()->route('mobile.contracts.show', $contract->id)
             ->with('success', 'Reservation effectuee avec succes! Veuillez proceder au paiement.');
@@ -320,7 +405,7 @@ class MobileController extends Controller
      */
     public function pay(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         $unpaidInvoices = $customer->invoices()
             ->whereIn('status', ['sent', 'overdue'])
@@ -349,7 +434,7 @@ class MobileController extends Controller
             'amount' => 'required|numeric|min:0.01',
         ]);
 
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         // Verify invoices belong to customer
         $invoices = Invoice::whereIn('id', $validated['invoice_ids'])
@@ -393,7 +478,7 @@ class MobileController extends Controller
      */
     public function access(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         $contractId = $request->contract_id;
 
@@ -427,7 +512,7 @@ class MobileController extends Controller
      */
     public function more(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         $stats = [
             'boxes' => $customer->contracts()->where('status', 'active')->count(),
@@ -530,7 +615,7 @@ class MobileController extends Controller
      */
     public function profile(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         return Inertia::render('Mobile/Profile/Index', [
             'customer' => $customer,
@@ -542,7 +627,7 @@ class MobileController extends Controller
      */
     public function updateProfile(Request $request)
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
@@ -562,7 +647,7 @@ class MobileController extends Controller
      */
     public function updateAddress(Request $request)
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         $validated = $request->validate([
             'address' => 'required|string|max:500',
@@ -581,16 +666,23 @@ class MobileController extends Controller
      */
     public function changePassword(Request $request)
     {
+        $customer = $this->getCustomer();
+
         $validated = $request->validate([
-            'current_password' => 'required|current_password',
+            'current_password' => 'required|string',
             'new_password' => 'required|string|min:8|confirmed',
         ]);
 
-        $request->user()->update([
-            'password' => bcrypt($validated['new_password']),
+        // Check current password
+        if (!Hash::check($validated['current_password'], $customer->password ?? '')) {
+            return back()->withErrors(['current_password' => 'Le mot de passe actuel est incorrect.']);
+        }
+
+        $customer->update([
+            'password' => Hash::make($validated['new_password']),
         ]);
 
-        return back()->with('success', 'Mot de passe modifie avec succes.');
+        return back()->with('success', 'Mot de passe modifié avec succès.');
     }
 
     /**
@@ -598,22 +690,21 @@ class MobileController extends Controller
      */
     public function deleteAccount(Request $request)
     {
-        $user = $request->user();
-        $customer = $user->customer;
+        $customer = $this->getCustomer();
 
         // Check for active contracts
-        if ($customer && $customer->contracts()->where('status', 'active')->exists()) {
+        if ($customer->contracts()->where('status', 'active')->exists()) {
             return back()->withErrors(['error' => 'Vous ne pouvez pas supprimer votre compte avec des contrats actifs.']);
         }
 
-        // Soft delete customer and user
-        if ($customer) {
-            $customer->delete();
-        }
-        $user->delete();
+        // Soft delete customer
+        $customer->delete();
 
-        return redirect()->route('login')
-            ->with('success', 'Votre compte a ete supprime.');
+        // Clear session
+        session()->forget('mobile_customer_id');
+
+        return redirect()->route('mobile.login')
+            ->with('success', 'Votre compte a été supprimé.');
     }
 
     /**
@@ -621,7 +712,7 @@ class MobileController extends Controller
      */
     public function support(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         $contracts = $customer->contracts()
             ->with('box')
@@ -668,7 +759,7 @@ class MobileController extends Controller
      */
     public function settings(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         // Get user settings (placeholder - could be stored in a settings table)
         $userSettings = [
@@ -717,7 +808,7 @@ class MobileController extends Controller
      */
     public function exportData(Request $request)
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         // Generate data export (GDPR compliance)
         // In production, generate a proper export file
@@ -732,7 +823,7 @@ class MobileController extends Controller
      */
     public function documents(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         // Get customer documents (placeholder)
         $documents = [];
@@ -782,7 +873,7 @@ class MobileController extends Controller
             'type' => 'required|in:identity,proof_address,insurance,other',
         ]);
 
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         // Store document (placeholder)
         $path = $request->file('file')->store('customer-documents/' . $customer->id, 'private');
@@ -804,7 +895,7 @@ class MobileController extends Controller
      */
     public function paymentMethods(Request $request): Response
     {
-        $customer = $request->user()->customer;
+        $customer = $this->getCustomer();
 
         // Placeholder for payment methods (integrate with Stripe)
         $cards = [];
@@ -902,8 +993,8 @@ class MobileController extends Controller
      */
     private function authorizeCustomerAccess(int $customerId): void
     {
-        $user = request()->user();
-        if (!$user->customer || $user->customer->id !== $customerId) {
+        $customer = $this->getCustomer();
+        if ($customer->id !== $customerId) {
             abort(403, 'Acces non autorise.');
         }
     }

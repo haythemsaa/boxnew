@@ -186,7 +186,17 @@
       "Bash(\"C:/xampp2025/php/php.exe\" -l \"C:/laragon/www/boxnew/boxibox-app/app/Models/Box.php\")",
       "Bash(\"C:/xampp2025/php/php.exe\" -l \"C:/laragon/www/boxnew/boxibox-app/app/Models/User.php\")",
       "Bash(powershell -Command \"Get-Content ''C:\\laragon\\www\\boxnew\\boxibox-app\\storage\\logs\\laravel.log'' -Tail 150 | Select-String -Pattern ''exception|error|staff'' -Context 2,2\")",
-      "Bash(powershell -Command \"Get-Content ''C:\\laragon\\www\\boxnew\\boxibox-app\\storage\\logs\\laravel.log'' -Tail 300 | Select-String -Pattern ''SQLSTATE|staff_profiles|payment_date'' -Context 3,3\")"
+      "Bash(powershell -Command \"Get-Content ''C:\\laragon\\www\\boxnew\\boxibox-app\\storage\\logs\\laravel.log'' -Tail 300 | Select-String -Pattern ''SQLSTATE|staff_profiles|payment_date'' -Context 3,3\")",
+      "Bash(grep:*)",
+      "Bash(php artisan migrate:*)",
+      "Bash(php artisan migrate:status:*)",
+      "Bash(php artisan tinker:*)",
+      "Bash(php artisan:*)",
+      "Bash(npm run build:*)",
+      "WebFetch(domain:www.selfstoragemanager.com)",
+      "WebFetch(domain:kinnovis.com)",
+      "WebFetch(domain:help.storeganise.com)",
+      "Bash(npm run dev:*)"
     ],
     "deny": [],
     "ask": []

@@ -3,11 +3,19 @@
 namespace App\Services;
 
 use App\Models\Box;
+use App\Models\BookingPromoCode;
+use App\Models\BookingSettings;
 use App\Models\Promotion;
 use Carbon\Carbon;
 
 class PricingService
 {
+    // TVA rate (French standard rate)
+    protected float $vatRate = 0.20;
+
+    // Whether to apply seasonal pricing (can be disabled per tenant)
+    protected bool $applySeasonalPricing = true;
+
     /**
      * Calculate final price with dynamic pricing rules
      */
@@ -17,36 +25,53 @@ class PricingService
         $discount = 0;
         $appliedPromotion = null;
 
-        // Apply seasonal pricing
-        $seasonalMultiplier = $this->getSeasonalMultiplier($startDate ?? now());
-        $seasonalPrice = $basePrice * $seasonalMultiplier;
+        // Apply seasonal pricing (optional)
+        $seasonalMultiplier = $this->applySeasonalPricing
+            ? $this->getSeasonalMultiplier($startDate ?? now())
+            : 1.0;
+        $seasonalPrice = round($basePrice * $seasonalMultiplier, 2);
 
-        // Apply promotion if provided
+        // Apply promotion if provided (try BookingPromoCode first, then legacy Promotion)
         if ($promotionCode) {
-            $promotion = Promotion::where('code', $promotionCode)
-                ->where('tenant_id', $box->tenant_id)
-                ->first();
+            // Try booking promo code
+            $promo = BookingPromoCode::findValidCode($promotionCode, $box->tenant_id, $box->site_id);
+            if ($promo) {
+                $discount = $promo->calculateDiscount($seasonalPrice);
+                $appliedPromotion = [
+                    'code' => $promo->code,
+                    'name' => $promo->name,
+                    'type' => $promo->discount_type,
+                    'value' => $promo->discount_value,
+                    'label' => $promo->discount_label,
+                ];
+            } else {
+                // Fallback to legacy Promotion model
+                $promotion = Promotion::where('code', $promotionCode)
+                    ->where('tenant_id', $box->tenant_id)
+                    ->first();
 
-            if ($promotion && $promotion->isValid()) {
-                $discount = $promotion->calculateDiscount($seasonalPrice);
-                $appliedPromotion = $promotion;
+                if ($promotion && $promotion->isValid()) {
+                    $discount = $promotion->calculateDiscount($seasonalPrice);
+                    $appliedPromotion = [
+                        'code' => $promotion->code,
+                        'name' => $promotion->name,
+                        'type' => $promotion->type,
+                        'value' => $promotion->value,
+                    ];
+                }
             }
         }
 
-        $finalPrice = max(0, $seasonalPrice - $discount);
+        $finalPrice = max(0, round($seasonalPrice - $discount, 2));
 
         return [
             'base_price' => $basePrice,
             'seasonal_multiplier' => $seasonalMultiplier,
+            'seasonal_adjustment' => round($seasonalPrice - $basePrice, 2),
             'seasonal_price' => $seasonalPrice,
-            'discount' => $discount,
+            'discount' => round($discount, 2),
             'final_price' => $finalPrice,
-            'promotion' => $appliedPromotion ? [
-                'code' => $appliedPromotion->code,
-                'name' => $appliedPromotion->name,
-                'type' => $appliedPromotion->type,
-                'value' => $appliedPromotion->value,
-            ] : null,
+            'promotion' => $appliedPromotion,
         ];
     }
 
@@ -144,5 +169,197 @@ class PricingService
             'promotion' => $pricing['promotion'],
             'duration_discount_percent' => $durationDiscount['discount_percent'],
         ];
+    }
+
+    /**
+     * Calculate complete booking total with prorata, deposit, taxes
+     * This is the main method to use for public booking
+     */
+    public function calculateBookingTotal(
+        Box $box,
+        Carbon $startDate,
+        ?int $durationMonths = null,
+        ?string $promoCode = null,
+        ?BookingSettings $settings = null,
+        bool $includeInsurance = false,
+        float $insuranceMonthly = 15.00
+    ): array {
+        // Get settings if not provided
+        if (!$settings) {
+            $settings = BookingSettings::getForTenant($box->tenant_id, $box->site_id);
+        }
+
+        // 1. Calculate base monthly price with seasonal adjustment
+        $pricing = $this->calculatePrice($box, $promoCode, $startDate);
+        $monthlyPriceHT = $pricing['final_price'];
+
+        // 2. Apply duration discount if applicable
+        $durationDiscount = 0;
+        $durationDiscountPercent = 0;
+        if ($durationMonths && $durationMonths >= 3) {
+            $durationData = $this->calculateDurationDiscount($monthlyPriceHT, $durationMonths);
+            $durationDiscount = $durationData['discount_amount'];
+            $durationDiscountPercent = $durationData['discount_percent'];
+            $monthlyPriceHT = $durationData['final_price'];
+        }
+
+        // 3. Calculate first month prorata
+        $firstMonthProrata = $this->calculateFirstMonthProrata($monthlyPriceHT, $startDate);
+
+        // 4. Calculate deposit
+        $depositAmount = 0;
+        if ($settings && $settings->require_deposit) {
+            if ($settings->deposit_percentage > 0) {
+                $depositAmount = round($pricing['base_price'] * ($settings->deposit_percentage / 100), 2);
+            } else {
+                $depositAmount = $settings->deposit_amount ?? 0;
+            }
+        }
+
+        // 5. Calculate insurance if included
+        $insuranceAmount = $includeInsurance ? $insuranceMonthly : 0;
+
+        // 6. Calculate subtotal HT (before tax)
+        $subtotalHT = round($firstMonthProrata['amount'] + $depositAmount + $insuranceAmount, 2);
+
+        // 7. Calculate TVA (VAT)
+        // Note: In France, storage rental is subject to 20% VAT
+        // But deposit is usually not taxed (it's a guarantee, not a service)
+        $taxableAmount = $firstMonthProrata['amount'] + $insuranceAmount;
+        $vatAmount = round($taxableAmount * $this->vatRate, 2);
+
+        // 8. Calculate total TTC (including tax)
+        $totalTTC = round($subtotalHT + $vatAmount, 2);
+
+        // 9. Build breakdown
+        return [
+            // Monthly recurring
+            'monthly_price_base' => $pricing['base_price'],
+            'monthly_price_ht' => $monthlyPriceHT,
+            'monthly_price_ttc' => round($monthlyPriceHT * (1 + $this->vatRate), 2),
+
+            // First month details
+            'first_month' => [
+                'full_month_ht' => $monthlyPriceHT,
+                'prorata_days' => $firstMonthProrata['days'],
+                'prorata_total_days' => $firstMonthProrata['total_days'],
+                'prorata_amount_ht' => $firstMonthProrata['amount'],
+                'prorata_percentage' => $firstMonthProrata['percentage'],
+                'is_prorated' => $firstMonthProrata['is_prorated'],
+            ],
+
+            // Deposit
+            'deposit' => [
+                'amount' => $depositAmount,
+                'required' => $settings?->require_deposit ?? false,
+                'percentage' => $settings?->deposit_percentage ?? 0,
+            ],
+
+            // Insurance
+            'insurance' => [
+                'included' => $includeInsurance,
+                'monthly_amount' => $insuranceMonthly,
+                'first_month_amount' => $insuranceAmount,
+            ],
+
+            // Discounts applied
+            'discounts' => [
+                'seasonal' => [
+                    'multiplier' => $pricing['seasonal_multiplier'],
+                    'adjustment' => $pricing['seasonal_adjustment'],
+                    'label' => $this->getSeasonalLabel($pricing['seasonal_multiplier']),
+                ],
+                'promo' => $pricing['promotion'],
+                'promo_amount' => $pricing['discount'],
+                'duration' => [
+                    'months' => $durationMonths,
+                    'percent' => $durationDiscountPercent,
+                    'amount' => $durationDiscount,
+                ],
+            ],
+
+            // Taxes
+            'vat' => [
+                'rate' => $this->vatRate,
+                'rate_percent' => $this->vatRate * 100,
+                'taxable_amount' => $taxableAmount,
+                'amount' => $vatAmount,
+            ],
+
+            // Totals
+            'subtotal_ht' => $subtotalHT,
+            'total_ttc' => $totalTTC,
+
+            // Payment due now (first month + deposit + insurance + VAT)
+            'due_now' => $totalTTC,
+
+            // Subsequent monthly payments
+            'monthly_recurring_ht' => $monthlyPriceHT + $insuranceAmount,
+            'monthly_recurring_ttc' => round(($monthlyPriceHT + $insuranceAmount) * (1 + $this->vatRate), 2),
+        ];
+    }
+
+    /**
+     * Calculate first month prorata based on start date
+     */
+    public function calculateFirstMonthProrata(float $monthlyPrice, Carbon $startDate): array
+    {
+        $dayOfMonth = $startDate->day;
+        $daysInMonth = $startDate->daysInMonth;
+
+        // If starting on 1st, no prorata needed
+        if ($dayOfMonth === 1) {
+            return [
+                'amount' => $monthlyPrice,
+                'days' => $daysInMonth,
+                'total_days' => $daysInMonth,
+                'percentage' => 100,
+                'is_prorated' => false,
+            ];
+        }
+
+        // Calculate remaining days in the month (including start day)
+        $remainingDays = $daysInMonth - $dayOfMonth + 1;
+        $prorataPercentage = round(($remainingDays / $daysInMonth) * 100, 1);
+        $prorataAmount = round(($monthlyPrice / $daysInMonth) * $remainingDays, 2);
+
+        return [
+            'amount' => $prorataAmount,
+            'days' => $remainingDays,
+            'total_days' => $daysInMonth,
+            'percentage' => $prorataPercentage,
+            'is_prorated' => true,
+        ];
+    }
+
+    /**
+     * Get seasonal pricing label
+     */
+    protected function getSeasonalLabel(float $multiplier): ?string
+    {
+        if ($multiplier > 1) {
+            return 'Haute saison (+' . round(($multiplier - 1) * 100) . '%)';
+        } elseif ($multiplier < 1) {
+            return 'Basse saison (' . round(($multiplier - 1) * 100) . '%)';
+        }
+        return null;
+    }
+
+    /**
+     * Disable seasonal pricing
+     */
+    public function disableSeasonalPricing(): self
+    {
+        $this->applySeasonalPricing = false;
+        return $this;
+    }
+
+    /**
+     * Set custom VAT rate
+     */
+    public function setVatRate(float $rate): self
+    {
+        $this->vatRate = $rate;
+        return $this;
     }
 }

@@ -161,8 +161,8 @@
                                     <ArrowUpIcon class="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <p class="font-medium text-gray-900">Move-ins ce mois</p>
-                                    <p class="text-sm text-gray-500">Nouvelles entrées</p>
+                                    <p class="font-medium text-gray-900">Entrées ce mois</p>
+                                    <p class="text-sm text-gray-500">Nouvelles locations</p>
                                 </div>
                             </div>
                             <div class="text-right">
@@ -177,8 +177,8 @@
                                     <ArrowDownIcon class="w-5 h-5 text-red-600" />
                                 </div>
                                 <div>
-                                    <p class="font-medium text-gray-900">Move-outs ce mois</p>
-                                    <p class="text-sm text-gray-500">Départs</p>
+                                    <p class="font-medium text-gray-900">Sorties ce mois</p>
+                                    <p class="text-sm text-gray-500">Fins de contrats</p>
                                 </div>
                             </div>
                             <div class="text-right">
@@ -210,8 +210,8 @@
                                     <ClockIcon class="w-5 h-5 text-blue-600" />
                                 </div>
                                 <div>
-                                    <p class="font-medium text-gray-900">Durée Moyenne de Séjour</p>
-                                    <p class="text-sm text-gray-500">Length of Stay</p>
+                                    <p class="font-medium text-gray-900">Durée Moyenne de Location</p>
+                                    <p class="text-sm text-gray-500">Ancienneté moyenne</p>
                                 </div>
                             </div>
                             <div class="text-right">
@@ -235,7 +235,7 @@
                                     <HeartIcon class="w-5 h-5 text-purple-600" />
                                 </div>
                                 <div>
-                                    <p class="font-medium text-gray-900">Customer Lifetime Value</p>
+                                    <p class="font-medium text-gray-900">Valeur Vie Client</p>
                                     <p class="text-sm text-gray-500">CLV moyen</p>
                                 </div>
                             </div>
@@ -327,9 +327,9 @@
                         </div>
 
                         <div class="p-5 bg-gray-50 rounded-xl">
-                            <p class="text-sm text-gray-500 mb-2">DSO (Days Sales Outstanding)</p>
+                            <p class="text-sm text-gray-500 mb-2">Délai Moyen de Paiement</p>
                             <p class="text-2xl font-bold text-blue-600">{{ (kpis.financial?.dso || 0).toFixed(0) }}</p>
-                            <p class="text-xs text-gray-500 mt-1">jours</p>
+                            <p class="text-xs text-gray-500 mt-1">jours (DSO)</p>
                         </div>
                     </div>
 

@@ -1,5 +1,13 @@
 <template>
     <MobileLayout title="Payer" :show-back="true">
+        <!-- Flash Messages -->
+        <div v-if="$page.props.flash?.error" class="mb-4 p-4 bg-red-100 text-red-700 rounded-xl">
+            {{ $page.props.flash.error }}
+        </div>
+        <div v-if="$page.props.flash?.warning" class="mb-4 p-4 bg-yellow-100 text-yellow-700 rounded-xl">
+            {{ $page.props.flash.warning }}
+        </div>
+
         <!-- Amount Summary -->
         <div class="bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl p-5 text-white mb-6 shadow-lg">
             <p class="text-primary-100 text-sm">Montant a payer</p>
@@ -60,138 +68,118 @@
             </div>
         </div>
 
-        <!-- Payment Method -->
+        <!-- Payment Method Selection -->
         <div class="mb-6" v-if="selectedInvoices.length > 0">
             <h3 class="text-lg font-semibold text-gray-900 mb-3">Mode de paiement</h3>
 
             <div class="space-y-3">
+                <!-- Saved Cards -->
                 <label
-                    v-for="method in paymentMethods"
-                    :key="method.id"
+                    v-for="card in savedCards"
+                    :key="card.id"
                     class="flex items-center bg-white rounded-xl shadow-sm p-4 cursor-pointer"
-                    :class="selectedMethod === method.id ? 'ring-2 ring-primary-500' : ''"
+                    :class="selectedMethod === `card_${card.id}` ? 'ring-2 ring-primary-500' : ''"
                 >
                     <input
                         type="radio"
-                        :value="method.id"
+                        :value="`card_${card.id}`"
                         v-model="selectedMethod"
                         class="w-5 h-5 border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                     <div class="flex-1 ml-3 flex items-center justify-between">
                         <div class="flex items-center">
-                            <component :is="method.icon" class="w-8 h-8 mr-3" :class="method.iconClass" />
+                            <CreditCardIcon class="w-8 h-8 mr-3 text-blue-500" />
                             <div>
-                                <p class="font-medium text-gray-900">{{ method.name }}</p>
-                                <p class="text-sm text-gray-500">{{ method.description }}</p>
+                                <p class="font-medium text-gray-900">{{ card.brand }} **** {{ card.last4 }}</p>
+                                <p class="text-sm text-gray-500">Expire {{ card.expiry }}</p>
                             </div>
                         </div>
-                        <span v-if="method.badge" class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
-                            {{ method.badge }}
+                        <span v-if="card.is_default" class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">
+                            Par defaut
                         </span>
+                    </div>
+                </label>
+
+                <!-- New Card -->
+                <label
+                    class="flex items-center bg-white rounded-xl shadow-sm p-4 cursor-pointer"
+                    :class="selectedMethod === 'new_card' ? 'ring-2 ring-primary-500' : ''"
+                >
+                    <input
+                        type="radio"
+                        value="new_card"
+                        v-model="selectedMethod"
+                        class="w-5 h-5 border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <div class="flex-1 ml-3 flex items-center">
+                        <PlusCircleIcon class="w-8 h-8 mr-3 text-primary-600" />
+                        <div>
+                            <p class="font-medium text-gray-900">Nouvelle carte</p>
+                            <p class="text-sm text-gray-500">Visa, Mastercard, CB</p>
+                        </div>
+                    </div>
+                </label>
+
+                <!-- PayPal -->
+                <label
+                    class="flex items-center bg-white rounded-xl shadow-sm p-4 cursor-pointer"
+                    :class="selectedMethod === 'paypal' ? 'ring-2 ring-primary-500' : ''"
+                >
+                    <input
+                        type="radio"
+                        value="paypal"
+                        v-model="selectedMethod"
+                        class="w-5 h-5 border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <div class="flex-1 ml-3 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <!-- PayPal Icon -->
+                            <div class="w-8 h-8 mr-3 flex items-center justify-center">
+                                <svg viewBox="0 0 24 24" class="w-7 h-7 text-[#003087]" fill="currentColor">
+                                    <path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.77.77 0 0 1 .757-.632h6.927c2.3 0 4.145.562 5.342 1.593 1.133.97 1.605 2.419 1.363 4.188-.262 1.932-1.047 3.485-2.335 4.62-1.307 1.152-3.02 1.74-5.096 1.74h-2.21a.77.77 0 0 0-.758.632l-.87 5.476zm.647-14.58l-1.49 9.377h1.898c1.514 0 2.77-.387 3.734-1.152.982-.78 1.54-1.89 1.658-3.3.086-.987-.15-1.764-.706-2.314-.578-.572-1.49-.863-2.712-.863h-2.382z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">PayPal</p>
+                                <p class="text-sm text-gray-500">Payer avec votre compte PayPal</p>
+                            </div>
+                        </div>
                     </div>
                 </label>
             </div>
         </div>
 
-        <!-- Card Form (if card selected) -->
-        <div v-if="selectedMethod === 'card' && selectedInvoices.length > 0" class="mb-6">
+        <!-- Stripe Card Element (for new card) -->
+        <div v-if="selectedMethod === 'new_card' && selectedInvoices.length > 0" class="mb-6">
             <h3 class="text-lg font-semibold text-gray-900 mb-3">Informations de carte</h3>
 
-            <div class="bg-white rounded-xl shadow-sm p-4 space-y-4">
-                <!-- Saved Cards -->
-                <div v-if="savedCards.length > 0" class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Cartes enregistrees</label>
-                    <div class="space-y-2">
-                        <label
-                            v-for="card in savedCards"
-                            :key="card.id"
-                            class="flex items-center p-3 bg-gray-50 rounded-lg cursor-pointer"
-                            :class="selectedCard === card.id ? 'ring-2 ring-primary-500' : ''"
-                        >
-                            <input
-                                type="radio"
-                                :value="card.id"
-                                v-model="selectedCard"
-                                class="w-4 h-4 border-gray-300 text-primary-600"
-                            />
-                            <div class="ml-3 flex items-center">
-                                <CreditCardIcon class="w-6 h-6 text-gray-400 mr-2" />
-                                <span class="font-medium">**** {{ card.last4 }}</span>
-                                <span class="text-gray-500 ml-2">{{ card.expiry }}</span>
-                            </div>
-                        </label>
-                        <label
-                            class="flex items-center p-3 bg-gray-50 rounded-lg cursor-pointer"
-                            :class="selectedCard === 'new' ? 'ring-2 ring-primary-500' : ''"
-                        >
-                            <input
-                                type="radio"
-                                value="new"
-                                v-model="selectedCard"
-                                class="w-4 h-4 border-gray-300 text-primary-600"
-                            />
-                            <div class="ml-3 flex items-center">
-                                <PlusCircleIcon class="w-6 h-6 text-primary-600 mr-2" />
-                                <span class="font-medium text-primary-600">Nouvelle carte</span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
+            <div class="bg-white rounded-xl shadow-sm p-4">
+                <StripeCardElement
+                    v-if="stripeKey"
+                    ref="stripeCardRef"
+                    :stripe-key="stripeKey"
+                    :client-secret="clientSecret"
+                    @ready="onStripeReady"
+                    @change="onCardChange"
+                    @complete="onCardComplete"
+                    @error="onCardError"
+                />
 
-                <!-- New Card Form -->
-                <div v-if="selectedCard === 'new' || savedCards.length === 0">
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Numero de carte</label>
-                        <input
-                            type="text"
-                            v-model="cardNumber"
-                            placeholder="1234 5678 9012 3456"
-                            maxlength="19"
-                            class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500"
-                        />
-                    </div>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Expiration</label>
-                            <input
-                                type="text"
-                                v-model="cardExpiry"
-                                placeholder="MM/YY"
-                                maxlength="5"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500"
-                            />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">CVV</label>
-                            <input
-                                type="text"
-                                v-model="cardCvv"
-                                placeholder="123"
-                                maxlength="4"
-                                class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500"
-                            />
-                        </div>
-                    </div>
-                    <label class="flex items-center mt-4">
-                        <input
-                            type="checkbox"
-                            v-model="saveCard"
-                            class="w-4 h-4 rounded border-gray-300 text-primary-600"
-                        />
-                        <span class="ml-2 text-sm text-gray-600">Enregistrer cette carte</span>
-                    </label>
-                </div>
+                <label class="flex items-center mt-4">
+                    <input
+                        type="checkbox"
+                        v-model="saveCard"
+                        class="w-4 h-4 rounded border-gray-300 text-primary-600"
+                    />
+                    <span class="ml-2 text-sm text-gray-600">Enregistrer cette carte pour plus tard</span>
+                </label>
             </div>
         </div>
 
-        <!-- SEPA Form (if sepa selected) -->
-        <div v-if="selectedMethod === 'sepa' && selectedInvoices.length > 0" class="mb-6">
-            <div class="bg-blue-50 rounded-xl p-4 flex items-start">
-                <InformationCircleIcon class="w-6 h-6 text-blue-500 mr-3 flex-shrink-0" />
-                <p class="text-sm text-blue-700">
-                    Le prelevement SEPA sera effectue dans les 3 jours ouvrables. Assurez-vous que votre compte dispose des fonds necessaires.
-                </p>
-            </div>
+        <!-- Error Message -->
+        <div v-if="errorMessage" class="mb-6 p-4 bg-red-50 text-red-700 rounded-xl flex items-start gap-3">
+            <ExclamationCircleIcon class="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <p>{{ errorMessage }}</p>
         </div>
 
         <!-- Pay Button -->
@@ -209,7 +197,8 @@
                     Traitement en cours...
                 </span>
                 <span v-else>
-                    Payer {{ formatCurrency(totalAmount) }}
+                    <span v-if="selectedMethod === 'paypal'">Payer avec PayPal</span>
+                    <span v-else>Payer {{ formatCurrency(totalAmount) }}</span>
                 </span>
             </button>
 
@@ -219,56 +208,47 @@
                 Paiement securise SSL
             </div>
         </div>
+
+        <!-- Bottom spacing for fixed button -->
+        <div class="h-32"></div>
     </MobileLayout>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { router } from '@inertiajs/vue3'
+import axios from 'axios'
 import MobileLayout from '@/Layouts/MobileLayout.vue'
+import StripeCardElement from '@/Components/Payment/StripeCardElement.vue'
 import {
     CreditCardIcon,
     CheckCircleIcon,
     PlusCircleIcon,
     LockClosedIcon,
-    InformationCircleIcon,
-    BuildingLibraryIcon,
-    BanknotesIcon,
+    ExclamationCircleIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     unpaidInvoices: Array,
     savedCards: Array,
-    preselectedInvoiceId: Number,
+    hasSepa: Boolean,
+    preselectedInvoiceId: [Number, String],
+    stripeKey: String,
+    paypalClientId: String,
 })
 
-const selectedInvoiceIds = ref(props.preselectedInvoiceId ? [props.preselectedInvoiceId] : [])
-const selectedMethod = ref('card')
-const selectedCard = ref(props.savedCards?.length > 0 ? props.savedCards[0].id : 'new')
-const cardNumber = ref('')
-const cardExpiry = ref('')
-const cardCvv = ref('')
+// State
+const selectedInvoiceIds = ref(props.preselectedInvoiceId ? [parseInt(props.preselectedInvoiceId)] : [])
+const selectedMethod = ref(props.savedCards?.length > 0 ? `card_${props.savedCards[0].id}` : 'new_card')
 const saveCard = ref(false)
 const processing = ref(false)
+const errorMessage = ref(null)
+const clientSecret = ref(null)
+const cardComplete = ref(false)
+const stripeCardRef = ref(null)
+const stripeReady = ref(false)
 
-const paymentMethods = [
-    {
-        id: 'card',
-        name: 'Carte bancaire',
-        description: 'Visa, Mastercard, CB',
-        icon: CreditCardIcon,
-        iconClass: 'text-blue-500',
-        badge: 'Recommande',
-    },
-    {
-        id: 'sepa',
-        name: 'Prelevement SEPA',
-        description: 'Depuis votre compte bancaire',
-        icon: BuildingLibraryIcon,
-        iconClass: 'text-purple-500',
-    },
-]
-
+// Computed
 const selectedInvoices = computed(() => {
     return (props.unpaidInvoices || []).filter(i => selectedInvoiceIds.value.includes(i.id))
 })
@@ -285,16 +265,15 @@ const canPay = computed(() => {
     if (selectedInvoices.value.length === 0) return false
     if (!selectedMethod.value) return false
 
-    if (selectedMethod.value === 'card') {
-        if (selectedCard.value === 'new' || props.savedCards?.length === 0) {
-            return cardNumber.value && cardExpiry.value && cardCvv.value
-        }
-        return true
+    // For new card, need Stripe to be ready and card complete
+    if (selectedMethod.value === 'new_card') {
+        return stripeReady.value && cardComplete.value
     }
 
     return true
 })
 
+// Methods
 const formatCurrency = (value) => {
     return new Intl.NumberFormat('fr-FR', {
         style: 'currency',
@@ -323,32 +302,113 @@ const selectAll = () => {
     }
 }
 
-const processPayment = () => {
+// Stripe handlers
+const onStripeReady = (data) => {
+    stripeReady.value = true
+}
+
+const onCardChange = (data) => {
+    cardComplete.value = data.complete
+    if (!data.complete) {
+        errorMessage.value = null
+    }
+}
+
+const onCardComplete = () => {
+    cardComplete.value = true
+    errorMessage.value = null
+}
+
+const onCardError = (error) => {
+    errorMessage.value = error.message
+}
+
+// Payment processing
+const processPayment = async () => {
     if (!canPay.value || processing.value) return
 
     processing.value = true
+    errorMessage.value = null
 
-    const paymentData = {
+    try {
+        if (selectedMethod.value === 'paypal') {
+            await processPayPal()
+        } else if (selectedMethod.value === 'new_card') {
+            await processNewCard()
+        } else if (selectedMethod.value.startsWith('card_')) {
+            await processSavedCard()
+        }
+    } catch (error) {
+        errorMessage.value = error.message || 'Une erreur est survenue'
+        processing.value = false
+    }
+}
+
+const processNewCard = async () => {
+    // 1. Create payment intent
+    const intentResponse = await axios.post(route('mobile.pay.stripe.intent'), {
         invoice_ids: selectedInvoiceIds.value,
-        method: selectedMethod.value,
-        amount: totalAmount.value,
+        save_card: saveCard.value,
+    })
+
+    const { clientSecret: secret, paymentIntentId } = intentResponse.data
+
+    // 2. Confirm payment with Stripe
+    const stripeCard = stripeCardRef.value
+    if (!stripeCard) {
+        throw new Error('Stripe not initialized')
     }
 
-    if (selectedMethod.value === 'card') {
-        if (selectedCard.value !== 'new') {
-            paymentData.card_id = selectedCard.value
-        } else {
-            paymentData.card_number = cardNumber.value
-            paymentData.card_expiry = cardExpiry.value
-            paymentData.card_cvv = cardCvv.value
-            paymentData.save_card = saveCard.value
+    const paymentIntent = await stripeCard.confirmPayment(secret)
+
+    // 3. Confirm with backend
+    const confirmResponse = await axios.post(route('mobile.pay.stripe.confirm'), {
+        payment_intent_id: paymentIntent.id,
+        invoice_ids: selectedInvoiceIds.value,
+    })
+
+    if (confirmResponse.data.success) {
+        router.visit(confirmResponse.data.redirect)
+    } else {
+        throw new Error(confirmResponse.data.error)
+    }
+}
+
+const processSavedCard = async () => {
+    const cardId = selectedMethod.value.replace('card_', '')
+
+    const response = await axios.post(route('mobile.pay.charge-saved'), {
+        payment_method_id: cardId,
+        invoice_ids: selectedInvoiceIds.value,
+    })
+
+    if (response.data.success) {
+        router.visit(response.data.redirect)
+    } else {
+        throw new Error(response.data.error)
+    }
+}
+
+const processPayPal = async () => {
+    const response = await axios.post(route('mobile.pay.paypal.create'), {
+        invoice_ids: selectedInvoiceIds.value,
+    })
+
+    if (response.data.approvalUrl) {
+        // Redirect to PayPal
+        window.location.href = response.data.approvalUrl
+    } else {
+        throw new Error('Erreur PayPal: URL non disponible')
+    }
+}
+
+// Auto-select first invoice if preselected
+onMounted(() => {
+    if (props.preselectedInvoiceId) {
+        const id = parseInt(props.preselectedInvoiceId)
+        if (!selectedInvoiceIds.value.includes(id)) {
+            selectedInvoiceIds.value.push(id)
         }
     }
-
-    router.post(route('mobile.pay.process'), paymentData, {
-        onFinish: () => {
-            processing.value = false
-        },
-    })
-}
+})
 </script>

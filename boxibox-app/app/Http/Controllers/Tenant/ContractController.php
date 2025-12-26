@@ -10,6 +10,7 @@ use App\Models\Site;
 use App\Models\Customer;
 use App\Models\Box;
 use App\Services\ExcelExportService;
+use App\Services\InsuranceService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
@@ -204,9 +205,18 @@ class ContractController extends Controller
             $contract->customer->increment('total_contracts');
         }
 
+        // Auto-enroll insurance if enabled for the site
+        $insuranceService = app(InsuranceService::class);
+        $insurancePolicy = $insuranceService->autoEnrollInsurance($contract);
+
+        $message = 'Contract created successfully.';
+        if ($insurancePolicy) {
+            $message .= ' Assurance ' . $insurancePolicy->plan->name . ' souscrite automatiquement.';
+        }
+
         return redirect()
             ->route('tenant.contracts.index')
-            ->with('success', 'Contract created successfully.');
+            ->with('success', $message);
     }
 
     /**
@@ -220,7 +230,7 @@ class ContractController extends Controller
             abort(403);
         }
 
-        $contract->load(['tenant', 'site', 'customer', 'box', 'staffUser', 'invoices']);
+        $contract->load(['tenant', 'site', 'customer', 'box', 'staffUser', 'invoices', 'addons']);
 
         return Inertia::render('Tenant/Contracts/Show', [
             'contract' => $contract,

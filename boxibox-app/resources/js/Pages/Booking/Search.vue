@@ -1,14 +1,14 @@
 <template>
-    <GuestLayout title="Réserver un Box de Stockage">
+    <PublicLayout>
         <!-- Hero Section -->
         <div class="bg-gradient-to-r from-blue-600 to-blue-800 text-white py-12 mb-8">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="w-full px-4 sm:px-6 lg:px-8">
                 <h1 class="text-4xl font-bold mb-4">Trouvez Votre Espace de Stockage Idéal</h1>
                 <p class="text-xl">Solutions de stockage sécurisées, abordables et pratiques</p>
             </div>
         </div>
 
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
+        <div class="w-full px-4 sm:px-6 lg:px-8 pb-12">
             <!-- Filters -->
             <div class="bg-white rounded-lg shadow-md p-6 mb-8">
                 <h2 class="text-lg font-semibold text-gray-900 mb-4">Filtrer les Box</h2>
@@ -83,57 +83,57 @@
             </div>
 
             <!-- Box Grid -->
-            <div v-if="boxes.data.length > 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div v-if="boxes.data.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                 <div
                     v-for="box in boxes.data"
                     :key="box.id"
-                    class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
+                    class="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1 border border-gray-100"
                 >
-                    <div class="p-6">
-                        <div class="flex justify-between items-start mb-4">
+                    <div class="p-4">
+                        <!-- Header -->
+                        <div class="flex justify-between items-start mb-3">
                             <div>
-                                <h3 class="text-xl font-bold text-gray-900">Box {{ box.number }}</h3>
+                                <h3 class="text-lg font-bold text-gray-900">Box {{ box.number }}</h3>
                                 <p class="text-sm text-gray-600">{{ box.site.name }}</p>
-                                <p class="text-xs text-gray-500">{{ box.site.city }}</p>
                             </div>
-                            <span class="px-3 py-1 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
-                                Disponible
+                            <span class="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-semibold rounded-full">
+                                Dispo
                             </span>
                         </div>
 
-                        <div class="space-y-2 mb-4">
-                            <div class="flex items-center text-sm text-gray-600">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <!-- Specs - Horizontal compact layout -->
+                        <div class="flex flex-wrap gap-2 mb-3 text-sm">
+                            <span class="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded-lg text-gray-700">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
                                 </svg>
-                                {{ box.length }} x {{ box.width }} x {{ box.height }} m
-                            </div>
-                            <div class="flex items-center text-sm text-gray-600">
-                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                {{ box.length }}x{{ box.width }}x{{ box.height }}m
+                            </span>
+                            <span class="flex items-center gap-1 px-2 py-1 bg-blue-50 rounded-lg text-blue-700 font-medium">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
                                 </svg>
-                                {{ formatVolume(box.volume) }} m³
-                            </div>
-                            <div class="flex items-center text-sm">
-                                <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">
-                                    {{ getSizeLabel(box.volume) }}
-                                </span>
-                            </div>
+                                {{ formatVolume(box.volume) }}m³
+                            </span>
                         </div>
 
-                        <div class="border-t pt-4">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <p class="text-3xl font-bold text-blue-600">{{ box.current_price }} €</p>
-                                    <p class="text-sm text-gray-500">/mois</p>
-                                </div>
-                                <Link
-                                    :href="route('booking.show', box.id)"
-                                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-                                >
-                                    Voir Détails
-                                </Link>
+                        <!-- Size category -->
+                        <span class="inline-block px-2 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded mb-3">
+                            {{ getSizeLabel(box.volume) }}
+                        </span>
+
+                        <!-- Price & Action -->
+                        <div class="border-t pt-3 flex justify-between items-center">
+                            <div>
+                                <span class="text-2xl font-bold text-blue-600">{{ box.current_price }}€</span>
+                                <span class="text-xs text-gray-500">/mois</span>
                             </div>
+                            <Link
+                                :href="route('booking.show', box.id)"
+                                class="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                Réserver
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -148,13 +148,13 @@
                 <p class="mt-1 text-sm text-gray-500">Essayez de modifier vos critères de recherche</p>
             </div>
         </div>
-    </GuestLayout>
+    </PublicLayout>
 </template>
 
 <script setup>
 import { ref } from 'vue';
 import { Link, router } from '@inertiajs/vue3';
-import GuestLayout from '@/Layouts/GuestLayout.vue';
+import PublicLayout from '@/Layouts/PublicLayout.vue';
 
 const props = defineProps({
     sites: Array,

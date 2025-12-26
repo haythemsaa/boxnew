@@ -166,7 +166,7 @@ class LoyaltyController extends Controller
         $program = LoyaltyProgram::where('tenant_id', $tenantId)->first();
 
         $rewards = $program
-            ? LoyaltyReward::where('loyalty_program_id', $program->id)
+            ? LoyaltyReward::where('program_id', $program->id)
                 ->withCount('redemptions')
                 ->get()
             : collect();
@@ -196,7 +196,7 @@ class LoyaltyController extends Controller
         ]);
 
         LoyaltyReward::create([
-            'loyalty_program_id' => $program->id,
+            'program_id' => $program->id,
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'type' => $validated['type'],

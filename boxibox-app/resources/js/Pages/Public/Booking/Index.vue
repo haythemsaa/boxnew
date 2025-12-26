@@ -58,6 +58,10 @@ const galleryImageIndex = ref(0)
 const checkingAvailability = ref(false)
 const availabilityStatus = ref({})
 
+// Detailed pricing from API
+const detailedPricing = ref(null)
+const pricingLoading = ref(false)
+
 // Payment options
 const paymentMethod = ref('at_signing') // 'now' or 'at_signing'
 const paymentProcessing = ref(false)
@@ -180,7 +184,13 @@ const selectedBoxData = computed(() => {
     return availableBoxes.value.find(b => b.id === selectedBox.value)
 })
 
+// Use API pricing when available, fallback to simple calculation
 const monthlyPrice = computed(() => {
+    // Use detailed pricing from API if available
+    if (detailedPricing.value) {
+        return detailedPricing.value.monthly_price_ht
+    }
+    // Fallback to simple calculation
     if (!selectedBox.value) return 0
     const box = availableBoxes.value.find(b => b.id === selectedBox.value)
     let price = box?.current_price || 0
@@ -191,11 +201,67 @@ const monthlyPrice = computed(() => {
 })
 
 const depositAmount = computed(() => {
+    // Use detailed pricing from API if available
+    if (detailedPricing.value) {
+        return detailedPricing.value.deposit.amount
+    }
+    // Fallback
     if (!props.settings?.require_deposit) return 0
     if (props.settings.deposit_percentage > 0) {
         return monthlyPrice.value * (props.settings.deposit_percentage / 100)
     }
     return props.settings.deposit_amount || 0
+})
+
+// First month amount (prorated if not starting on 1st)
+const firstMonthAmount = computed(() => {
+    if (detailedPricing.value) {
+        return detailedPricing.value.first_month.prorata_amount_ht
+    }
+    return monthlyPrice.value
+})
+
+// Is first month prorated?
+const isFirstMonthProrated = computed(() => {
+    return detailedPricing.value?.first_month?.is_prorated ?? false
+})
+
+// Prorata info
+const prorataInfo = computed(() => {
+    if (!detailedPricing.value?.first_month?.is_prorated) return null
+    return {
+        days: detailedPricing.value.first_month.prorata_days,
+        totalDays: detailedPricing.value.first_month.prorata_total_days,
+        percentage: detailedPricing.value.first_month.prorata_percentage,
+    }
+})
+
+// VAT amount
+const vatAmount = computed(() => {
+    return detailedPricing.value?.vat?.amount ?? 0
+})
+
+// Seasonal discount info
+const seasonalInfo = computed(() => {
+    if (!detailedPricing.value?.discounts?.seasonal) return null
+    const seasonal = detailedPricing.value.discounts.seasonal
+    if (seasonal.multiplier === 1) return null
+    return {
+        label: seasonal.label,
+        adjustment: seasonal.adjustment,
+    }
+})
+
+// Duration discount info
+const durationDiscountInfo = computed(() => {
+    if (!detailedPricing.value?.discounts?.duration) return null
+    const dur = detailedPricing.value.discounts.duration
+    if (!dur.percent || dur.percent === 0) return null
+    return {
+        months: dur.months,
+        percent: dur.percent,
+        amount: dur.amount,
+    }
 })
 
 const getSizeCategory = (volume) => {
@@ -357,6 +423,51 @@ const formatDate = (date) => {
         year: 'numeric'
     })
 }
+
+// Fetch detailed pricing from API
+const fetchPricing = async () => {
+    if (!selectedBox.value || !form.value.start_date) {
+        detailedPricing.value = null
+        return
+    }
+
+    pricingLoading.value = true
+    try {
+        const response = await fetch(route('public.booking.calculate-pricing'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+            },
+            body: JSON.stringify({
+                box_id: selectedBox.value,
+                tenant_id: props.tenant.id,
+                start_date: form.value.start_date,
+                duration_months: form.value.duration_type === 'fixed_term' ? form.value.planned_duration_months : null,
+                promo_code: promoApplied.value?.code || null,
+                include_insurance: form.value.needs_insurance,
+            }),
+        })
+
+        if (response.ok) {
+            const data = await response.json()
+            detailedPricing.value = data.pricing
+        }
+    } catch (error) {
+        console.error('Error fetching pricing:', error)
+    } finally {
+        pricingLoading.value = false
+    }
+}
+
+// Watch for changes that affect pricing
+watch(
+    () => [selectedBox.value, form.value.start_date, form.value.duration_type, form.value.planned_duration_months, form.value.needs_insurance, promoApplied.value],
+    () => {
+        fetchPricing()
+    },
+    { deep: true }
+)
 
 // Check availability when date changes
 watch(() => form.value.start_date, async (newDate) => {
@@ -522,7 +633,19 @@ const processPayment = async () => {
 // Calculate total due now (deposit + first month if paying now)
 const totalDueNow = computed(() => {
     if (paymentMethod.value === 'at_signing') return 0
-    return monthlyPrice.value + depositAmount.value
+    // Use detailed pricing total TTC if available
+    if (detailedPricing.value) {
+        return detailedPricing.value.total_ttc
+    }
+    return firstMonthAmount.value + depositAmount.value
+})
+
+// Subtotal before tax
+const subtotalHT = computed(() => {
+    if (detailedPricing.value) {
+        return detailedPricing.value.subtotal_ht
+    }
+    return firstMonthAmount.value + depositAmount.value
 })
 
 const prevStep = () => {
@@ -695,7 +818,7 @@ onMounted(() => {
         </div>
 
         <!-- Booking Form -->
-        <div v-else class="max-w-5xl mx-auto px-4 py-8">
+        <div v-else class="max-w-7xl mx-auto px-4 py-8">
             <!-- Progress Steps -->
             <div class="mb-10">
                 <div class="flex items-center justify-center">
@@ -934,7 +1057,7 @@ onMounted(() => {
                     </div>
 
                     <!-- Boxes Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         <button
                             v-for="box in availableBoxes"
                             :key="box.id"
@@ -1422,22 +1545,85 @@ onMounted(() => {
 
                     <!-- Pricing -->
                     <div class="mt-6 pt-6 border-t border-gray-100">
-                        <div class="space-y-3">
+                        <div v-if="pricingLoading" class="flex items-center justify-center py-4">
+                            <svg class="animate-spin h-6 w-6 text-gray-400" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span class="ml-2 text-gray-500">Calcul du prix...</span>
+                        </div>
+                        <div v-else class="space-y-3">
+                            <!-- Base price -->
                             <div class="flex justify-between text-gray-600">
-                                <span>Prix mensuel</span>
+                                <span>Prix mensuel de base</span>
                                 <span class="font-medium">{{ formatCurrency(availableBoxes.find(b => b.id === selectedBox)?.current_price) }}</span>
                             </div>
+
+                            <!-- Seasonal adjustment -->
+                            <div v-if="seasonalInfo" class="flex justify-between" :class="seasonalInfo.adjustment > 0 ? 'text-orange-600' : 'text-green-600'">
+                                <span>{{ seasonalInfo.label }}</span>
+                                <span class="font-medium">{{ seasonalInfo.adjustment > 0 ? '+' : '' }}{{ formatCurrency(seasonalInfo.adjustment) }}</span>
+                            </div>
+
+                            <!-- Promo discount -->
                             <div v-if="promoApplied" class="flex justify-between text-green-600">
                                 <span>Reduction ({{ promoApplied.discount_label }})</span>
                                 <span class="font-medium">-{{ formatCurrency(promoApplied.calculated_discount) }}</span>
                             </div>
+
+                            <!-- Duration discount -->
+                            <div v-if="durationDiscountInfo" class="flex justify-between text-green-600">
+                                <span>Remise engagement {{ durationDiscountInfo.months }} mois (-{{ durationDiscountInfo.percent }}%)</span>
+                                <span class="font-medium">-{{ formatCurrency(durationDiscountInfo.amount) }}/mois</span>
+                            </div>
+
+                            <!-- Monthly price after discounts -->
+                            <div class="flex justify-between text-gray-900 font-semibold pt-2 border-t border-gray-100">
+                                <span>Prix mensuel HT</span>
+                                <span>{{ formatCurrency(monthlyPrice) }}</span>
+                            </div>
+
+                            <!-- First month (prorated or full) -->
+                            <div class="flex justify-between text-gray-600">
+                                <div class="flex items-center">
+                                    <span>1er mois</span>
+                                    <span v-if="isFirstMonthProrated" class="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">
+                                        Prorata {{ prorataInfo?.days }}/{{ prorataInfo?.totalDays }} jours
+                                    </span>
+                                </div>
+                                <span class="font-medium">{{ formatCurrency(firstMonthAmount) }}</span>
+                            </div>
+
+                            <!-- Deposit -->
                             <div v-if="depositAmount > 0" class="flex justify-between text-gray-600">
-                                <span>Acompte a la reservation</span>
+                                <span>Depot de garantie</span>
                                 <span class="font-medium">{{ formatCurrency(depositAmount) }}</span>
                             </div>
-                            <div class="flex justify-between text-2xl font-bold text-gray-900 pt-4 border-t border-gray-200">
-                                <span>Total mensuel</span>
-                                <span :style="{ color: settings?.primary_color }">{{ formatCurrency(monthlyPrice) }}</span>
+
+                            <!-- Subtotal HT -->
+                            <div class="flex justify-between text-gray-700 pt-2 border-t border-gray-100">
+                                <span>Sous-total HT</span>
+                                <span class="font-medium">{{ formatCurrency(subtotalHT) }}</span>
+                            </div>
+
+                            <!-- VAT -->
+                            <div v-if="vatAmount > 0" class="flex justify-between text-gray-600">
+                                <span>TVA (20%)</span>
+                                <span class="font-medium">{{ formatCurrency(vatAmount) }}</span>
+                            </div>
+
+                            <!-- Total TTC -->
+                            <div class="flex justify-between text-2xl font-bold text-gray-900 pt-4 border-t-2 border-gray-200">
+                                <span>Total a payer TTC</span>
+                                <span :style="{ color: settings?.primary_color }">{{ formatCurrency(totalDueNow > 0 ? totalDueNow : subtotalHT + vatAmount) }}</span>
+                            </div>
+
+                            <!-- Monthly recurring info -->
+                            <div v-if="detailedPricing" class="mt-4 p-3 bg-gray-50 rounded-xl text-sm text-gray-600">
+                                <div class="flex items-center">
+                                    <CalendarIcon class="h-4 w-4 mr-2 text-gray-400" />
+                                    <span>Puis <strong>{{ formatCurrency(detailedPricing.monthly_recurring_ttc) }} TTC/mois</strong> a partir du mois suivant</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1469,7 +1655,7 @@ onMounted(() => {
                                             Reglez votre premier mois et l'acompte par carte bancaire. Reservation confirmee immediatement.
                                         </p>
                                         <p class="mt-3 font-bold text-lg" :style="{ color: settings?.primary_color }">
-                                            {{ formatCurrency(monthlyPrice + depositAmount) }}
+                                            {{ formatCurrency(detailedPricing ? detailedPricing.total_ttc : (firstMonthAmount + depositAmount)) }}
                                         </p>
                                     </div>
                                     <div

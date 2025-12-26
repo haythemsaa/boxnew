@@ -10,6 +10,7 @@ return Application::configure(basePath: dirname(__DIR__))
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
         commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -31,6 +32,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             '2fa' => \App\Http\Middleware\EnforceTwoFactorAuth::class,
             'api.key' => \App\Http\Middleware\ValidateExternalApiKey::class,
+            'mobile.customer' => \App\Http\Middleware\MobileCustomerAuth::class,
         ]);
 
         // Exclude public booking API routes and webhooks from CSRF verification

@@ -337,6 +337,56 @@ const submitTermination = () => {
                             </div>
                         </div>
 
+                        <!-- Services additionnels (Addons) -->
+                        <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                            <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="p-2 bg-purple-100 rounded-lg">
+                                            <CubeIcon class="w-5 h-5 text-purple-600" />
+                                        </div>
+                                        <h2 class="text-lg font-semibold text-gray-900">Services additionnels</h2>
+                                    </div>
+                                    <span v-if="contract.addons && contract.addons.length > 0" class="px-3 py-1 bg-purple-100 text-purple-700 text-sm font-semibold rounded-full">
+                                        {{ contract.addons.filter(a => a.status === 'active').length }} actif(s)
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="p-6">
+                                <div v-if="contract.addons && contract.addons.length > 0" class="space-y-3 mb-4">
+                                    <div
+                                        v-for="addon in contract.addons.filter(a => a.status === 'active').slice(0, 3)"
+                                        :key="addon.id"
+                                        class="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+                                    >
+                                        <div class="flex items-center gap-3">
+                                            <div class="p-2 bg-white rounded-lg shadow-sm">
+                                                <CubeIcon class="w-4 h-4 text-purple-600" />
+                                            </div>
+                                            <div>
+                                                <p class="font-medium text-gray-900">{{ addon.product_name }}</p>
+                                                <p class="text-xs text-gray-500">{{ addon.quantity }} x {{ formatCurrency(addon.unit_price) }}</p>
+                                            </div>
+                                        </div>
+                                        <span class="font-semibold text-gray-900">{{ formatCurrency(addon.quantity * addon.unit_price) }}</span>
+                                    </div>
+                                    <div v-if="contract.addons.filter(a => a.status === 'active').length > 3" class="text-center text-sm text-gray-500">
+                                        + {{ contract.addons.filter(a => a.status === 'active').length - 3 }} autre(s) service(s)
+                                    </div>
+                                </div>
+                                <div v-else class="text-center py-4 text-gray-500 mb-4">
+                                    Aucun service additionnel actif
+                                </div>
+                                <Link
+                                    :href="route('tenant.contracts.addons.index', contract.id)"
+                                    class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-500 to-indigo-600 text-white rounded-xl text-sm font-medium hover:from-purple-600 hover:to-indigo-700 transition-all shadow-lg"
+                                >
+                                    <CubeIcon class="w-5 h-5" />
+                                    Gérer les services
+                                </Link>
+                            </div>
+                        </div>
+
                         <!-- Factures -->
                         <div v-if="contract.invoices && contract.invoices.length > 0" class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                             <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">

@@ -47,6 +47,17 @@ Route::middleware('throttle:webhooks')->group(function () {
     // GoCardless SEPA webhooks
     Route::post('/webhooks/gocardless', [\App\Http\Controllers\API\GoCardlessWebhookController::class, 'handle'])->name('webhooks.gocardless');
 
+    // Google Reserve with Google API v3
+    Route::prefix('google-reserve/v3')->group(function () {
+        Route::get('/health', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'healthCheck'])->name('google-reserve.health');
+        Route::post('/CheckAvailability', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'checkAvailability'])->name('google-reserve.check-availability');
+        Route::post('/BatchAvailabilityLookup', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'batchAvailabilityLookup'])->name('google-reserve.batch-availability');
+        Route::post('/CreateBooking', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'createBooking'])->name('google-reserve.create-booking');
+        Route::post('/UpdateBooking', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'updateBooking'])->name('google-reserve.update-booking');
+        Route::post('/GetBookingStatus', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'getBookingStatus'])->name('google-reserve.get-booking');
+        Route::post('/ListBookings', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'listBookings'])->name('google-reserve.list-bookings');
+    });
+
     // Email & SMS Tracking Webhooks
     Route::post('/webhooks/email/{provider}/{token}', [\App\Http\Controllers\API\TrackingController::class, 'handleEmailWebhook'])->name('webhooks.email');
     Route::post('/webhooks/sms/{provider}/{token}', [\App\Http\Controllers\API\TrackingController::class, 'handleSmsWebhook'])->name('webhooks.sms');
@@ -113,6 +124,48 @@ Route::prefix('v1/availability')->group(function () {
 */
 Route::prefix('v1/gallery')->group(function () {
     Route::get('/sites/{site}', [\App\Http\Controllers\Tenant\MediaGalleryController::class, 'publicGallery'])->name('api.v1.gallery.site');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Referral Code Validation API (Public)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('referral')->middleware('throttle:60,1')->group(function () {
+    Route::post('/validate', function (\Illuminate\Http\Request $request) {
+        $request->validate([
+            'code' => 'required|string|max:20',
+            'tenant_id' => 'required|integer|exists:tenants,id',
+        ]);
+
+        $referralService = app(\App\Services\ReferralService::class);
+        $result = $referralService->validateCode(
+            $request->code,
+            $request->tenant_id,
+            $request->customer_id
+        );
+
+        return response()->json($result);
+    })->name('api.referral.validate');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Booking Widget API (No Auth Required - CORS enabled)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('widget')->middleware('throttle:120,1')->group(function () {
+    // Get widget data (sites, boxes, settings)
+    Route::get('/{widgetKey}', [\App\Http\Controllers\API\WidgetApiController::class, 'getData'])->name('api.widget.data');
+
+    // Calculate pricing
+    Route::post('/{widgetKey}/pricing', [\App\Http\Controllers\API\WidgetApiController::class, 'calculatePricing'])->name('api.widget.pricing');
+
+    // Validate promo code
+    Route::post('/{widgetKey}/promo-validate', [\App\Http\Controllers\API\WidgetApiController::class, 'validatePromoCode'])->name('api.widget.promo');
+
+    // Track booking conversion
+    Route::post('/{widgetKey}/track-booking', [\App\Http\Controllers\API\WidgetApiController::class, 'trackBooking'])->name('api.widget.track');
 });
 
 /*

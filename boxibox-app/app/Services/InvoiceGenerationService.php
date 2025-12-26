@@ -9,6 +9,13 @@ use Carbon\Carbon;
 
 class InvoiceGenerationService
 {
+    protected ContractAddonService $contractAddonService;
+
+    public function __construct(ContractAddonService $contractAddonService)
+    {
+        $this->contractAddonService = $contractAddonService;
+    }
+
     /**
      * Generate invoices for active contracts based on billing frequency.
      */
@@ -81,17 +88,30 @@ class InvoiceGenerationService
         $invoicePeriod = $this->getInvoicePeriod($contract);
         $invoiceNumber = $this->generateInvoiceNumber($contract);
 
+        // Start with storage item
         $items = [
             [
-                'description' => "Box Storage - {$contract->box->number}" . ($contract->box->volume ? " ({$contract->box->volume}m³)" : ""),
+                'type' => 'storage',
+                'product_id' => null,
+                'description' => "Location Box - {$contract->box->code}" . ($contract->box->size ? " ({$contract->box->size}m²)" : ""),
                 'quantity' => 1,
                 'unit_price' => $contract->monthly_price,
+                'tax_rate' => 20,
+                'discount' => 0,
                 'total' => $contract->monthly_price,
             ],
         ];
 
-        // Apply discount if any
         $subtotal = $contract->monthly_price;
+
+        // Add contract addons (recurring services)
+        $addonItems = $this->getAddonItemsForBillingPeriod($contract, $invoicePeriod);
+        foreach ($addonItems as $addonItem) {
+            $items[] = $addonItem;
+            $subtotal += $addonItem['total'];
+        }
+
+        // Apply discount if any
         $discountAmount = 0;
 
         if ($contract->discount_percentage > 0) {
@@ -100,8 +120,10 @@ class InvoiceGenerationService
             $discountAmount = $contract->discount_amount;
         }
 
-        $taxAmount = ($subtotal - $discountAmount) * (0 / 100); // Tax rate from settings or contract
-        $total = $subtotal - $discountAmount + $taxAmount;
+        // Calculate tax (default 20% TVA for France)
+        $taxableAmount = $subtotal - $discountAmount;
+        $taxAmount = $this->calculateTaxAmount($items, $discountAmount);
+        $total = $taxableAmount + $taxAmount;
 
         $dueDate = Carbon::parse($invoicePeriod['end'])->addDays(30); // 30-day payment terms
 
@@ -118,7 +140,7 @@ class InvoiceGenerationService
             'period_end' => $invoicePeriod['end'],
             'items' => $items,
             'subtotal' => $subtotal,
-            'tax_rate' => 0,
+            'tax_rate' => 20,
             'tax_amount' => $taxAmount,
             'discount_amount' => $discountAmount,
             'total' => $total,
@@ -128,7 +150,130 @@ class InvoiceGenerationService
             'reminder_count' => 0,
         ]);
 
+        // Update addon next billing dates
+        $this->updateAddonBillingDates($contract, $invoicePeriod);
+
         return $invoice;
+    }
+
+    /**
+     * Get addon items for the billing period.
+     */
+    protected function getAddonItemsForBillingPeriod(Contract $contract, array $period): array
+    {
+        $items = [];
+
+        $activeAddons = $contract->addons()
+            ->where('status', 'active')
+            ->where(function ($query) use ($period) {
+                $query->where('start_date', '<=', $period['end'])
+                    ->where(function ($q) use ($period) {
+                        $q->whereNull('end_date')
+                            ->orWhere('end_date', '>=', $period['start']);
+                    });
+            })
+            ->get();
+
+        foreach ($activeAddons as $addon) {
+            // Check if this addon should be billed in this period
+            if ($this->shouldBillAddon($addon, $period)) {
+                $items[] = [
+                    'type' => 'addon',
+                    'product_id' => $addon->product_id,
+                    'addon_id' => $addon->id,
+                    'description' => $addon->product_name,
+                    'quantity' => $addon->quantity,
+                    'unit_price' => $addon->unit_price,
+                    'tax_rate' => $addon->tax_rate ?? 20,
+                    'discount' => 0,
+                    'total' => $addon->quantity * $addon->unit_price,
+                ];
+            }
+        }
+
+        return $items;
+    }
+
+    /**
+     * Check if an addon should be billed in a given period.
+     */
+    protected function shouldBillAddon($addon, array $period): bool
+    {
+        // For monthly addons, always bill
+        if ($addon->billing_period === 'monthly') {
+            return true;
+        }
+
+        // For quarterly, only bill at quarter start
+        if ($addon->billing_period === 'quarterly') {
+            $periodStart = Carbon::parse($period['start']);
+            return in_array($periodStart->month, [1, 4, 7, 10]);
+        }
+
+        // For yearly, only bill at year start
+        if ($addon->billing_period === 'yearly') {
+            $periodStart = Carbon::parse($period['start']);
+            return $periodStart->month === 1;
+        }
+
+        return true;
+    }
+
+    /**
+     * Calculate total tax amount from items.
+     */
+    protected function calculateTaxAmount(array $items, float $discountAmount = 0): float
+    {
+        $totalBeforeDiscount = array_sum(array_column($items, 'total'));
+        if ($totalBeforeDiscount == 0) {
+            return 0;
+        }
+
+        $discountRatio = $discountAmount / $totalBeforeDiscount;
+        $taxAmount = 0;
+
+        foreach ($items as $item) {
+            $itemTotal = $item['total'];
+            $itemDiscount = $itemTotal * $discountRatio;
+            $taxableAmount = $itemTotal - $itemDiscount;
+            $taxRate = $item['tax_rate'] ?? 20;
+            $taxAmount += $taxableAmount * ($taxRate / 100);
+        }
+
+        return round($taxAmount, 2);
+    }
+
+    /**
+     * Update addon next billing dates after invoice generation.
+     */
+    protected function updateAddonBillingDates(Contract $contract, array $period): void
+    {
+        $periodEnd = Carbon::parse($period['end']);
+
+        $contract->addons()
+            ->where('status', 'active')
+            ->each(function ($addon) use ($periodEnd) {
+                $addon->update([
+                    'next_billing_date' => $this->calculateNextBillingDate($addon, $periodEnd),
+                ]);
+            });
+    }
+
+    /**
+     * Calculate the next billing date for an addon.
+     */
+    protected function calculateNextBillingDate($addon, Carbon $currentPeriodEnd): Carbon
+    {
+        switch ($addon->billing_period) {
+            case 'monthly':
+                return $currentPeriodEnd->copy()->addMonth()->startOfMonth();
+            case 'quarterly':
+                return $currentPeriodEnd->copy()->addMonths(3)->startOfMonth();
+            case 'yearly':
+                return $currentPeriodEnd->copy()->addYear()->startOfYear();
+            default:
+                return $currentPeriodEnd->copy()->addMonth()->startOfMonth();
+        }
     }
 
     /**

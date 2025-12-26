@@ -51,9 +51,14 @@ use App\Http\Controllers\Tenant\OverdueController;
 use App\Http\Controllers\Tenant\ReportingController;
 use App\Http\Controllers\Tenant\InspectionController;
 use App\Http\Controllers\Tenant\LoyaltyController;
+use App\Http\Controllers\Tenant\ReferralController;
 use App\Http\Controllers\Tenant\StaffController;
 use App\Http\Controllers\Tenant\CalculatorController as TenantCalculatorController;
 use App\Http\Controllers\Tenant\ReviewController;
+use App\Http\Controllers\Tenant\GoogleReserveController;
+use App\Http\Controllers\Tenant\MarketplaceController;
+use App\Http\Controllers\Tenant\CallTrackingController;
+use App\Http\Controllers\Tenant\KioskController;
 use App\Http\Controllers\Tenant\GdprController;
 use App\Http\Controllers\Tenant\VideoCallController;
 use App\Http\Controllers\Tenant\UserController as TenantUserController;
@@ -232,6 +237,7 @@ Route::prefix('book')->name('public.booking.')->group(function () {
     // API endpoints for booking form
     Route::get('/api/sites/{siteId}/boxes', [PublicBookingController::class, 'getAvailableBoxes'])->name('get-boxes');
     Route::post('/api/promo-code/validate', [PublicBookingController::class, 'validatePromoCode'])->name('validate-promo');
+    Route::post('/api/calculate-pricing', [PublicBookingController::class, 'calculatePricing'])->name('calculate-pricing');
     Route::post('/api/check-availability', [PublicBookingController::class, 'checkAvailability'])->name('check-availability');
     Route::post('/api/create-payment-intent', [PublicBookingController::class, 'createPaymentIntent'])->name('create-payment-intent');
     Route::post('/api/bookings', [PublicBookingController::class, 'store'])->name('store');
@@ -448,6 +454,42 @@ Route::middleware('auth')->group(function () {
 
         // Payments (Resource Controller)
         Route::resource('payments', PaymentController::class);
+
+        // Products (Shop/Add-ons Management)
+        Route::prefix('products')->name('products.')->controller(\App\Http\Controllers\Tenant\ProductController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/create', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{product}', 'show')->name('show');
+            Route::get('/{product}/edit', 'edit')->name('edit');
+            Route::put('/{product}', 'update')->name('update');
+            Route::delete('/{product}', 'destroy')->name('destroy');
+            Route::post('/{product}/toggle-active', 'toggleActive')->name('toggle-active');
+            Route::post('/{product}/adjust-stock', 'adjustStock')->name('adjust-stock');
+        });
+
+        // Product Sales (Point of Sale)
+        Route::prefix('sales')->name('sales.')->controller(\App\Http\Controllers\Tenant\ProductSaleController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/create', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{sale}', 'show')->name('show');
+            Route::post('/{sale}/mark-paid', 'markAsPaid')->name('mark-paid');
+            Route::post('/{sale}/complete', 'complete')->name('complete');
+            Route::post('/{sale}/cancel', 'cancel')->name('cancel');
+            Route::post('/{sale}/refund', 'refund')->name('refund');
+        });
+
+        // Contract Addons (Recurring Services on Contracts)
+        Route::prefix('contracts/{contract}/addons')->name('contracts.addons.')->controller(\App\Http\Controllers\Tenant\ContractAddonController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::put('/{addon}', 'update')->name('update');
+            Route::delete('/{addon}', 'destroy')->name('destroy');
+            Route::post('/{addon}/pause', 'pause')->name('pause');
+            Route::post('/{addon}/resume', 'resume')->name('resume');
+            Route::post('/{addon}/cancel', 'cancel')->name('cancel');
+        });
 
         // Payment Retry Management (Smart Dunning)
         Route::prefix('payment-retries')->name('payment-retries.')->controller(\App\Http\Controllers\Tenant\PaymentRetryController::class)->group(function () {
@@ -699,6 +741,13 @@ Route::middleware('auth')->group(function () {
             Route::get('/api/dashboard/{siteId}', 'dashboardApi')->name('api.dashboard');
 
             // Smart Locks
+            Route::get('/locks', 'locks')->name('locks.index');
+            Route::get('/locks/create', 'createLock')->name('locks.create');
+            Route::post('/locks', 'storeLock')->name('locks.store');
+            Route::get('/locks/{lock}', 'showLock')->name('locks.show');
+            Route::get('/locks/{lock}/edit', 'editLock')->name('locks.edit');
+            Route::put('/locks/{lock}', 'updateLock')->name('locks.update');
+            Route::delete('/locks/{lock}', 'destroyLock')->name('locks.destroy');
             Route::post('/locks/{lock}/unlock', 'unlockLock')->name('locks.unlock');
             Route::post('/locks/{lock}/lock', 'lockLock')->name('locks.lock');
 
@@ -1065,6 +1114,20 @@ Route::middleware('auth')->group(function () {
             Route::post('/redemptions/{redemption}/process', 'processRedemption')->name('redemptions.process');
         });
 
+        // Referral / Sponsorship Routes
+        Route::prefix('referrals')->name('referrals.')->controller(ReferralController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/settings', 'updateSettings')->name('settings.update');
+            Route::get('/codes', 'codes')->name('codes');
+            Route::post('/codes', 'createCode')->name('codes.create');
+            Route::patch('/codes/{code}/toggle', 'toggleCode')->name('codes.toggle');
+            Route::delete('/codes/{code}', 'deleteCode')->name('codes.delete');
+            Route::get('/rewards', 'rewards')->name('rewards');
+            Route::post('/rewards/{reward}/apply', 'applyReward')->name('rewards.apply');
+            Route::post('/customers/{customer}/generate-code', 'generateForCustomer')->name('generate-code');
+            Route::get('/export', 'export')->name('export');
+        });
+
         // Staff Management Routes
         Route::prefix('staff')->name('staff.')->controller(StaffController::class)->group(function () {
             Route::get('/', 'index')->name('index');
@@ -1121,6 +1184,66 @@ Route::middleware('auth')->group(function () {
             Route::post('/manage/requests/bulk', 'bulkSendRequests')->name('requests.bulk');
             Route::post('/manage/requests/{reviewRequest}/resend', 'resendRequest')->name('requests.resend');
             Route::get('/analytics/nps', 'npsReport')->name('nps');
+        });
+
+        // Google Reserve Routes
+        Route::prefix('google-reserve')->name('google-reserve.')->controller(GoogleReserveController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/settings', 'settings')->name('settings');
+            Route::post('/settings', 'updateSettings')->name('settings.update');
+            Route::get('/{booking}', 'show')->name('show');
+            Route::post('/{booking}/confirm', 'confirm')->name('confirm');
+            Route::post('/{booking}/cancel', 'cancel')->name('cancel');
+            Route::post('/{booking}/complete', 'complete')->name('complete');
+            Route::post('/{booking}/convert', 'convert')->name('convert');
+            Route::post('/slots/generate', 'generateSlots')->name('slots.generate');
+        });
+
+        // Marketplace Routes
+        Route::prefix('marketplaces')->name('marketplaces.')->controller(MarketplaceController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/leads', 'leads')->name('leads');
+            Route::get('/leads/{lead}', 'showLead')->name('leads.show');
+            Route::put('/leads/{lead}/status', 'updateLeadStatus')->name('leads.status');
+            Route::get('/settings', 'settings')->name('settings');
+            Route::post('/integrations', 'saveIntegration')->name('integrations.save');
+            Route::post('/integrations/{integration}/test', 'testConnection')->name('integrations.test');
+            Route::post('/integrations/{integration}/sync', 'syncInventory')->name('integrations.sync');
+            Route::delete('/integrations/{integration}', 'deleteIntegration')->name('integrations.delete');
+        });
+
+        // Call Tracking Routes
+        Route::prefix('call-tracking')->name('call-tracking.')->controller(CallTrackingController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/calls', 'calls')->name('calls');
+            Route::get('/calls/{call}', 'showCall')->name('calls.show');
+            Route::post('/calls/{call}/callback', 'scheduleCallback')->name('calls.callback');
+            Route::post('/calls/{call}/callback/complete', 'completeCallback')->name('calls.callback.complete');
+            Route::post('/calls/{call}/converted', 'markConverted')->name('calls.converted');
+            Route::post('/calls/{call}/note', 'addNote')->name('calls.note');
+            Route::get('/numbers', 'numbers')->name('numbers');
+            Route::post('/numbers', 'storeNumber')->name('numbers.store');
+            Route::put('/numbers/{number}', 'updateNumber')->name('numbers.update');
+            Route::delete('/numbers/{number}', 'deleteNumber')->name('numbers.delete');
+            Route::get('/settings', 'settings')->name('settings');
+            Route::post('/settings', 'updateSettings')->name('settings.update');
+        });
+
+        // Kiosk Routes
+        Route::prefix('kiosks')->name('kiosks.')->controller(KioskController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/create', 'create')->name('create');
+            Route::post('/', 'store')->name('store');
+            Route::get('/issues', 'issues')->name('issues');
+            Route::get('/analytics', 'analytics')->name('analytics');
+            Route::get('/{kiosk}', 'show')->name('show');
+            Route::get('/{kiosk}/edit', 'edit')->name('edit');
+            Route::put('/{kiosk}', 'update')->name('update');
+            Route::delete('/{kiosk}', 'destroy')->name('destroy');
+            Route::post('/{kiosk}/regenerate-code', 'regenerateCode')->name('regenerate-code');
+            Route::get('/{kiosk}/sessions', 'sessions')->name('sessions');
+            Route::post('/{kiosk}/issues', 'storeIssue')->name('issues.store');
+            Route::post('/issues/{issue}/resolve', 'resolveIssue')->name('issues.resolve');
         });
 
         // GDPR & Data Protection Routes
@@ -1239,7 +1362,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/instant', 'createInstant')->name('instant');
         });
 
-        // Support Chat Routes (Tenant <-> Customer)
+        // Support Chat Routes (Tenant <-> Customer) - Tickets
         Route::prefix('support')->name('support.')->controller(\App\Http\Controllers\Tenant\SupportChatController::class)->group(function () {
             Route::get('/', 'index')->name('index');
             Route::get('/create', 'create')->name('create');
@@ -1249,6 +1372,20 @@ Route::middleware('auth')->group(function () {
             Route::post('/{ticket}/message', 'sendMessage')->name('message');
             Route::put('/{ticket}/status', 'updateStatus')->name('status');
             Route::put('/{ticket}/assign', 'assign')->name('assign');
+        });
+
+        // Live Chat Routes (Real-time Tenant <-> Customer Chat)
+        Route::prefix('live-chat')->name('live-chat.')->controller(\App\Http\Controllers\Tenant\LiveChatController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('/unread-count', 'unreadCount')->name('unread-count');
+            Route::get('/{conversation}', 'show')->name('show');
+            Route::post('/{conversation}/reply', 'reply')->name('reply');
+            Route::post('/{conversation}/read', 'markAsRead')->name('read');
+            Route::post('/{conversation}/typing', 'typing')->name('typing');
+            Route::post('/{conversation}/close', 'close')->name('close');
+            Route::post('/{conversation}/reopen', 'reopen')->name('reopen');
+            Route::post('/{conversation}/assign', 'assign')->name('assign');
+            Route::post('/{conversation}/canned-response', 'cannedResponse')->name('canned-response');
         });
 
         // Valet Storage Routes
@@ -1359,10 +1496,18 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Mobile Application Routes (PWA)
+    | Mobile Application Routes (PWA) - Customer Only
     |--------------------------------------------------------------------------
     */
+    // Mobile Auth Routes (Public)
     Route::prefix('mobile')->name('mobile.')->group(function () {
+        Route::get('/login', [MobileController::class, 'loginPage'])->name('login');
+        Route::post('/login', [MobileController::class, 'login'])->name('login.submit');
+        Route::post('/logout', [MobileController::class, 'logout'])->name('logout');
+    });
+
+    // Mobile Protected Routes (Customer Auth Required)
+    Route::prefix('mobile')->name('mobile.')->middleware('mobile.customer')->group(function () {
         // Dashboard
         Route::get('/', [MobileController::class, 'dashboard'])->name('dashboard');
 
@@ -1389,13 +1534,32 @@ Route::middleware('auth')->group(function () {
         Route::post('/contracts/{contract}/renew', [MobileController::class, 'renewContract'])->name('contracts.renew');
         Route::post('/contracts/{contract}/terminate', [MobileController::class, 'terminateContract'])->name('contracts.terminate');
 
-        // Reserve
-        Route::get('/reserve', [MobileController::class, 'reserve'])->name('reserve');
-        Route::post('/reserve', [MobileController::class, 'storeReservation'])->name('reserve.store');
+        // Reserve (with payment)
+        Route::prefix('reserve')->name('reserve.')->controller(\App\Http\Controllers\Mobile\ReservationPaymentController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/calculate', 'calculateTotal')->name('calculate');
+            Route::post('/payment-intent', 'createPaymentIntent')->name('payment-intent');
+            Route::post('/confirm', 'confirmReservation')->name('confirm');
+            // PayPal
+            Route::post('/paypal/create', 'createPayPalOrder')->name('paypal.create');
+            Route::get('/paypal/success', 'capturePayPalOrder')->name('paypal.success');
+            Route::get('/paypal/cancel', 'paymentCancel')->name('paypal.cancel');
+        });
 
-        // Pay
-        Route::get('/pay', [MobileController::class, 'pay'])->name('pay');
-        Route::post('/pay', [MobileController::class, 'processPayment'])->name('pay.process');
+        // Pay (Stripe + PayPal)
+        Route::prefix('pay')->name('pay.')->controller(\App\Http\Controllers\Mobile\MobilePaymentController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            // Stripe
+            Route::post('/stripe/intent', 'createStripeIntent')->name('stripe.intent');
+            Route::post('/stripe/confirm', 'confirmStripePayment')->name('stripe.confirm');
+            Route::post('/charge-saved', 'chargeSavedCard')->name('charge-saved');
+            // PayPal
+            Route::post('/paypal/create', 'createPayPalOrder')->name('paypal.create');
+            Route::get('/paypal/success', 'capturePayPalOrder')->name('paypal.success');
+            Route::get('/paypal/cancel', 'paymentCancel')->name('paypal.cancel');
+            // Success page
+            Route::get('/success', 'paymentSuccess')->name('success');
+        });
 
         // Access
         Route::get('/access', [MobileController::class, 'access'])->name('access');
@@ -1443,6 +1607,37 @@ Route::middleware('auth')->group(function () {
         Route::get('/insurance', function () {
             return Inertia::render('Mobile/Insurance/Index');
         })->name('insurance');
+
+        // Live Chat (Real-time Customer <-> Tenant)
+        Route::prefix('chat')->name('chat.')->controller(\App\Http\Controllers\Mobile\ChatController::class)->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::post('/', 'store')->name('store');
+            Route::get('/{conversationId}', 'show')->name('show');
+            Route::post('/{conversationId}/messages', 'sendMessage')->name('send');
+            Route::post('/{conversationId}/read', 'markAsRead')->name('read');
+            Route::post('/{conversationId}/typing', 'typing')->name('typing');
+            Route::post('/{conversationId}/close', 'close')->name('close');
+        });
+
+        // Smart Lock / IoT Lock Control
+        Route::get('/smart-lock', function () {
+            return Inertia::render('Mobile/SmartLock/Index');
+        })->name('smart-lock');
+
+        // Share Access
+        Route::get('/share-access', function () {
+            return Inertia::render('Mobile/Share/Index');
+        })->name('share-access');
+
+        // Notifications
+        Route::get('/notifications', function () {
+            return Inertia::render('Mobile/Notifications/Index');
+        })->name('notifications');
+
+        // Help / FAQ
+        Route::get('/help', function () {
+            return Inertia::render('Mobile/Help/Index');
+        })->name('help');
     });
 
     /*
@@ -1726,3 +1921,11 @@ Route::prefix('portal')->name('customer.portal.')->group(function () {
         Route::post('/logout', [\App\Http\Controllers\Customer\PortalController::class, 'logout'])->name('logout');
     });
 });
+
+/*
+|--------------------------------------------------------------------------
+| New Features Routes (Waitlist, Auctions, Reviews)
+|--------------------------------------------------------------------------
+*/
+
+require __DIR__.'/features.php';

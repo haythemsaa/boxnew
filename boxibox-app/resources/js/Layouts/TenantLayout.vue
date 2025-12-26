@@ -244,6 +244,38 @@
                     </SidebarLink>
                 </div>
 
+                <!-- Boutique Section -->
+                <div class="mb-6">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        Boutique
+                    </p>
+                    <SidebarLink
+                        :href="route('tenant.products.index')"
+                        :active="route().current('tenant.products.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <CubeIcon class="h-5 w-5" />
+                        </template>
+                        Produits
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.sales.index')"
+                        :active="route().current('tenant.sales.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-emerald-600/20 to-teal-600/20 border border-emerald-500/30 hover:from-emerald-600/30 hover:to-teal-600/30"
+                    >
+                        <template #icon>
+                            <ShoppingCartIcon class="h-5 w-5 text-emerald-500" />
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Ventes
+                            <span class="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-bold">POS</span>
+                        </span>
+                    </SidebarLink>
+                </div>
+
                 <!-- Finance Section -->
                 <div class="mb-6">
                     <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
@@ -434,6 +466,26 @@
                                 {{ $page.props.unreadMessages }}
                             </span>
                         </template>
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.live-chat.index')"
+                        :active="route().current('tenant.live-chat.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-green-600/20 to-emerald-600/20 border border-green-500/30 hover:from-green-600/30 hover:to-emerald-600/30"
+                    >
+                        <template #icon>
+                            <svg class="h-5 w-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z"/>
+                            </svg>
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Chat en direct
+                            <span class="relative flex h-2 w-2">
+                                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                            </span>
+                        </span>
                     </SidebarLink>
 
                     <SidebarLink
@@ -657,6 +709,64 @@
                             <StarIcon class="h-5 w-5" />
                         </template>
                         Avis clients
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.google-reserve.index')"
+                        :active="route().current('tenant.google-reserve.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-red-600/20 to-yellow-600/20 border border-red-500/30 hover:from-red-600/30 hover:to-yellow-600/30"
+                    >
+                        <template #icon>
+                            <svg class="h-5 w-5 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>
+                            </svg>
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Google Reserve
+                            <span class="text-[10px] bg-gradient-to-r from-red-500 to-yellow-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
+                        </span>
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.marketplaces.index')"
+                        :active="route().current('tenant.marketplaces.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-green-600/20 to-teal-600/20 border border-green-500/30 hover:from-green-600/30 hover:to-teal-600/30"
+                    >
+                        <template #icon>
+                            <GlobeAltIcon class="h-5 w-5 text-green-500" />
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Marketplaces
+                            <span class="text-[10px] bg-gradient-to-r from-green-500 to-teal-500 text-white px-1.5 py-0.5 rounded-full font-bold">+30%</span>
+                        </span>
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.call-tracking.index')"
+                        :active="route().current('tenant.call-tracking.*')"
+                        :collapsed="sidebarCollapsed"
+                    >
+                        <template #icon>
+                            <PhoneIcon class="h-5 w-5" />
+                        </template>
+                        Call Tracking
+                    </SidebarLink>
+
+                    <SidebarLink
+                        :href="route('tenant.kiosks.index')"
+                        :active="route().current('tenant.kiosks.*')"
+                        :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-sky-600/20 to-indigo-600/20 border border-sky-500/30 hover:from-sky-600/30 hover:to-indigo-600/30"
+                    >
+                        <template #icon>
+                            <ComputerDesktopIcon class="h-5 w-5 text-sky-500" />
+                        </template>
+                        <span class="flex items-center gap-2">
+                            Kiosques
+                            <span class="text-[10px] bg-gradient-to-r from-sky-500 to-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">24/7</span>
+                        </span>
                     </SidebarLink>
 
                     <SidebarLink
@@ -954,6 +1064,10 @@
                                         <ReceiptPercentIcon class="h-4 w-4 mr-3 text-purple-500" />
                                         Nouvelle facture
                                     </Link>
+                                    <Link :href="route('tenant.sales.create')" class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                        <ShoppingCartIcon class="h-4 w-4 mr-3 text-teal-500" />
+                                        Nouvelle vente
+                                    </Link>
                                 </div>
                             </transition>
                         </div>
@@ -1020,40 +1134,8 @@
                         </div>
 
                         <!-- Notifications -->
-                        <div class="relative" data-tutorial="notifications">
-                            <button
-                                @click="showNotifications = !showNotifications"
-                                class="relative p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                                aria-label="Notifications"
-                                :aria-expanded="showNotifications"
-                                aria-haspopup="true"
-                            >
-                                <BellIcon class="h-5 w-5" aria-hidden="true" />
-                                <span
-                                    v-if="$page.props.notificationsCount > 0"
-                                    class="absolute top-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white ring-2 ring-white"
-                                    :aria-label="`${$page.props.notificationsCount} nouvelles notifications`"
-                                >
-                                    {{ $page.props.notificationsCount > 9 ? '9+' : $page.props.notificationsCount }}
-                                </span>
-                            </button>
-                            <transition name="dropdown">
-                                <div v-if="showNotifications" class="absolute right-0 mt-2 w-80 rounded-xl bg-white shadow-xl border border-gray-100 z-50">
-                                    <div class="px-4 py-3 border-b border-gray-100">
-                                        <h3 class="text-sm font-semibold text-gray-900">Notifications</h3>
-                                    </div>
-                                    <div class="max-h-96 overflow-y-auto">
-                                        <div class="px-4 py-8 text-center text-gray-500 text-sm">
-                                            Aucune nouvelle notification
-                                        </div>
-                                    </div>
-                                    <div class="px-4 py-3 border-t border-gray-100 bg-gray-50 rounded-b-xl">
-                                        <a href="#" class="text-sm text-primary-600 hover:text-primary-700 font-medium">
-                                            Voir toutes les notifications
-                                        </a>
-                                    </div>
-                                </div>
-                            </transition>
+                        <div data-tutorial="notifications">
+                            <NotificationCenter />
                         </div>
                     </div>
                 </div>
@@ -1150,6 +1232,7 @@ import { ref, onMounted, onUnmounted } from 'vue'
 import { Link } from '@inertiajs/vue3'
 import SidebarLink from '@/Components/SidebarLink.vue'
 import TutorialGuide from '@/Components/Tutorial/TutorialGuide.vue'
+import NotificationCenter from '@/Components/NotificationCenter.vue'
 import { useTutorial } from '@/Composables/useTutorial'
 import { QuestionMarkCircleIcon } from '@heroicons/vue/24/outline'
 import {
@@ -1214,6 +1297,11 @@ import {
     ChartBarSquareIcon,
     PhotoIcon,
     UserCircleIcon,
+    GlobeAltIcon,
+    PhoneIcon,
+    ComputerDesktopIcon,
+    CubeIcon,
+    ShoppingCartIcon,
 } from '@heroicons/vue/24/outline'
 
 defineProps({

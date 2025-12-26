@@ -15,13 +15,14 @@ class MaintenanceTicketHistory extends Model
     protected $fillable = [
         'ticket_id',
         'user_id',
+        'field_changed',
         'old_value',
         'new_value',
     ];
 
     protected $casts = [
-        'old_value' => 'array',
-        'new_value' => 'array',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     public function ticket(): BelongsTo

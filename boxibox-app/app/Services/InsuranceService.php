@@ -294,6 +294,107 @@ class InsuranceService
     }
 
     /**
+     * Auto-enroll insurance for a new contract if site has auto-enrollment enabled.
+     *
+     * @param Contract $contract The newly created contract
+     * @param float|null $declaredValue Optional declared value, will estimate if not provided
+     * @return InsurancePolicy|null The created policy or null if auto-enrollment not enabled
+     */
+    public function autoEnrollInsurance(Contract $contract, ?float $declaredValue = null): ?InsurancePolicy
+    {
+        $site = $contract->site;
+
+        // Check if auto-enrollment is enabled for this site
+        if (!$site || !$site->hasAutoEnrollInsurance()) {
+            return null;
+        }
+
+        // Get the default insurance plan
+        $plan = $site->getAutoEnrollInsurancePlan();
+        if (!$plan || !$plan->is_active) {
+            Log::warning('Auto-enrollment insurance: Default plan not found or inactive', [
+                'site_id' => $site->id,
+                'plan_id' => $site->default_insurance_plan_id,
+            ]);
+            return null;
+        }
+
+        // Check if contract already has insurance
+        if ($this->hasActiveInsurance($contract)) {
+            Log::info('Auto-enrollment insurance: Contract already has active insurance', [
+                'contract_id' => $contract->id,
+            ]);
+            return null;
+        }
+
+        // Estimate value if not provided
+        $boxSize = $contract->box->size_m2 ?? $contract->box->area ?? 5;
+        if (!$declaredValue) {
+            $declaredValue = $this->estimateValue($boxSize);
+
+            // Apply minimum coverage if configured
+            if ($site->insurance_min_coverage && $declaredValue < $site->insurance_min_coverage) {
+                $declaredValue = $site->insurance_min_coverage;
+            }
+        }
+
+        try {
+            $policy = $this->subscribe(
+                $contract,
+                $plan,
+                $declaredValue,
+                $site->insurance_auto_enroll_message ?? 'Assurance souscrite automatiquement',
+                'monthly'
+            );
+
+            Log::info('Auto-enrollment insurance: Policy created', [
+                'contract_id' => $contract->id,
+                'policy_id' => $policy->id,
+                'plan_id' => $plan->id,
+                'premium_monthly' => $policy->premium_monthly,
+            ]);
+
+            return $policy;
+
+        } catch (\Exception $e) {
+            Log::error('Auto-enrollment insurance: Failed to create policy', [
+                'contract_id' => $contract->id,
+                'plan_id' => $plan->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return null;
+        }
+    }
+
+    /**
+     * Check if insurance is required for a site and return validation message.
+     *
+     * @param Site $site The site to check
+     * @return array ['required' => bool, 'plan' => InsurancePlan|null, 'message' => string]
+     */
+    public function checkInsuranceRequirement(\App\Models\Site $site): array
+    {
+        if (!$site->insurance_required) {
+            return [
+                'required' => false,
+                'plan' => null,
+                'message' => 'L\'assurance est optionnelle.',
+            ];
+        }
+
+        $plan = $site->getAutoEnrollInsurancePlan();
+
+        return [
+            'required' => true,
+            'plan' => $plan,
+            'message' => $plan
+                ? 'L\'assurance ' . $plan->name . ' sera souscrite automatiquement.'
+                : 'Une assurance est obligatoire pour ce site.',
+        ];
+    }
+
+    /**
      * Obtenir la police active d'un contrat
      */
     public function getActivePolicy(Contract $contract): ?InsurancePolicy

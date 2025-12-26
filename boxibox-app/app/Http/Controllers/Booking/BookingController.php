@@ -107,11 +107,16 @@ class BookingController extends Controller
 
         $box->load(['site']);
 
-        // Get similar boxes at the same site
+        // Get similar boxes at the same site (based on similar volume range)
+        $volume = $box->volume ?? 0;
+        $minVolume = $volume * 0.5; // 50% smaller
+        $maxVolume = $volume * 1.5; // 50% larger
+
         $similarBoxes = Box::where('site_id', $box->site_id)
             ->where('id', '!=', $box->id)
             ->where('status', 'available')
-            ->where('size_category', $box->size_category)
+            ->whereBetween('volume', [$minVolume, $maxVolume])
+            ->orderByRaw('ABS(volume - ?) ASC', [$volume]) // Order by closest volume
             ->limit(4)
             ->get();
 
@@ -271,8 +276,14 @@ class BookingController extends Controller
         } catch (\Exception $e) {
             DB::rollBack();
 
+            // Log the actual error for debugging
+            \Log::error('Booking error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+                'box_id' => $box->id,
+            ]);
+
             return back()->withInput()
-                ->with('error', 'There was an error processing your booking. Please try again.');
+                ->withErrors(['error' => 'Erreur lors de la réservation: ' . $e->getMessage()]);
         }
     }
 

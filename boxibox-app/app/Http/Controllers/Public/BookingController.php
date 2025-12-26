@@ -12,6 +12,8 @@ use App\Models\Box;
 use App\Models\Site;
 use App\Models\Tenant;
 use App\Services\NotificationService;
+use App\Services\PricingService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
@@ -270,6 +272,46 @@ class BookingController extends Controller
                 'discount_value' => $promo->discount_value,
                 'discount_label' => $promo->discount_label,
                 'calculated_discount' => $discount,
+            ],
+        ]);
+    }
+
+    /**
+     * Calculate pricing with prorata, VAT, discounts
+     * This is the main API for accurate pricing calculation
+     */
+    public function calculatePricing(Request $request, PricingService $pricingService)
+    {
+        $request->validate([
+            'box_id' => 'required|exists:boxes,id',
+            'tenant_id' => 'required|exists:tenants,id',
+            'start_date' => 'required|date',
+            'duration_months' => 'nullable|integer|min:1|max:60',
+            'promo_code' => 'nullable|string',
+            'include_insurance' => 'nullable|boolean',
+        ]);
+
+        $box = Box::findOrFail($request->box_id);
+        $startDate = Carbon::parse($request->start_date);
+        $settings = BookingSettings::getForTenant($request->tenant_id, $box->site_id);
+
+        // Calculate complete pricing
+        $pricing = $pricingService->calculateBookingTotal(
+            box: $box,
+            startDate: $startDate,
+            durationMonths: $request->duration_months,
+            promoCode: $request->promo_code,
+            settings: $settings,
+            includeInsurance: $request->boolean('include_insurance'),
+        );
+
+        return response()->json([
+            'success' => true,
+            'pricing' => $pricing,
+            'box' => [
+                'id' => $box->id,
+                'name' => $box->display_name,
+                'base_price' => $box->current_price,
             ],
         ]);
     }

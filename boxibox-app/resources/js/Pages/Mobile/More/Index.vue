@@ -84,14 +84,14 @@
                         <span class="flex-1 text-gray-900">Reserver un nouveau box</span>
                         <ChevronRightIcon class="w-5 h-5 text-gray-400" />
                     </Link>
-                    <Link
-                        :href="route('calculator.index')"
+                    <a
+                        href="/calculator"
                         class="flex items-center px-4 py-3 hover:bg-gray-50"
                     >
                         <CalculatorIcon class="w-6 h-6 text-blue-500 mr-3" />
                         <span class="flex-1 text-gray-900">Calculateur de taille</span>
                         <ChevronRightIcon class="w-5 h-5 text-gray-400" />
-                    </Link>
+                    </a>
                     <Link
                         :href="route('mobile.insurance')"
                         class="flex items-center px-4 py-3 hover:bg-gray-50"
@@ -151,7 +151,7 @@
                         <ChevronRightIcon class="w-5 h-5 text-gray-400" />
                     </Link>
                     <Link
-                        :href="route('mobile.notifications-settings')"
+                        :href="route('mobile.notifications')"
                         class="flex items-center px-4 py-3 hover:bg-gray-50"
                     >
                         <BellIcon class="w-6 h-6 text-gray-400 mr-3" />
@@ -204,7 +204,7 @@
 
             <!-- Logout -->
             <Link
-                :href="route('logout')"
+                :href="route('mobile.logout')"
                 method="post"
                 as="button"
                 class="w-full bg-white rounded-2xl shadow-sm p-4 flex items-center justify-center text-red-600 font-semibold"

@@ -32,6 +32,12 @@ class Site extends Model
         'gate_api_endpoint',
         'gate_api_key',
         'access_hours',
+        // Insurance auto-enrollment
+        'insurance_auto_enroll',
+        'insurance_required',
+        'default_insurance_plan_id',
+        'insurance_min_coverage',
+        'insurance_auto_enroll_message',
     ];
 
     protected $casts = [
@@ -44,6 +50,10 @@ class Site extends Model
         'self_service_enabled' => 'boolean',
         'access_hours' => 'array',
         'deleted_at' => 'datetime',
+        // Insurance
+        'insurance_auto_enroll' => 'boolean',
+        'insurance_required' => 'boolean',
+        'insurance_min_coverage' => 'decimal:2',
     ];
 
     // Relationships
@@ -70,6 +80,43 @@ class Site extends Model
     public function pricingRules(): HasMany
     {
         return $this->hasMany(PricingRule::class);
+    }
+
+    public function media(): HasMany
+    {
+        return $this->hasMany(SiteMedia::class);
+    }
+
+    public function defaultInsurancePlan(): BelongsTo
+    {
+        return $this->belongsTo(InsurancePlan::class, 'default_insurance_plan_id');
+    }
+
+    public function insurancePlans(): HasMany
+    {
+        return $this->hasMany(InsurancePlan::class)
+            ->orWhereNull('site_id') // Include global plans
+            ->where('is_active', true);
+    }
+
+    /**
+     * Check if insurance auto-enrollment is enabled for this site.
+     */
+    public function hasAutoEnrollInsurance(): bool
+    {
+        return $this->insurance_auto_enroll && $this->default_insurance_plan_id;
+    }
+
+    /**
+     * Get the insurance plan for auto-enrollment.
+     */
+    public function getAutoEnrollInsurancePlan(): ?InsurancePlan
+    {
+        if (!$this->hasAutoEnrollInsurance()) {
+            return null;
+        }
+
+        return $this->defaultInsurancePlan;
     }
 
     // Scopes

@@ -52,6 +52,21 @@ import ModernTable from './Components/Modern/ModernTable.vue';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Boxibox';
 
+// Click outside directive
+const clickOutside = {
+    beforeMount(el, binding) {
+        el.clickOutsideEvent = (event) => {
+            if (!(el === event.target || el.contains(event.target))) {
+                binding.value(event);
+            }
+        };
+        document.addEventListener('click', el.clickOutsideEvent);
+    },
+    unmounted(el) {
+        document.removeEventListener('click', el.clickOutsideEvent);
+    },
+};
+
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,
     resolve: (name) => resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob('./Pages/**/*.vue')),
@@ -85,6 +100,9 @@ createInertiaApp({
         app.component('DynamicForm', DynamicForm);
         app.component('ModernModal', ModernModal);
         app.component('ModernTable', ModernTable);
+
+        // Register global directives
+        app.directive('click-outside', clickOutside);
 
         return app.mount(el);
     },

@@ -268,12 +268,12 @@ const isFormValid = computed(
 
 const saveCustomerSignature = (signatureData) => {
     customerSignatureData.value = signatureData
-    form.customer_signature = signatureData
+    form.customer_signature = signatureData || null
 }
 
 const saveStaffSignature = (signatureData) => {
     staffSignatureData.value = signatureData
-    form.staff_signature = signatureData
+    form.staff_signature = signatureData || null
 }
 
 const submitSignatures = () => {

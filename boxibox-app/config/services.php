@@ -41,6 +41,13 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
     ],
 
+    'paypal' => [
+        'client_id' => env('PAYPAL_CLIENT_ID'),
+        'client_secret' => env('PAYPAL_CLIENT_SECRET'),
+        'mode' => env('PAYPAL_MODE', 'sandbox'), // sandbox or live
+        'webhook_id' => env('PAYPAL_WEBHOOK_ID'),
+    ],
+
     'gocardless' => [
         'access_token' => env('GOCARDLESS_ACCESS_TOKEN'),
         'environment' => env('GOCARDLESS_ENVIRONMENT', 'sandbox'), // sandbox or live

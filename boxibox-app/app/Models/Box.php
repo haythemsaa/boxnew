@@ -96,6 +96,11 @@ class Box extends Model
         return $this->hasOne(PlanElement::class);
     }
 
+    public function smartLock(): HasOne
+    {
+        return $this->hasOne(SmartLock::class);
+    }
+
     // Scopes
     public function scopeAvailable($query)
     {

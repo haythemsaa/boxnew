@@ -17,7 +17,7 @@
         </div>
 
         <!-- Controls -->
-        <div class="mt-4 flex gap-3">
+        <div class="mt-4 flex items-center gap-3">
             <button
                 @click="clearSignature"
                 class="px-4 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-lg transition-colors font-medium text-sm"
@@ -39,17 +39,16 @@
                 Refaire
             </button>
             <div class="flex-1"></div>
-            <button
-                @click="saveSignature"
-                :disabled="isEmpty"
-                class="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors font-medium text-sm disabled:opacity-50"
+            <span
+                v-if="!isEmpty"
+                class="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg text-sm font-medium flex items-center gap-1"
             >
-                ✓ Enregistrer
-            </button>
+                ✓ Capturee
+            </span>
         </div>
 
         <!-- Info -->
-        <p class="mt-2 text-xs text-gray-500">Signez avec votre doigt ou souris</p>
+        <p class="mt-2 text-xs text-gray-500">Signez avec votre doigt ou souris (auto-sauvegarde)</p>
     </div>
 </template>
 
@@ -125,6 +124,11 @@ const stopDrawing = () => {
         isDrawing.value = false
         ctx.value.closePath()
         saveState()
+        // Auto-emit signature after each stroke
+        if (!isEmpty.value) {
+            const signatureData = canvas.value.toDataURL('image/png')
+            emit('signature-saved', signatureData)
+        }
     }
 }
 
@@ -159,12 +163,24 @@ const clearSignature = () => {
     historyStep.value = 0
     history.value = ['']
     saveState()
+    emit('signature-saved', null)
 }
 
 const undoSignature = () => {
     if (canUndo.value) {
         historyStep.value--
         restoreState()
+        // Check if canvas is empty after undo
+        setTimeout(() => {
+            const imageData = ctx.value.getImageData(0, 0, canvas.value.width, canvas.value.height)
+            const hasContent = imageData.data.some((channel, index) => index % 4 === 3 && channel !== 0)
+            isEmpty.value = !hasContent
+            if (hasContent) {
+                emit('signature-saved', canvas.value.toDataURL('image/png'))
+            } else {
+                emit('signature-saved', null)
+            }
+        }, 100)
     }
 }
 
@@ -172,6 +188,10 @@ const redoSignature = () => {
     if (canRedo.value) {
         historyStep.value++
         restoreState()
+        setTimeout(() => {
+            emit('signature-saved', canvas.value.toDataURL('image/png'))
+            isEmpty.value = false
+        }, 100)
     }
 }
 
@@ -189,10 +209,7 @@ const restoreState = () => {
     }
 }
 
-const saveSignature = () => {
-    const signatureData = canvas.value.toDataURL('image/png')
-    emit('signature-saved', signatureData)
-}
+// Signature is auto-saved when user stops drawing - see stopDrawing()
 </script>
 
 <style scoped>

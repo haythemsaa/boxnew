@@ -465,4 +465,216 @@ class IoTController extends Controller
             'sites' => $sites,
         ]);
     }
+
+    /**
+     * List all smart locks
+     */
+    public function locks(Request $request)
+    {
+        $tenant = $request->user()->tenant;
+        $siteId = $request->input('site_id');
+
+        $locks = SmartLock::where('tenant_id', $tenant->id)
+            ->when($siteId, function ($q) use ($siteId) {
+                $q->whereHas('box', fn($b) => $b->where('site_id', $siteId));
+            })
+            ->with(['box', 'box.site'])
+            ->orderBy('device_name')
+            ->paginate(50);
+
+        $sites = Site::where('tenant_id', $tenant->id)
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+        return Inertia::render('Tenant/IoT/Locks/Index', [
+            'locks' => $locks,
+            'sites' => $sites,
+            'filters' => ['site_id' => $siteId],
+        ]);
+    }
+
+    /**
+     * Show form to create a new smart lock
+     */
+    public function createLock(Request $request)
+    {
+        $tenant = $request->user()->tenant;
+
+        $sites = Site::where('tenant_id', $tenant->id)
+            ->select('id', 'name')
+            ->orderBy('name')
+            ->get();
+
+        $boxes = \App\Models\Box::whereIn('site_id', $sites->pluck('id'))
+            ->whereDoesntHave('smartLock')
+            ->select('id', 'site_id', 'number', 'name')
+            ->orderBy('number')
+            ->get()
+            ->map(fn($box) => [
+                'id' => $box->id,
+                'site_id' => $box->site_id,
+                'box_number' => $box->number,
+                'display_name' => $box->name ?? $box->number,
+            ]);
+
+        $providers = [
+            'noke' => 'Noke',
+            'salto' => 'Salto KS',
+            'kisi' => 'Kisi',
+            'pti' => 'PTI',
+            'generic' => 'Generique',
+        ];
+
+        return Inertia::render('Tenant/IoT/Locks/Create', [
+            'sites' => $sites,
+            'boxes' => $boxes,
+            'providers' => $providers,
+        ]);
+    }
+
+    /**
+     * Store a new smart lock
+     */
+    public function storeLock(Request $request)
+    {
+        $validated = $request->validate([
+            'box_id' => 'required|exists:boxes,id',
+            'provider' => 'required|in:noke,salto,kisi,pti,generic',
+            'device_id' => 'required|string|max:100',
+            'device_name' => 'nullable|string|max:100',
+        ]);
+
+        $tenant = $request->user()->tenant;
+
+        // Verify box belongs to tenant
+        $box = \App\Models\Box::findOrFail($validated['box_id']);
+        $site = Site::findOrFail($box->site_id);
+        if ($site->tenant_id !== $tenant->id) {
+            abort(403);
+        }
+
+        SmartLock::create([
+            'tenant_id' => $tenant->id,
+            'box_id' => $validated['box_id'],
+            'provider' => $validated['provider'],
+            'device_id' => $validated['device_id'],
+            'device_name' => $validated['device_name'] ?? 'Serrure ' . $box->box_number,
+            'status' => 'active',
+            'battery_level' => 100,
+            'last_seen_at' => now(),
+        ]);
+
+        return redirect()->route('tenant.iot.locks.index')
+            ->with('success', 'Serrure ajoutee avec succes');
+    }
+
+    /**
+     * Show smart lock details
+     */
+    public function showLock(SmartLock $lock)
+    {
+        $tenant = request()->user()->tenant;
+        if ($lock->tenant_id !== $tenant->id) {
+            abort(403);
+        }
+
+        $lock->load('box', 'box.site');
+
+        // Get access logs for this lock
+        $accessLogs = AccessLog::where('smart_lock_id', $lock->id)
+            ->with('customer')
+            ->orderBy('accessed_at', 'desc')
+            ->limit(50)
+            ->get()
+            ->map(fn($log) => [
+                'id' => $log->id,
+                'action' => $log->action,
+                'status' => $log->status,
+                'accessed_at' => $log->accessed_at?->toIso8601String(),
+                'customer' => $log->customer ? [
+                    'id' => $log->customer->id,
+                    'name' => $log->customer->full_name,
+                ] : null,
+            ]);
+
+        $providers = [
+            'noke' => 'Noke',
+            'salto' => 'Salto KS',
+            'kisi' => 'Kisi',
+            'pti' => 'PTI',
+            'generic' => 'Generique',
+        ];
+
+        return Inertia::render('Tenant/IoT/Locks/Show', [
+            'lock' => $lock,
+            'accessLogs' => $accessLogs,
+            'providers' => $providers,
+        ]);
+    }
+
+    /**
+     * Show form to edit a smart lock
+     */
+    public function editLock(SmartLock $lock)
+    {
+        $tenant = request()->user()->tenant;
+        if ($lock->tenant_id !== $tenant->id) {
+            abort(403);
+        }
+
+        $lock->load('box', 'box.site');
+
+        $providers = [
+            'noke' => 'Noke',
+            'salto' => 'Salto KS',
+            'kisi' => 'Kisi',
+            'pti' => 'PTI',
+            'generic' => 'Generique',
+        ];
+
+        return Inertia::render('Tenant/IoT/Locks/Edit', [
+            'lock' => $lock,
+            'providers' => $providers,
+        ]);
+    }
+
+    /**
+     * Update a smart lock
+     */
+    public function updateLock(Request $request, SmartLock $lock)
+    {
+        $tenant = $request->user()->tenant;
+        if ($lock->tenant_id !== $tenant->id) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'provider' => 'required|in:noke,salto,kisi,pti,generic',
+            'device_id' => 'required|string|max:100',
+            'device_name' => 'nullable|string|max:100',
+            'status' => 'in:active,inactive,offline',
+        ]);
+
+        $lock->update($validated);
+
+        return redirect()->route('tenant.iot.locks.index')
+            ->with('success', 'Serrure mise a jour');
+    }
+
+    /**
+     * Delete a smart lock
+     */
+    public function destroyLock(SmartLock $lock)
+    {
+        $tenant = request()->user()->tenant;
+        if ($lock->tenant_id !== $tenant->id) {
+            abort(403);
+        }
+
+        $lock->delete();
+
+        return redirect()->route('tenant.iot.locks.index')
+            ->with('success', 'Serrure supprimee');
+    }
 }

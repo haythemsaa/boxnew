@@ -9,6 +9,8 @@ class BookingSettings extends Model
 {
     protected $table = 'booking_settings';
 
+    protected $appends = ['booking_url'];
+
     protected $fillable = [
         'tenant_id',
         'site_id',

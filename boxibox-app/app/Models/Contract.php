@@ -118,6 +118,21 @@ class Contract extends Model
         return $this->hasMany(InsurancePolicy::class);
     }
 
+    public function addons(): HasMany
+    {
+        return $this->hasMany(ContractAddon::class);
+    }
+
+    public function activeAddons(): HasMany
+    {
+        return $this->hasMany(ContractAddon::class)->where('status', 'active');
+    }
+
+    public function productSales(): HasMany
+    {
+        return $this->hasMany(ProductSale::class);
+    }
+
     // Scopes
     public function scopeActive($query)
     {
@@ -198,5 +213,17 @@ class Contract extends Model
         }
 
         return max(0, $price);
+    }
+
+    public function getMonthlyAddonsTotal(): float
+    {
+        return $this->activeAddons()
+            ->where('billing_period', 'monthly')
+            ->sum(\DB::raw('quantity * unit_price'));
+    }
+
+    public function getTotalMonthlyPrice(): float
+    {
+        return $this->calculateFinalPrice() + $this->getMonthlyAddonsTotal();
     }
 }

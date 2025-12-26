@@ -241,8 +241,7 @@ const sendMessage = () => {
 }
 
 const openChat = () => {
-    // Open chat widget
-    alert('Chat en direct - Fonctionnalite a venir')
+    router.visit(route('mobile.chat.index'))
 }
 
 const formatDate = (date) => {

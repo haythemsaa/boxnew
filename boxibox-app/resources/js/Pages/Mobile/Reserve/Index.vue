@@ -1,15 +1,16 @@
 <template>
     <MobileLayout title="Reserver un Box">
         <!-- Step Indicator -->
-        <div class="flex items-center justify-between mb-6 px-4">
+        <div class="flex items-center justify-between mb-6 px-2">
             <div v-for="(stepInfo, index) in steps" :key="index" class="flex items-center">
                 <div
                     class="w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm"
                     :class="step >= index + 1 ? 'bg-primary-600 text-white' : 'bg-gray-200 text-gray-500'"
                 >
-                    {{ index + 1 }}
+                    <CheckIcon v-if="step > index + 1" class="w-4 h-4" />
+                    <span v-else>{{ index + 1 }}</span>
                 </div>
-                <div v-if="index < steps.length - 1" class="w-8 h-0.5 mx-1" :class="step > index + 1 ? 'bg-primary-600' : 'bg-gray-200'"></div>
+                <div v-if="index < steps.length - 1" class="w-6 h-0.5 mx-0.5" :class="step > index + 1 ? 'bg-primary-600' : 'bg-gray-200'"></div>
             </div>
         </div>
 
@@ -17,7 +18,6 @@
         <div v-if="step === 1">
             <h2 class="text-xl font-bold text-gray-900 mb-4">Choisir un site</h2>
 
-            <!-- Search -->
             <div class="relative mb-4">
                 <MagnifyingGlassIcon class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
@@ -28,7 +28,6 @@
                 />
             </div>
 
-            <!-- Sites List -->
             <div class="space-y-3">
                 <button
                     v-for="site in filteredSites"
@@ -51,16 +50,10 @@
                             </div>
                         </div>
                         <div class="text-right">
-                            <p class="text-sm font-medium text-green-600">{{ site.available_boxes }} dispo</p>
-                            <p class="text-xs text-gray-400">Des {{ site.min_price }}€/mois</p>
+                            <p class="text-sm font-medium text-green-600">{{ site.boxes?.length || 0 }} dispo</p>
                         </div>
                     </div>
                 </button>
-            </div>
-
-            <div v-if="filteredSites.length === 0" class="text-center py-12">
-                <MapPinIcon class="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                <p class="text-gray-500">Aucun site trouve</p>
             </div>
         </div>
 
@@ -69,21 +62,6 @@
             <h2 class="text-xl font-bold text-gray-900 mb-2">Choisir un box</h2>
             <p class="text-gray-500 mb-4">Site: {{ selectedSite?.name }}</p>
 
-            <!-- Calculator Link -->
-            <Link
-                :href="route('calculator.index')"
-                class="block bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white mb-4"
-            >
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h4 class="font-semibold">Pas sur de la taille ?</h4>
-                        <p class="text-sm text-blue-100">Utilisez notre calculateur</p>
-                    </div>
-                    <CalculatorIcon class="w-8 h-8 text-white/80" />
-                </div>
-            </Link>
-
-            <!-- Filter by size -->
             <div class="flex space-x-2 mb-4 overflow-x-auto pb-2">
                 <button
                     v-for="size in sizeFilters"
@@ -98,7 +76,6 @@
                 </button>
             </div>
 
-            <!-- Available Boxes -->
             <div class="space-y-3">
                 <button
                     v-for="box in filteredBoxes"
@@ -110,32 +87,13 @@
                     <div class="p-4">
                         <div class="flex items-start justify-between">
                             <div>
-                                <h3 class="font-bold text-gray-900">{{ box.name }}</h3>
-                                <p class="text-sm text-gray-500">{{ box.dimensions }}</p>
+                                <h3 class="font-bold text-gray-900">Box {{ box.number }}</h3>
+                                <p class="text-sm text-gray-500">{{ box.volume }} m³</p>
                             </div>
                             <div class="text-right">
-                                <p class="text-xl font-bold text-primary-600">{{ box.price }}€</p>
+                                <p class="text-xl font-bold text-primary-600">{{ box.monthly_price }}€</p>
                                 <p class="text-xs text-gray-400">/mois</p>
                             </div>
-                        </div>
-
-                        <div class="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                            <div class="flex items-center space-x-4">
-                                <div class="text-center">
-                                    <p class="text-xs text-gray-400">Surface</p>
-                                    <p class="font-semibold text-gray-900">{{ box.area }} m²</p>
-                                </div>
-                                <div class="text-center">
-                                    <p class="text-xs text-gray-400">Volume</p>
-                                    <p class="font-semibold text-gray-900">{{ box.volume }} m³</p>
-                                </div>
-                            </div>
-                            <span
-                                v-if="box.promo"
-                                class="px-2 py-1 bg-red-100 text-red-600 text-xs font-medium rounded-full"
-                            >
-                                -{{ box.promo }}%
-                            </span>
                         </div>
                     </div>
                 </button>
@@ -149,120 +107,158 @@
 
         <!-- Step 3: Select Dates -->
         <div v-if="step === 3">
-            <h2 class="text-xl font-bold text-gray-900 mb-2">Dates de location</h2>
-            <p class="text-gray-500 mb-4">Box: {{ selectedBox?.name }}</p>
+            <h2 class="text-xl font-bold text-gray-900 mb-2">Date de debut</h2>
+            <p class="text-gray-500 mb-4">Box {{ selectedBox?.number }}</p>
 
             <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
                 <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Date de debut</label>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date d'entree</label>
                     <input
                         type="date"
                         v-model="startDate"
                         :min="minStartDate"
-                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                        class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500"
                     />
                 </div>
+            </div>
 
-                <div class="mb-4">
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Duree du contrat</label>
-                    <div class="grid grid-cols-3 gap-2">
-                        <button
-                            v-for="duration in durations"
-                            :key="duration.months"
-                            @click="selectedDuration = duration.months"
-                            :class="[
-                                'py-3 rounded-xl text-center font-medium transition',
-                                selectedDuration === duration.months
-                                    ? 'bg-primary-600 text-white'
-                                    : 'bg-gray-100 text-gray-700'
-                            ]"
-                        >
-                            {{ duration.label }}
-                        </button>
-                    </div>
-                </div>
+            <!-- Options -->
+            <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
+                <h3 class="font-semibold text-gray-900 mb-3">Options</h3>
 
-                <div class="bg-gray-50 rounded-xl p-4">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-gray-500">Date de fin</span>
-                        <span class="font-medium text-gray-900">{{ computedEndDate }}</span>
+                <label class="flex items-center justify-between py-3 border-b border-gray-100">
+                    <div>
+                        <p class="font-medium text-gray-900">Depot de garantie</p>
+                        <p class="text-sm text-gray-500">2 mois de loyer ({{ selectedBox?.monthly_price * 2 }}€)</p>
                     </div>
-                    <div class="flex justify-between items-center">
-                        <span class="text-gray-500">Prix total</span>
-                        <span class="font-bold text-primary-600">{{ computedTotalPrice }}€</span>
+                    <input
+                        type="checkbox"
+                        v-model="includeDeposit"
+                        class="w-5 h-5 rounded border-gray-300 text-primary-600"
+                    />
+                </label>
+
+                <label class="flex items-center justify-between py-3">
+                    <div>
+                        <p class="font-medium text-gray-900">Assurance</p>
+                        <p class="text-sm text-gray-500">Protection du contenu (15€/mois)</p>
                     </div>
-                </div>
+                    <input
+                        type="checkbox"
+                        v-model="includeInsurance"
+                        class="w-5 h-5 rounded border-gray-300 text-primary-600"
+                    />
+                </label>
             </div>
         </div>
 
-        <!-- Step 4: Confirmation -->
+        <!-- Step 4: Confirmation & Summary -->
         <div v-if="step === 4">
-            <h2 class="text-xl font-bold text-gray-900 mb-4">Confirmation</h2>
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Recapitulatif</h2>
 
-            <!-- Summary -->
             <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
-                <h3 class="font-semibold text-gray-900 mb-3">Recapitulatif</h3>
-
                 <div class="space-y-3">
-                    <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                    <div class="flex justify-between py-2 border-b border-gray-100">
                         <span class="text-gray-500">Site</span>
                         <span class="font-medium text-gray-900">{{ selectedSite?.name }}</span>
                     </div>
-                    <div class="flex items-center justify-between py-2 border-b border-gray-100">
+                    <div class="flex justify-between py-2 border-b border-gray-100">
                         <span class="text-gray-500">Box</span>
-                        <span class="font-medium text-gray-900">{{ selectedBox?.name }} ({{ selectedBox?.area }} m²)</span>
+                        <span class="font-medium text-gray-900">{{ selectedBox?.number }} ({{ selectedBox?.volume }} m³)</span>
                     </div>
-                    <div class="flex items-center justify-between py-2 border-b border-gray-100">
-                        <span class="text-gray-500">Debut</span>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-gray-500">Date de debut</span>
                         <span class="font-medium text-gray-900">{{ formatDate(startDate) }}</span>
                     </div>
-                    <div class="flex items-center justify-between py-2 border-b border-gray-100">
-                        <span class="text-gray-500">Fin</span>
-                        <span class="font-medium text-gray-900">{{ computedEndDate }}</span>
-                    </div>
-                    <div class="flex items-center justify-between py-2 border-b border-gray-100">
-                        <span class="text-gray-500">Duree</span>
-                        <span class="font-medium text-gray-900">{{ selectedDuration }} mois</span>
-                    </div>
                 </div>
             </div>
 
-            <!-- Pricing -->
             <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
-                <h3 class="font-semibold text-gray-900 mb-3">Tarification</h3>
-
+                <h3 class="font-semibold text-gray-900 mb-3">A payer maintenant</h3>
                 <div class="space-y-2">
                     <div class="flex justify-between">
-                        <span class="text-gray-500">Prix mensuel</span>
-                        <span class="text-gray-900">{{ selectedBox?.price }}€</span>
+                        <span class="text-gray-500">1er mois de location</span>
+                        <span class="text-gray-900">{{ selectedBox?.monthly_price }}€</span>
                     </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-500">x {{ selectedDuration }} mois</span>
-                        <span class="text-gray-900">{{ computedTotalPrice }}€</span>
-                    </div>
-                    <div v-if="selectedBox?.deposit" class="flex justify-between">
+                    <div v-if="includeDeposit" class="flex justify-between">
                         <span class="text-gray-500">Depot de garantie</span>
-                        <span class="text-gray-900">{{ selectedBox.deposit }}€</span>
+                        <span class="text-gray-900">{{ selectedBox?.monthly_price * 2 }}€</span>
+                    </div>
+                    <div v-if="includeInsurance" class="flex justify-between">
+                        <span class="text-gray-500">Assurance</span>
+                        <span class="text-gray-900">15€</span>
                     </div>
                     <div class="flex justify-between pt-3 border-t border-gray-200">
-                        <span class="font-semibold text-gray-900">Premier paiement</span>
-                        <span class="font-bold text-primary-600 text-lg">{{ firstPayment }}€</span>
+                        <span class="font-bold text-gray-900">Total</span>
+                        <span class="font-bold text-primary-600 text-xl">{{ totalAmount }}€</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Terms -->
-            <div class="bg-white rounded-xl shadow-sm p-4 mb-4">
-                <label class="flex items-start">
-                    <input
-                        type="checkbox"
-                        v-model="acceptTerms"
-                        class="mt-1 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span class="ml-3 text-sm text-gray-600">
-                        J'accepte les <a href="#" class="text-primary-600">conditions generales</a> et la <a href="#" class="text-primary-600">politique de confidentialite</a>
-                    </span>
+            <label class="flex items-start bg-white rounded-xl shadow-sm p-4 mb-4">
+                <input
+                    type="checkbox"
+                    v-model="acceptTerms"
+                    class="mt-1 rounded border-gray-300 text-primary-600"
+                />
+                <span class="ml-3 text-sm text-gray-600">
+                    J'accepte les <a href="#" class="text-primary-600">conditions generales</a>
+                </span>
+            </label>
+        </div>
+
+        <!-- Step 5: Payment -->
+        <div v-if="step === 5">
+            <h2 class="text-xl font-bold text-gray-900 mb-2">Paiement</h2>
+            <p class="text-gray-500 mb-4">Montant: <span class="font-bold text-primary-600">{{ totalAmount }}€</span></p>
+
+            <!-- Payment Method Selection -->
+            <div class="space-y-3 mb-6">
+                <label
+                    class="flex items-center bg-white rounded-xl shadow-sm p-4 cursor-pointer"
+                    :class="paymentMethod === 'card' ? 'ring-2 ring-primary-500' : ''"
+                >
+                    <input type="radio" value="card" v-model="paymentMethod" class="w-5 h-5 text-primary-600" />
+                    <div class="ml-3 flex items-center">
+                        <CreditCardIcon class="w-6 h-6 text-blue-500 mr-2" />
+                        <span class="font-medium">Carte bancaire</span>
+                    </div>
                 </label>
+
+                <label
+                    class="flex items-center bg-white rounded-xl shadow-sm p-4 cursor-pointer"
+                    :class="paymentMethod === 'paypal' ? 'ring-2 ring-primary-500' : ''"
+                >
+                    <input type="radio" value="paypal" v-model="paymentMethod" class="w-5 h-5 text-primary-600" />
+                    <div class="ml-3 flex items-center">
+                        <div class="w-6 h-6 mr-2 text-[#003087]">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.076 21.337H2.47a.641.641 0 0 1-.633-.74L4.944 3.72a.77.77 0 0 1 .757-.632h6.927c2.3 0 4.145.562 5.342 1.593 1.133.97 1.605 2.419 1.363 4.188-.262 1.932-1.047 3.485-2.335 4.62-1.307 1.152-3.02 1.74-5.096 1.74h-2.21a.77.77 0 0 0-.758.632l-.87 5.476z"/></svg>
+                        </div>
+                        <span class="font-medium">PayPal</span>
+                    </div>
+                </label>
+            </div>
+
+            <!-- Stripe Card Element -->
+            <div v-if="paymentMethod === 'card'" class="bg-white rounded-xl shadow-sm p-4 mb-4">
+                <StripeCardElement
+                    v-if="stripeKey"
+                    ref="stripeCardRef"
+                    :stripe-key="stripeKey"
+                    @ready="stripeReady = true"
+                    @change="onCardChange"
+                    @complete="cardComplete = true"
+                />
+            </div>
+
+            <!-- PayPal Info -->
+            <div v-if="paymentMethod === 'paypal'" class="bg-blue-50 rounded-xl p-4 mb-4">
+                <p class="text-sm text-blue-700">Vous serez redirige vers PayPal pour finaliser le paiement.</p>
+            </div>
+
+            <!-- Error -->
+            <div v-if="errorMessage" class="bg-red-50 text-red-700 rounded-xl p-4 mb-4">
+                {{ errorMessage }}
             </div>
         </div>
 
@@ -277,34 +273,49 @@
             </button>
             <button
                 @click="nextStep"
-                :disabled="!canProceed"
-                class="flex-1 py-3.5 bg-primary-600 text-white font-semibold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                :disabled="!canProceed || processing"
+                class="flex-1 py-3.5 bg-primary-600 text-white font-semibold rounded-xl disabled:opacity-50 flex items-center justify-center"
             >
-                {{ step === 4 ? 'Confirmer la reservation' : 'Continuer' }}
+                <span v-if="processing" class="flex items-center">
+                    <svg class="animate-spin -ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    Traitement...
+                </span>
+                <span v-else>
+                    {{ step === 5 ? (paymentMethod === 'paypal' ? 'Payer avec PayPal' : 'Payer ' + totalAmount + '€') : (step === 4 ? 'Passer au paiement' : 'Continuer') }}
+                </span>
             </button>
         </div>
+
+        <div class="h-32"></div>
     </MobileLayout>
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
-import { Link, router } from '@inertiajs/vue3'
+import { router } from '@inertiajs/vue3'
+import axios from 'axios'
 import MobileLayout from '@/Layouts/MobileLayout.vue'
+import StripeCardElement from '@/Components/Payment/StripeCardElement.vue'
 import {
     MagnifyingGlassIcon,
     MapPinIcon,
     BuildingOfficeIcon,
     CubeIcon,
-    CalculatorIcon,
+    CheckIcon,
+    CreditCardIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
     sites: Array,
-    boxes: Array,
+    customer: Object,
+    stripeKey: String,
 })
 
 const step = ref(1)
-const steps = ['Site', 'Box', 'Dates', 'Confirmation']
+const steps = ['Site', 'Box', 'Options', 'Resume', 'Paiement']
 
 // Step 1
 const siteSearch = ref('')
@@ -316,122 +327,153 @@ const selectedBox = ref(null)
 
 // Step 3
 const startDate = ref(new Date().toISOString().split('T')[0])
-const selectedDuration = ref(1)
+const includeDeposit = ref(true)
+const includeInsurance = ref(false)
 
 // Step 4
 const acceptTerms = ref(false)
 
+// Step 5
+const paymentMethod = ref('card')
+const stripeCardRef = ref(null)
+const stripeReady = ref(false)
+const cardComplete = ref(false)
+const processing = ref(false)
+const errorMessage = ref(null)
+
 const sizeFilters = [
     { value: 'all', label: 'Tous' },
-    { value: 'small', label: '1-3 m²' },
-    { value: 'medium', label: '4-8 m²' },
-    { value: 'large', label: '9-15 m²' },
-    { value: 'xlarge', label: '15+ m²' },
+    { value: 'small', label: '1-5 m³' },
+    { value: 'medium', label: '5-15 m³' },
+    { value: 'large', label: '15+ m³' },
 ]
 
-const durations = [
-    { months: 1, label: '1 mois' },
-    { months: 3, label: '3 mois' },
-    { months: 6, label: '6 mois' },
-    { months: 12, label: '12 mois' },
-]
-
-const minStartDate = computed(() => {
-    return new Date().toISOString().split('T')[0]
-})
+const minStartDate = computed(() => new Date().toISOString().split('T')[0])
 
 const filteredSites = computed(() => {
     if (!siteSearch.value) return props.sites || []
     const query = siteSearch.value.toLowerCase()
     return (props.sites || []).filter(s =>
-        s.name.toLowerCase().includes(query) ||
-        s.city.toLowerCase().includes(query)
+        s.name?.toLowerCase().includes(query) ||
+        s.city?.toLowerCase().includes(query)
     )
 })
 
 const filteredBoxes = computed(() => {
-    let boxes = (props.boxes || []).filter(b => b.site_id === selectedSite.value?.id && b.status === 'available')
+    if (!selectedSite.value?.boxes) return []
+    let boxes = selectedSite.value.boxes.filter(b => b.status === 'available')
 
     if (selectedSize.value !== 'all') {
         boxes = boxes.filter(b => {
-            const area = b.area
+            const vol = b.volume
             switch (selectedSize.value) {
-                case 'small': return area >= 1 && area <= 3
-                case 'medium': return area >= 4 && area <= 8
-                case 'large': return area >= 9 && area <= 15
-                case 'xlarge': return area > 15
+                case 'small': return vol >= 1 && vol < 5
+                case 'medium': return vol >= 5 && vol < 15
+                case 'large': return vol >= 15
                 default: return true
             }
         })
     }
-
     return boxes
 })
 
-const computedEndDate = computed(() => {
-    if (!startDate.value) return '-'
-    const date = new Date(startDate.value)
-    date.setMonth(date.getMonth() + selectedDuration.value)
-    return formatDate(date)
-})
-
-const computedTotalPrice = computed(() => {
+const totalAmount = computed(() => {
     if (!selectedBox.value) return 0
-    return selectedBox.value.price * selectedDuration.value
-})
-
-const firstPayment = computed(() => {
-    if (!selectedBox.value) return 0
-    return selectedBox.value.price + (selectedBox.value.deposit || 0)
+    let total = selectedBox.value.monthly_price
+    if (includeDeposit.value) total += selectedBox.value.monthly_price * 2
+    if (includeInsurance.value) total += 15
+    return total
 })
 
 const canProceed = computed(() => {
     switch (step.value) {
         case 1: return selectedSite.value !== null
         case 2: return selectedBox.value !== null
-        case 3: return startDate.value && selectedDuration.value
+        case 3: return startDate.value
         case 4: return acceptTerms.value
+        case 5:
+            if (paymentMethod.value === 'card') return stripeReady.value && cardComplete.value
+            return true
         default: return false
     }
 })
 
 const formatDate = (date) => {
     if (!date) return '-'
-    const d = typeof date === 'string' ? new Date(date) : date
-    return d.toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-    })
+    return new Date(date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-const selectSite = (site) => {
-    selectedSite.value = site
-}
+const selectSite = (site) => { selectedSite.value = site }
+const selectBox = (box) => { selectedBox.value = box }
 
-const selectBox = (box) => {
-    selectedBox.value = box
-}
+const onCardChange = (data) => { cardComplete.value = data.complete }
 
-const previousStep = () => {
-    if (step.value > 1) step.value--
-}
+const previousStep = () => { if (step.value > 1) step.value-- }
 
-const nextStep = () => {
-    if (step.value < 4) {
+const nextStep = async () => {
+    if (step.value < 5) {
         step.value++
     } else {
-        submitReservation()
+        await processPayment()
     }
 }
 
-const submitReservation = () => {
-    router.post(route('mobile.reserve.store'), {
-        site_id: selectedSite.value.id,
+const processPayment = async () => {
+    processing.value = true
+    errorMessage.value = null
+
+    try {
+        if (paymentMethod.value === 'paypal') {
+            await processPayPal()
+        } else {
+            await processStripe()
+        }
+    } catch (error) {
+        errorMessage.value = error.message || 'Erreur de paiement'
+        processing.value = false
+    }
+}
+
+const processStripe = async () => {
+    // Create payment intent
+    const intentResponse = await axios.post(route('mobile.reserve.payment-intent'), {
         box_id: selectedBox.value.id,
         start_date: startDate.value,
-        duration_months: selectedDuration.value,
-        accept_terms: acceptTerms.value,
+        include_deposit: includeDeposit.value,
+        include_insurance: includeInsurance.value,
     })
+
+    const { clientSecret, reservationToken } = intentResponse.data
+
+    // Confirm payment
+    const stripeCard = stripeCardRef.value
+    const paymentIntent = await stripeCard.confirmPayment(clientSecret)
+
+    // Confirm reservation
+    const confirmResponse = await axios.post(route('mobile.reserve.confirm'), {
+        payment_intent_id: paymentIntent.id,
+        reservation_token: reservationToken,
+    })
+
+    if (confirmResponse.data.success) {
+        router.visit(confirmResponse.data.redirect)
+    } else {
+        throw new Error(confirmResponse.data.error)
+    }
+}
+
+const processPayPal = async () => {
+    const response = await axios.post(route('mobile.reserve.paypal.create'), {
+        box_id: selectedBox.value.id,
+        start_date: startDate.value,
+        include_deposit: includeDeposit.value,
+        include_insurance: includeInsurance.value,
+    })
+
+    if (response.data.approvalUrl) {
+        window.location.href = response.data.approvalUrl
+    } else {
+        throw new Error('Erreur PayPal')
+    }
 }
 </script>
