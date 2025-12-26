@@ -181,9 +181,10 @@ class SupportChatController extends Controller
     public function assign(Request $request, SupportTicket $ticket)
     {
         $this->authorize('update', $ticket);
+        $tenantId = $request->user()->tenant_id;
 
         $validated = $request->validate([
-            'assigned_to' => 'nullable|exists:users,id',
+            'assigned_to' => ['nullable', 'exists:users,id', new \App\Rules\SameTenantUser($tenantId)],
         ]);
 
         $ticket->update(['assigned_to' => $validated['assigned_to']]);
@@ -207,8 +208,10 @@ class SupportChatController extends Controller
      */
     public function store(Request $request)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
+            'customer_id' => ['required', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
             'subject' => 'required|string|max:255',
             'description' => 'required|string|max:5000',
             'category' => 'required|in:' . implode(',', array_keys(SupportTicket::CATEGORIES)),

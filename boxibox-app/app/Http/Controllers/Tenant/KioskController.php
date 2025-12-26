@@ -76,9 +76,11 @@ class KioskController extends Controller
 
     public function store(Request $request)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'location_description' => 'nullable|string|max:255',
             'language' => 'in:fr,en,nl,de',
             'allow_new_rentals' => 'boolean',
@@ -92,8 +94,6 @@ class KioskController extends Controller
             'idle_timeout_seconds' => 'integer|min:30|max:600',
             'enable_screensaver' => 'boolean',
         ]);
-
-        $tenantId = $request->user()->tenant_id;
         $kiosk = $this->service->createKiosk($tenantId, $validated);
 
         return redirect()->route('tenant.kiosks.show', $kiosk)
@@ -112,9 +112,11 @@ class KioskController extends Controller
 
     public function update(Request $request, KioskDevice $kiosk)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
             'name' => 'required|string|max:100',
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'location_description' => 'nullable|string|max:255',
             'is_active' => 'boolean',
             'language' => 'in:fr,en,nl,de',

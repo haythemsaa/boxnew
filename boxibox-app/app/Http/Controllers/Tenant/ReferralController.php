@@ -150,7 +150,7 @@ class ReferralController extends Controller
         $tenantId = auth()->user()->tenant_id;
 
         $validated = $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
+            'customer_id' => ['nullable', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
             'name' => 'nullable|string|max:100',
             'code' => 'nullable|string|max:20|unique:referral_codes,code',
             'max_uses' => 'nullable|integer|min:1',

@@ -361,9 +361,11 @@ class BookingManagementController extends Controller
      */
     public function createWidget(Request $request)
     {
+        $tenantId = $this->getTenantId();
+
         $request->validate([
             'name' => 'required|string|max:255',
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'widget_type' => 'required|in:full,compact,button,inline',
             'allowed_domains' => 'nullable|array',
         ]);
@@ -529,13 +531,15 @@ class BookingManagementController extends Controller
      */
     public function createPromoCode(Request $request)
     {
+        $tenantId = $this->getTenantId();
+
         $request->validate([
             'code' => 'required|string|max:50|unique:booking_promo_codes,code',
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:500',
             'discount_type' => 'required|in:percentage,fixed,free_months',
             'discount_value' => 'required|numeric|min:0',
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'min_rental_amount' => 'nullable|numeric|min:0',
             'min_rental_months' => 'nullable|integer|min:1',
             'max_uses' => 'nullable|integer|min:1',

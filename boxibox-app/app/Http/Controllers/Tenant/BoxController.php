@@ -106,9 +106,11 @@ class BoxController extends Controller
      */
     public function planSave(Request $request): RedirectResponse
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
             'boxes' => 'required|array',
-            'boxes.*.id' => 'required|exists:boxes,id',
+            'boxes.*.id' => ['required', 'exists:boxes,id', new \App\Rules\SameTenantResource(\App\Models\Box::class, $tenantId)],
             'boxes.*.position' => 'required|array',
             'boxes.*.position.x' => 'nullable|numeric',
             'boxes.*.position.y' => 'nullable|numeric',
@@ -117,9 +119,10 @@ class BoxController extends Controller
             'elements' => 'nullable|array',
         ]);
 
-        // Update positions for each box
+        // Update positions for each box (already validated for tenant ownership)
         foreach ($validated['boxes'] as $boxData) {
             Box::where('id', $boxData['id'])
+                ->where('tenant_id', $tenantId)
                 ->update(['position' => $boxData['position']]);
         }
 

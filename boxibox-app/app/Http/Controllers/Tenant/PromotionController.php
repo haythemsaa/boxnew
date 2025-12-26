@@ -267,7 +267,9 @@ class PromotionController extends Controller
      */
     public function updatePromoCode(Request $request, BookingPromoCode $promoCode): RedirectResponse
     {
-        if ($promoCode->tenant_id !== Auth::user()->tenant_id) {
+        $tenantId = Auth::user()->tenant_id;
+
+        if ($promoCode->tenant_id !== $tenantId) {
             abort(403);
         }
 
@@ -276,7 +278,7 @@ class PromotionController extends Controller
             'description' => 'nullable|string|max:500',
             'discount_type' => 'required|in:percentage,fixed,free_months',
             'discount_value' => 'required|numeric|min:0',
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'valid_from' => 'nullable|date',
             'valid_until' => 'nullable|date|after_or_equal:valid_from',
             'max_uses' => 'nullable|integer|min:1',
@@ -394,13 +396,13 @@ class PromotionController extends Controller
      */
     public function applyCode(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
             'code' => 'required|string',
-            'booking_id' => 'nullable|exists:bookings,id',
-            'contract_id' => 'nullable|exists:contracts,id',
+            'booking_id' => ['nullable', 'exists:bookings,id', new \App\Rules\SameTenantResource(\App\Models\Booking::class, $tenantId)],
+            'contract_id' => ['nullable', 'exists:contracts,id', new \App\Rules\SameTenantResource(\App\Models\Contract::class, $tenantId)],
         ]);
-
-        $tenantId = Auth::user()->tenant_id;
 
         // Find the target
         if (!empty($validated['booking_id'])) {

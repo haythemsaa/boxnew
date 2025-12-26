@@ -79,10 +79,12 @@ class MarketplaceController extends Controller
 
     public function updateLeadStatus(Request $request, MarketplaceLead $lead)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
             'status' => 'required|in:new,contacted,qualified,tour_scheduled,converted,lost,duplicate',
             'lost_reason' => 'nullable|string|max:500',
-            'converted_contract_id' => 'nullable|exists:contracts,id',
+            'converted_contract_id' => ['nullable', 'exists:contracts,id', new \App\Rules\SameTenantResource(\App\Models\Contract::class, $tenantId)],
             'converted_value' => 'nullable|numeric|min:0',
         ]);
 

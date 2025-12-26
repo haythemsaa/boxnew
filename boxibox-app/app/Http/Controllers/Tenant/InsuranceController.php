@@ -72,10 +72,12 @@ class InsuranceController extends Controller
      */
     public function subscribe(Request $request)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'contract_id' => 'required|exists:contracts,id',
-            'plan_id' => 'required|exists:insurance_plans,id',
+            'customer_id' => ['required', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
+            'contract_id' => ['required', 'exists:contracts,id', new \App\Rules\SameTenantResource(\App\Models\Contract::class, $tenantId)],
+            'plan_id' => ['required', 'exists:insurance_plans,id', new \App\Rules\SameTenantResource(\App\Models\InsurancePlan::class, $tenantId)],
             'start_date' => 'required|date',
         ]);
 

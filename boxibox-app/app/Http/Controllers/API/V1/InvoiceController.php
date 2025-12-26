@@ -82,12 +82,35 @@ class InvoiceController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     * SECURITY: Validates that referenced customer/contract belong to the same tenant.
      */
     public function store(Request $request): JsonResponse
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => ['required', 'exists:customers,id'],
-            'contract_id' => ['nullable', 'exists:contracts,id'],
+            'customer_id' => [
+                'required',
+                'exists:customers,id',
+                function ($attribute, $value, $fail) use ($tenantId) {
+                    $customer = Customer::find($value);
+                    if (!$customer || $customer->tenant_id !== $tenantId) {
+                        $fail('The selected customer does not belong to your organization.');
+                    }
+                },
+            ],
+            'contract_id' => [
+                'nullable',
+                'exists:contracts,id',
+                function ($attribute, $value, $fail) use ($tenantId) {
+                    if ($value) {
+                        $contract = Contract::find($value);
+                        if (!$contract || $contract->tenant_id !== $tenantId) {
+                            $fail('The selected contract does not belong to your organization.');
+                        }
+                    }
+                },
+            ],
             'invoice_date' => ['required', 'date'],
             'due_date' => ['required', 'date', 'after_or_equal:invoice_date'],
             'status' => ['required', 'in:draft,sent,paid,overdue,cancelled'],
@@ -147,17 +170,40 @@ class InvoiceController extends Controller
 
     /**
      * Update the specified resource in storage.
+     * SECURITY: Validates that referenced customer/contract belong to the same tenant.
      */
     public function update(Request $request, Invoice $invoice): InvoiceResource
     {
+        $tenantId = $request->user()->tenant_id;
+
         // Ensure tenant can only update their own invoices
-        if ($invoice->tenant_id !== $request->user()->tenant_id) {
+        if ($invoice->tenant_id !== $tenantId) {
             abort(403);
         }
 
         $validated = $request->validate([
-            'customer_id' => ['sometimes', 'exists:customers,id'],
-            'contract_id' => ['nullable', 'exists:contracts,id'],
+            'customer_id' => [
+                'sometimes',
+                'exists:customers,id',
+                function ($attribute, $value, $fail) use ($tenantId) {
+                    $customer = Customer::find($value);
+                    if (!$customer || $customer->tenant_id !== $tenantId) {
+                        $fail('The selected customer does not belong to your organization.');
+                    }
+                },
+            ],
+            'contract_id' => [
+                'nullable',
+                'exists:contracts,id',
+                function ($attribute, $value, $fail) use ($tenantId) {
+                    if ($value) {
+                        $contract = Contract::find($value);
+                        if (!$contract || $contract->tenant_id !== $tenantId) {
+                            $fail('The selected contract does not belong to your organization.');
+                        }
+                    }
+                },
+            ],
             'invoice_date' => ['sometimes', 'date'],
             'due_date' => ['sometimes', 'date'],
             'status' => ['sometimes', 'in:draft,sent,paid,overdue,cancelled'],

@@ -79,9 +79,11 @@ class SepaMandateController extends Controller
      */
     public function store(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'contract_id' => 'nullable|exists:contracts,id',
+            'customer_id' => ['required', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
+            'contract_id' => ['nullable', 'exists:contracts,id', new \App\Rules\SameTenantResource(\App\Models\Contract::class, $tenantId)],
             'ics' => 'required|string|max:35',
             'type' => 'required|in:recurrent,one_time',
             'iban' => 'required|string|max:34',

@@ -63,10 +63,12 @@ class ContractController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => ['required', 'exists:customers,id'],
-            'site_id' => ['required', 'exists:sites,id'],
-            'box_id' => ['required', 'exists:boxes,id'],
+            'customer_id' => ['required', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
+            'box_id' => ['required', 'exists:boxes,id', new \App\Rules\SameTenantResource(\App\Models\Box::class, $tenantId)],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after:start_date'],
             'monthly_price' => ['required', 'numeric', 'min:0'],
@@ -122,10 +124,12 @@ class ContractController extends Controller
             abort(403);
         }
 
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => ['sometimes', 'exists:customers,id'],
-            'site_id' => ['sometimes', 'exists:sites,id'],
-            'box_id' => ['sometimes', 'exists:boxes,id'],
+            'customer_id' => ['sometimes', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
+            'site_id' => ['sometimes', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
+            'box_id' => ['sometimes', 'exists:boxes,id', new \App\Rules\SameTenantResource(\App\Models\Box::class, $tenantId)],
             'status' => ['sometimes', 'in:draft,active,expired,cancelled'],
             'start_date' => ['sometimes', 'date'],
             'end_date' => ['nullable', 'date'],

@@ -65,9 +65,11 @@ class WaitlistController extends Controller
      */
     public function store(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
-            'box_id' => 'nullable|exists:boxes,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
+            'box_id' => ['nullable', 'exists:boxes,id', new \App\Rules\SameTenantResource(\App\Models\Box::class, $tenantId)],
             'customer_email' => 'required|email',
             'customer_first_name' => 'required|string|max:255',
             'customer_last_name' => 'required|string|max:255',

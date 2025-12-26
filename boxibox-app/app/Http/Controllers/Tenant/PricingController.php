@@ -68,12 +68,12 @@ class PricingController extends Controller
      */
     public function applyRecommendation(Request $request)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $request->validate([
             'action' => 'required|string',
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
         ]);
-
-        $tenantId = $request->user()->tenant_id;
         $siteId = $request->input('site_id');
         $action = $request->input('action');
 
@@ -149,11 +149,13 @@ class PricingController extends Controller
      */
     public function storeStrategy(Request $request)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'strategy_type' => 'required|in:occupancy,seasonal,duration,promotion',
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'rules' => 'required|array',
             'min_discount_percentage' => 'required|numeric|min:0|max:100',
             'max_discount_percentage' => 'required|numeric|min:0|max:100',

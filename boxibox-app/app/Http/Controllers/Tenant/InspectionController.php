@@ -111,16 +111,16 @@ class InspectionController extends Controller
 
     public function store(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
-            'schedule_id' => 'nullable|exists:inspection_schedules,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
+            'schedule_id' => ['nullable', 'exists:inspection_schedules,id', new \App\Rules\SameTenantResource(\App\Models\InspectionSchedule::class, $tenantId)],
             'type' => 'required|string',
             'inspection_date' => 'nullable|date',
             'checklist_template' => 'nullable|array',
             'findings' => 'nullable|string',
         ]);
-
-        $tenantId = Auth::user()->tenant_id;
 
         $inspection = Inspection::create([
             'tenant_id' => $tenantId,
@@ -251,16 +251,16 @@ class InspectionController extends Controller
 
     public function storeSchedule(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'name' => 'required|string|max:255',
             'type' => 'required|string',
             'frequency' => 'required|in:daily,weekly,monthly,quarterly,annually',
             'checklist_template' => 'nullable|array',
-            'assigned_to' => 'nullable|exists:users,id',
+            'assigned_to' => ['nullable', 'exists:users,id', new \App\Rules\SameTenantUser($tenantId)],
         ]);
-
-        $tenantId = Auth::user()->tenant_id;
 
         InspectionSchedule::create([
             'tenant_id' => $tenantId,
@@ -303,12 +303,12 @@ class InspectionController extends Controller
 
     public function startPatrol(Request $request)
     {
-        $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
-            'schedule_id' => 'nullable|exists:patrol_schedules,id',
-        ]);
-
         $tenantId = Auth::user()->tenant_id;
+
+        $validated = $request->validate([
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
+            'schedule_id' => ['nullable', 'exists:patrol_schedules,id', new \App\Rules\SameTenantResource(\App\Models\PatrolSchedule::class, $tenantId)],
+        ]);
 
         $patrol = Patrol::create([
             'tenant_id' => $tenantId,

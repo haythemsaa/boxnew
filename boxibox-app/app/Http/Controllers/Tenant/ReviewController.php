@@ -180,14 +180,14 @@ class ReviewController extends Controller
 
     public function sendRequest(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'contract_id' => 'nullable|exists:contracts,id',
+            'customer_id' => ['required', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
+            'contract_id' => ['nullable', 'exists:contracts,id', new \App\Rules\SameTenantResource(\App\Models\Contract::class, $tenantId)],
             'type' => 'required|in:satisfaction,nps,google',
             'channel' => 'required|in:email,sms',
         ]);
-
-        $tenantId = Auth::user()->tenant_id;
 
         $reviewRequest = ReviewRequest::create([
             'tenant_id' => $tenantId,

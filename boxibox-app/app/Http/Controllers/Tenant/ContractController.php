@@ -14,6 +14,7 @@ use App\Services\InsuranceService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -172,6 +173,7 @@ class ContractController extends Controller
 
     /**
      * Store a newly created contract in storage.
+     * SECURITY: Uses DB transaction with lock to prevent race conditions on box reservation.
      */
     public function store(StoreContractRequest $request): RedirectResponse
     {
@@ -184,28 +186,56 @@ class ContractController extends Controller
         }
 
         // Set staff_user_id to current user if signed by staff
-        if ($data['signed_by_staff'] && empty($data['staff_user_id'])) {
+        if (!empty($data['signed_by_staff']) && empty($data['staff_user_id'])) {
             $data['staff_user_id'] = $request->user()->id;
         }
 
         // Set customer_signed_at if signed by customer
-        if ($data['signed_by_customer'] && empty($data['customer_signed_at'])) {
+        if (!empty($data['signed_by_customer']) && empty($data['customer_signed_at'])) {
             $data['customer_signed_at'] = now();
         }
 
-        $contract = Contract::create($data);
+        // Use transaction with lock to prevent race condition on box reservation
+        $result = DB::transaction(function () use ($data) {
+            // Lock the box to prevent concurrent reservations
+            $box = Box::lockForUpdate()->find($data['box_id']);
 
-        // Update box status if contract is active
-        if ($contract->status === 'active') {
-            $contract->box->update(['status' => 'occupied']);
+            if (!$box) {
+                return ['error' => 'Box not found.'];
+            }
+
+            // Verify box is still available (race condition protection)
+            if ($box->status !== 'available') {
+                return ['error' => 'Cette box n\'est plus disponible. Elle a été réservée par un autre utilisateur.'];
+            }
+
+            // Create contract
+            $contract = Contract::create($data);
+
+            // Update box status if contract is active
+            if ($contract->status === 'active') {
+                $box->update(['status' => 'occupied']);
+
+                // Only increment customer contracts for active contracts (bug fix)
+                if ($contract->customer) {
+                    $contract->customer->increment('total_contracts');
+                }
+            }
+
+            return ['contract' => $contract];
+        });
+
+        // Check for errors
+        if (isset($result['error'])) {
+            return redirect()
+                ->back()
+                ->withInput()
+                ->with('error', $result['error']);
         }
 
-        // Update customer statistics
-        if ($contract->customer) {
-            $contract->customer->increment('total_contracts');
-        }
+        $contract = $result['contract'];
 
-        // Auto-enroll insurance if enabled for the site
+        // Auto-enroll insurance if enabled for the site (outside transaction for performance)
         $insuranceService = app(InsuranceService::class);
         $insurancePolicy = $insuranceService->autoEnrollInsurance($contract);
 

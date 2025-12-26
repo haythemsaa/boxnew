@@ -67,15 +67,15 @@ class GdprController extends Controller
 
     public function storeRequest(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
+            'customer_id' => ['nullable', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
             'requester_name' => 'required|string|max:255',
             'requester_email' => 'required|email',
             'type' => 'required|string',
             'description' => 'nullable|string',
         ]);
-
-        $tenantId = Auth::user()->tenant_id;
 
         // Deadline: 30 jours pour les demandes RGPD
         $deadline = now()->addDays(30);
@@ -267,13 +267,13 @@ class GdprController extends Controller
 
     public function recordConsent(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
+            'customer_id' => ['required', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
             'consent_type' => 'required|string',
             'version' => 'nullable|string',
         ]);
-
-        $tenantId = Auth::user()->tenant_id;
 
         // Retirer le consentement existant si présent
         GdprConsent::where('tenant_id', $tenantId)

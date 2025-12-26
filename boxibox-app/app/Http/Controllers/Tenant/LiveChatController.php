@@ -333,13 +333,23 @@ class LiveChatController extends Controller
 
     /**
      * Assign conversation to an agent
+     * SECURITY: Validates that the agent belongs to the same tenant.
      */
     public function assign(Request $request, int $id): JsonResponse
     {
         $tenantId = $request->user()->tenant_id;
 
         $validated = $request->validate([
-            'agent_id' => 'required|exists:users,id',
+            'agent_id' => [
+                'required',
+                'exists:users,id',
+                function ($attribute, $value, $fail) use ($tenantId) {
+                    $user = \App\Models\User::find($value);
+                    if (!$user || $user->tenant_id !== $tenantId) {
+                        $fail('L\'agent sélectionné n\'appartient pas à votre organisation.');
+                    }
+                },
+            ],
         ]);
 
         $conversation = ChatConversation::where('id', $id)

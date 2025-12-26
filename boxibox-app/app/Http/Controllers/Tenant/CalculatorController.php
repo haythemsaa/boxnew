@@ -190,9 +190,11 @@ class CalculatorController extends Controller
 
     public function storeWidget(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'style_config' => 'nullable|array',
             'categories_enabled' => 'nullable|array',
             'show_prices' => 'boolean',
@@ -223,9 +225,11 @@ class CalculatorController extends Controller
 
     public function updateWidget(Request $request, CalculatorWidget $widget)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'style_config' => 'nullable|array',
             'categories_enabled' => 'nullable|array',
             'show_prices' => 'boolean',

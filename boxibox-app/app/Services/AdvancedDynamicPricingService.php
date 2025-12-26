@@ -402,7 +402,8 @@ class AdvancedDynamicPricingService
         $rentedCount = $history->where('was_rented', true)->count();
         $totalCount = $history->count();
 
-        $conversionRate = $rentedCount / $totalCount;
+        // Protect against division by zero
+        $conversionRate = $totalCount > 0 ? $rentedCount / $totalCount : 0;
 
         // If conversion rate is low, suggest lower prices
         if ($conversionRate < 0.20) {
@@ -777,7 +778,9 @@ class AdvancedDynamicPricingService
             return 0.30; // Default 30% conversion
         }
 
-        return $history->where('was_rented', true)->count() / $history->count();
+        // Protect against division by zero
+        $totalCount = $history->count();
+        return $totalCount > 0 ? $history->where('was_rented', true)->count() / $totalCount : 0.30;
     }
 
     /**

@@ -35,6 +35,12 @@ class BookingApiKey extends Model
         'api_secret',
     ];
 
+    /**
+     * Store the plain secret temporarily for returning to user on creation.
+     * This is NOT persisted - only available immediately after creation.
+     */
+    protected ?string $plainSecret = null;
+
     protected static function boot()
     {
         parent::boot();
@@ -44,9 +50,21 @@ class BookingApiKey extends Model
                 $apiKey->api_key = 'bk_' . Str::random(32);
             }
             if (empty($apiKey->api_secret)) {
-                $apiKey->api_secret = hash('sha256', Str::random(64));
+                // Generate and store plain secret for one-time display
+                $plainSecret = Str::random(64);
+                $apiKey->plainSecret = $plainSecret;
+                // Hash before storing (SECURITY)
+                $apiKey->api_secret = hash('sha256', $plainSecret);
             }
         });
+    }
+
+    /**
+     * Get the plain secret (only available once, immediately after creation).
+     */
+    public function getPlainSecret(): ?string
+    {
+        return $this->plainSecret;
     }
 
     // Relationships
@@ -82,11 +100,15 @@ class BookingApiKey extends Model
         ]);
     }
 
+    /**
+     * Regenerate the secret and return the new plain secret.
+     * SECURITY: The secret is hashed before storing.
+     */
     public function regenerateSecret(): string
     {
-        $newSecret = hash('sha256', Str::random(64));
-        $this->update(['api_secret' => $newSecret]);
-        return $newSecret;
+        $plainSecret = Str::random(64);
+        $this->update(['api_secret' => hash('sha256', $plainSecret)]);
+        return $plainSecret; // Return plain secret for one-time display to user
     }
 
     // Scopes
@@ -102,14 +124,32 @@ class BookingApiKey extends Model
             ->first();
     }
 
+    /**
+     * Validate API credentials.
+     * SECURITY: Uses hash_equals to prevent timing attacks.
+     */
     public static function validateCredentials(string $apiKey, string $apiSecret): ?self
     {
         $key = static::findByApiKey($apiKey);
 
-        if (!$key || $key->api_secret !== $apiSecret) {
+        if (!$key) {
+            return null;
+        }
+
+        // Hash the provided secret and compare with stored hash
+        $hashedSecret = hash('sha256', $apiSecret);
+        if (!hash_equals($key->api_secret, $hashedSecret)) {
             return null;
         }
 
         return $key;
+    }
+
+    /**
+     * Verify a provided secret against the stored hash.
+     */
+    public function verifySecret(string $secret): bool
+    {
+        return hash_equals($this->api_secret, hash('sha256', $secret));
     }
 }

@@ -122,8 +122,8 @@ class LeadController extends Controller
             'company' => 'nullable|string|max:255',
             'type' => 'nullable|in:individual,company',
             'source' => 'nullable|in:website,phone,referral,walk-in,google_ads,facebook',
-            'site_id' => 'nullable|exists:sites,id',
-            'assigned_to' => 'nullable|exists:users,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class)],
+            'assigned_to' => ['nullable', 'exists:users,id', new \App\Rules\SameTenantUser()],
             'box_type_interest' => 'nullable|string',
             'budget_min' => 'nullable|numeric',
             'budget_max' => 'nullable|numeric',
@@ -155,7 +155,7 @@ class LeadController extends Controller
             'email' => 'sometimes|email|unique:leads,email,' . $lead->id,
             'phone' => 'nullable|string|max:20',
             'status' => 'sometimes|in:new,contacted,qualified,converted,lost',
-            'assigned_to' => 'nullable|exists:users,id',
+            'assigned_to' => ['nullable', 'exists:users,id', new \App\Rules\SameTenantUser()],
             'notes' => 'nullable|string',
         ]);
 
@@ -299,9 +299,9 @@ class LeadController extends Controller
 
         $validated = $request->validate([
             'lead_ids' => 'required|array',
-            'lead_ids.*' => 'exists:leads,id',
+            'lead_ids.*' => ['exists:leads,id', new \App\Rules\SameTenantResource(\App\Models\Lead::class)],
             'status' => 'nullable|in:new,contacted,qualified,negotiation,converted,lost',
-            'assigned_to' => 'nullable|exists:users,id',
+            'assigned_to' => ['nullable', 'exists:users,id', new \App\Rules\SameTenantUser()],
             'priority' => 'nullable|in:cold,lukewarm,warm,hot,very_hot',
         ]);
 

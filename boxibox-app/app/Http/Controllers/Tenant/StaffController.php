@@ -119,14 +119,14 @@ class StaffController extends Controller
             $userId = $user->id;
         } else {
             $request->validate([
-                'user_id' => 'required|exists:users,id|unique:staff_profiles,user_id',
+                'user_id' => ['required', 'exists:users,id', 'unique:staff_profiles,user_id', new \App\Rules\SameTenantUser($tenantId)],
             ]);
             $userId = $request->user_id;
         }
 
         // Validate staff profile fields
         $validated = $request->validate([
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'position' => 'required|string|max:255',
             'department' => 'nullable|string|max:255',
             'employee_number' => 'nullable|string|max:50',
@@ -201,9 +201,10 @@ class StaffController extends Controller
     public function update(Request $request, StaffProfile $staff)
     {
         $this->authorize('update', $staff);
+        $tenantId = Auth::user()->tenant_id;
 
         $validated = $request->validate([
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'position' => 'required|string|max:255',
             'department' => 'nullable|string|max:255',
             'contract_type' => 'required|in:full_time,part_time,contractor,intern',
@@ -253,8 +254,8 @@ class StaffController extends Controller
         $tenantId = Auth::user()->tenant_id;
 
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'site_id' => 'required|exists:sites,id',
+            'user_id' => ['required', 'exists:users,id', new \App\Rules\SameTenantUser($tenantId)],
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'shift_date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
@@ -279,8 +280,10 @@ class StaffController extends Controller
 
     public function updateShift(Request $request, StaffShift $shift)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i|after:start_time',
             'type' => 'nullable|in:regular,overtime,on_call,training,meeting',
@@ -337,9 +340,11 @@ class StaffController extends Controller
 
     public function storeTask(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
-            'site_id' => 'nullable|exists:sites,id',
+            'user_id' => ['required', 'exists:users,id', new \App\Rules\SameTenantUser($tenantId)],
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'priority' => 'required|in:low,medium,high,urgent',
@@ -349,7 +354,7 @@ class StaffController extends Controller
         ]);
 
         StaffTask::create([
-            'tenant_id' => Auth::user()->tenant_id,
+            'tenant_id' => $tenantId,
             'assigned_to' => $validated['user_id'],
             'assigned_by' => Auth::id(),
             'site_id' => $validated['site_id'] ?? null,

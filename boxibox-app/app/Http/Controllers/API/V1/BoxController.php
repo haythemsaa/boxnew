@@ -229,8 +229,10 @@ class BoxController extends Controller
             abort(403);
         }
 
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => ['sometimes', 'exists:sites,id'],
+            'site_id' => ['sometimes', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'name' => ['sometimes', 'string', 'max:255'],
             'code' => ['nullable', 'string', 'max:50'],
             'floor' => ['nullable', 'string', 'max:50'],

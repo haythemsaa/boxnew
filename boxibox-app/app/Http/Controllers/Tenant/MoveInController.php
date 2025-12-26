@@ -135,8 +135,8 @@ class MoveInController extends Controller
         $tenantId = $request->user()->tenant_id;
 
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
-            'box_id' => 'nullable|exists:boxes,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
+            'box_id' => ['nullable', 'exists:boxes,id', new \App\Rules\SameTenantResource(\App\Models\Box::class, $tenantId)],
             'email' => 'required|email',
             'phone' => 'nullable|string|max:20',
             'first_name' => 'nullable|string|max:100',

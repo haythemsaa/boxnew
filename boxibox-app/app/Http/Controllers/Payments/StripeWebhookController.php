@@ -8,29 +8,60 @@ use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Log;
+use Stripe\Webhook;
+use Stripe\Exception\SignatureVerificationException;
 
 class StripeWebhookController extends Controller
 {
     /**
      * Handle incoming Stripe webhook events.
+     * SECURITY: Validates Stripe signature before processing.
      */
     public function handle(Request $request): Response
     {
-        $event = $request->json()->all();
-        $eventType = $event['type'] ?? null;
+        // Verify Stripe webhook signature (CRITICAL for security)
+        $webhookSecret = config('services.stripe.webhook_secret');
+        $payload = $request->getContent();
+        $sigHeader = $request->header('Stripe-Signature');
 
-        Log::info('Stripe webhook received', [
+        if (!$webhookSecret) {
+            Log::error('Stripe webhook secret not configured');
+            return response()->json(['error' => 'Webhook not configured'], 500);
+        }
+
+        if (!$sigHeader) {
+            Log::warning('Stripe webhook missing signature header');
+            return response()->json(['error' => 'Missing signature'], 400);
+        }
+
+        try {
+            $event = Webhook::constructEvent($payload, $sigHeader, $webhookSecret);
+        } catch (SignatureVerificationException $e) {
+            Log::warning('Stripe webhook signature verification failed', [
+                'error' => $e->getMessage(),
+                'ip' => $request->ip(),
+            ]);
+            return response()->json(['error' => 'Invalid signature'], 400);
+        } catch (\Exception $e) {
+            Log::error('Stripe webhook parsing failed', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Invalid payload'], 400);
+        }
+
+        $eventType = $event->type;
+        $eventData = $event->data->object->toArray();
+
+        Log::info('Stripe webhook verified', [
             'event_type' => $eventType,
-            'event_id' => $event['id'] ?? null,
+            'event_id' => $event->id,
         ]);
 
         match ($eventType) {
-            'payment_intent.succeeded' => $this->handlePaymentIntentSucceeded($event),
-            'payment_intent.payment_failed' => $this->handlePaymentIntentFailed($event),
-            'invoice.paid' => $this->handleInvoicePaid($event),
-            'invoice.payment_failed' => $this->handleInvoicePaymentFailed($event),
-            'customer.subscription.updated' => $this->handleSubscriptionUpdated($event),
-            'customer.subscription.deleted' => $this->handleSubscriptionDeleted($event),
+            'payment_intent.succeeded' => $this->handlePaymentIntentSucceeded($eventData),
+            'payment_intent.payment_failed' => $this->handlePaymentIntentFailed($eventData),
+            'invoice.paid' => $this->handleInvoicePaid($eventData),
+            'invoice.payment_failed' => $this->handleInvoicePaymentFailed($eventData),
+            'customer.subscription.updated' => $this->handleSubscriptionUpdated($eventData),
+            'customer.subscription.deleted' => $this->handleSubscriptionDeleted($eventData),
             default => Log::info('Unhandled Stripe webhook event', ['type' => $eventType]),
         };
 
@@ -40,9 +71,8 @@ class StripeWebhookController extends Controller
     /**
      * Handle payment intent succeeded.
      */
-    protected function handlePaymentIntentSucceeded(array $event): void
+    protected function handlePaymentIntentSucceeded(array $data): void
     {
-        $data = $event['data']['object'] ?? [];
         $invoiceId = $data['metadata']['invoice_id'] ?? null;
 
         if (!$invoiceId) {
@@ -91,9 +121,8 @@ class StripeWebhookController extends Controller
     /**
      * Handle payment intent failed.
      */
-    protected function handlePaymentIntentFailed(array $event): void
+    protected function handlePaymentIntentFailed(array $data): void
     {
-        $data = $event['data']['object'] ?? [];
         $invoiceId = $data['metadata']['invoice_id'] ?? null;
 
         if (!$invoiceId) {
@@ -117,10 +146,9 @@ class StripeWebhookController extends Controller
     /**
      * Handle invoice paid.
      */
-    protected function handleInvoicePaid(array $event): void
+    protected function handleInvoicePaid(array $data): void
     {
-        $data = $event['data']['object'] ?? [];
-        $amount = $data['amount_paid'] / 100; // Convert from cents
+        $amount = ($data['amount_paid'] ?? 0) / 100; // Convert from cents
 
         Log::info('Stripe invoice paid', [
             'stripe_invoice_id' => $data['id'],
@@ -133,12 +161,10 @@ class StripeWebhookController extends Controller
     /**
      * Handle invoice payment failed.
      */
-    protected function handleInvoicePaymentFailed(array $event): void
+    protected function handleInvoicePaymentFailed(array $data): void
     {
-        $data = $event['data']['object'] ?? [];
-
         Log::warning('Stripe invoice payment failed', [
-            'stripe_invoice_id' => $data['id'],
+            'stripe_invoice_id' => $data['id'] ?? 'unknown',
             'error' => $data['last_finalization_error']['message'] ?? 'Unknown error',
         ]);
 
@@ -148,13 +174,11 @@ class StripeWebhookController extends Controller
     /**
      * Handle subscription updated.
      */
-    protected function handleSubscriptionUpdated(array $event): void
+    protected function handleSubscriptionUpdated(array $data): void
     {
-        $data = $event['data']['object'] ?? [];
-
         Log::info('Stripe subscription updated', [
-            'subscription_id' => $data['id'],
-            'status' => $data['status'],
+            'subscription_id' => $data['id'] ?? 'unknown',
+            'status' => $data['status'] ?? 'unknown',
         ]);
 
         // Update subscription status in database if needed
@@ -163,12 +187,10 @@ class StripeWebhookController extends Controller
     /**
      * Handle subscription deleted.
      */
-    protected function handleSubscriptionDeleted(array $event): void
+    protected function handleSubscriptionDeleted(array $data): void
     {
-        $data = $event['data']['object'] ?? [];
-
         Log::info('Stripe subscription deleted', [
-            'subscription_id' => $data['id'],
+            'subscription_id' => $data['id'] ?? 'unknown',
         ]);
 
         // Update subscription status in database if needed

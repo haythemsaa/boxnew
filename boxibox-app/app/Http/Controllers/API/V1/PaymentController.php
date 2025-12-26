@@ -87,9 +87,11 @@ class PaymentController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => ['required', 'exists:customers,id'],
-            'invoice_id' => ['nullable', 'exists:invoices,id'],
+            'customer_id' => ['required', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
+            'invoice_id' => ['nullable', 'exists:invoices,id', new \App\Rules\SameTenantResource(\App\Models\Invoice::class, $tenantId)],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'method' => ['required', 'in:bank_transfer,credit_card,direct_debit,cash,check'],
             'status' => ['required', 'in:pending,completed,failed,refunded'],
@@ -156,9 +158,11 @@ class PaymentController extends Controller
             abort(403);
         }
 
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => ['sometimes', 'exists:customers,id'],
-            'invoice_id' => ['nullable', 'exists:invoices,id'],
+            'customer_id' => ['sometimes', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
+            'invoice_id' => ['nullable', 'exists:invoices,id', new \App\Rules\SameTenantResource(\App\Models\Invoice::class, $tenantId)],
             'amount' => ['sometimes', 'numeric', 'min:0.01'],
             'method' => ['sometimes', 'in:bank_transfer,credit_card,direct_debit,cash,check'],
             'status' => ['sometimes', 'in:pending,completed,failed,refunded'],

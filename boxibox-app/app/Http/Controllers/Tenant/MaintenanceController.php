@@ -78,21 +78,21 @@ class MaintenanceController extends Controller
 
     public function store(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
-            'box_id' => 'nullable|exists:boxes,id',
-            'customer_id' => 'nullable|exists:customers,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
+            'box_id' => ['nullable', 'exists:boxes,id', new \App\Rules\SameTenantResource(\App\Models\Box::class, $tenantId)],
+            'customer_id' => ['nullable', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'type' => 'required|in:repair,cleaning,inspection,installation,other',
             'priority' => 'required|in:low,medium,high,urgent',
-            'assigned_to' => 'nullable|exists:users,id',
+            'assigned_to' => ['nullable', 'exists:users,id', new \App\Rules\SameTenantUser($tenantId)],
             'scheduled_date' => 'nullable|date',
             'estimated_cost' => 'nullable|numeric|min:0',
             'estimated_hours' => 'nullable|integer|min:0',
         ]);
-
-        $tenantId = Auth::user()->tenant_id;
         $validated['tenant_id'] = $tenantId;
         $validated['created_by'] = Auth::id();
         $validated['ticket_number'] = MaintenanceTicket::generateTicketNumber();
@@ -150,16 +150,17 @@ class MaintenanceController extends Controller
     public function update(Request $request, MaintenanceTicket $maintenance)
     {
         $this->authorize('update', $maintenance);
+        $tenantId = Auth::user()->tenant_id;
 
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
-            'box_id' => 'nullable|exists:boxes,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
+            'box_id' => ['nullable', 'exists:boxes,id', new \App\Rules\SameTenantResource(\App\Models\Box::class, $tenantId)],
             'title' => 'required|string|max:255',
             'description' => 'required|string',
             'type' => 'required|in:repair,cleaning,inspection,installation,other',
             'priority' => 'required|in:low,medium,high,urgent',
             'status' => 'required|in:open,in_progress,pending_parts,completed,cancelled',
-            'assigned_to' => 'nullable|exists:users,id',
+            'assigned_to' => ['nullable', 'exists:users,id', new \App\Rules\SameTenantUser($tenantId)],
             'scheduled_date' => 'nullable|date',
             'estimated_cost' => 'nullable|numeric|min:0',
             'actual_cost' => 'nullable|numeric|min:0',

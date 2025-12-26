@@ -9,6 +9,7 @@ use App\Services\StripePaymentService;
 use App\Services\SecurityAuditService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -50,6 +51,7 @@ class StripePaymentController extends Controller
 
     /**
      * Confirm payment after Stripe processes it.
+     * SECURITY: Uses DB transaction with lock to prevent race conditions.
      */
     public function confirm(Request $request, Invoice $invoice): RedirectResponse
     {
@@ -74,16 +76,31 @@ class StripePaymentController extends Controller
                 ->withErrors(['stripe' => 'Payment verification failed. Please try again.']);
         }
 
-        // Create payment record if not already created by webhook
-        $existingPayment = Payment::where('stripe_payment_intent_id', $request->payment_intent_id)
-            ->where('invoice_id', $invoice->id)
-            ->first();
+        // Use transaction with lock to prevent double payments (race condition)
+        $paymentCreated = DB::transaction(function () use ($request, $invoice, $paymentResult) {
+            // Lock the invoice row to prevent concurrent updates
+            $lockedInvoice = Invoice::lockForUpdate()->find($invoice->id);
 
-        if (!$existingPayment) {
+            if (!$lockedInvoice) {
+                return false;
+            }
+
+            // Check for existing payment with pessimistic locking
+            $existingPayment = Payment::where('stripe_payment_intent_id', $request->payment_intent_id)
+                ->where('invoice_id', $invoice->id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($existingPayment) {
+                // Payment already exists - likely created by webhook
+                return 'already_exists';
+            }
+
+            // Create payment record
             Payment::create([
                 'invoice_id' => $invoice->id,
-                'tenant_id' => $invoice->tenant_id,
-                'customer_id' => $invoice->customer_id,
+                'tenant_id' => $lockedInvoice->tenant_id,
+                'customer_id' => $lockedInvoice->customer_id,
                 'amount' => $paymentResult['amount'],
                 'currency' => 'eur',
                 'payment_method' => 'card',
@@ -93,22 +110,29 @@ class StripePaymentController extends Controller
                 'status' => 'completed',
                 'paid_at' => now(),
             ]);
-        }
 
-        // Update invoice
-        $remaining = $invoice->total - ($invoice->amount_paid + $paymentResult['amount']);
+            // Update invoice within same transaction
+            $remaining = $lockedInvoice->total - ($lockedInvoice->amount_paid + $paymentResult['amount']);
 
-        if ($remaining <= 0) {
-            $invoice->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-                'amount_paid' => $invoice->total,
-            ]);
-        } else {
-            $invoice->update([
-                'status' => 'partial',
-                'amount_paid' => $invoice->amount_paid + $paymentResult['amount'],
-            ]);
+            if ($remaining <= 0) {
+                $lockedInvoice->update([
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                    'amount_paid' => $lockedInvoice->total,
+                ]);
+            } else {
+                $lockedInvoice->update([
+                    'status' => 'partial',
+                    'amount_paid' => $lockedInvoice->amount_paid + $paymentResult['amount'],
+                ]);
+            }
+
+            return 'created';
+        });
+
+        if ($paymentCreated === false) {
+            return redirect()->route('tenant.invoices.show', $invoice->id)
+                ->withErrors(['stripe' => 'Invoice not found.']);
         }
 
         $this->auditService->logSecurityEvent(
@@ -118,6 +142,7 @@ class StripePaymentController extends Controller
             [
                 'amount' => $paymentResult['amount'],
                 'charge_id' => $paymentResult['charge_id'],
+                'source' => $paymentCreated === 'already_exists' ? 'webhook' : 'direct',
             ]
         );
 

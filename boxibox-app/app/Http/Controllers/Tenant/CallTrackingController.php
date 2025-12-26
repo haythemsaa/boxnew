@@ -97,19 +97,19 @@ class CallTrackingController extends Controller
 
     public function storeNumber(Request $request)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
             'phone_number' => 'required|string|unique:tracking_numbers,phone_number',
             'friendly_name' => 'nullable|string|max:100',
             'forward_to' => 'required|string',
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'source' => 'required|string',
             'medium' => 'nullable|string',
             'campaign' => 'nullable|string',
             'number_type' => 'in:local,toll_free,mobile',
             'sms_enabled' => 'boolean',
         ]);
-
-        $tenantId = $request->user()->tenant_id;
         $this->service->createTrackingNumber($tenantId, $validated);
 
         return back()->with('success', 'Numéro de tracking ajouté');
@@ -117,10 +117,12 @@ class CallTrackingController extends Controller
 
     public function updateNumber(Request $request, TrackingNumber $number)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
             'friendly_name' => 'nullable|string|max:100',
             'forward_to' => 'required|string',
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'source' => 'required|string',
             'medium' => 'nullable|string',
             'campaign' => 'nullable|string',
@@ -197,8 +199,10 @@ class CallTrackingController extends Controller
 
     public function markConverted(Request $request, CallRecord $call)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'contract_id' => 'nullable|exists:contracts,id',
+            'contract_id' => ['nullable', 'exists:contracts,id', new \App\Rules\SameTenantResource(\App\Models\Contract::class, $tenantId)],
             'value' => 'nullable|numeric|min:0',
         ]);
 

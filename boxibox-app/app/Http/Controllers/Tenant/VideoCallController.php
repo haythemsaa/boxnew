@@ -134,12 +134,14 @@ class VideoCallController extends Controller
      */
     public function store(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
             'type' => 'required|in:' . implode(',', array_keys(VideoCall::TYPES)),
-            'site_id' => 'nullable|exists:sites,id',
-            'agent_id' => 'nullable|exists:users,id',
-            'customer_id' => 'nullable|exists:customers,id',
-            'prospect_id' => 'nullable|exists:prospects,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
+            'agent_id' => ['nullable', 'exists:users,id', new \App\Rules\SameTenantUser($tenantId)],
+            'customer_id' => ['nullable', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
+            'prospect_id' => ['nullable', 'exists:prospects,id', new \App\Rules\SameTenantResource(\App\Models\Prospect::class, $tenantId)],
             'guest_name' => 'nullable|string|max:255',
             'guest_email' => 'nullable|email',
             'guest_phone' => 'nullable|string|max:50',
@@ -463,11 +465,13 @@ class VideoCallController extends Controller
      */
     public function createInstant(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
             'guest_name' => 'required|string|max:255',
             'guest_email' => 'nullable|email',
             'guest_phone' => 'nullable|string|max:50',
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'type' => 'in:' . implode(',', array_keys(VideoCall::TYPES)),
         ]);
 

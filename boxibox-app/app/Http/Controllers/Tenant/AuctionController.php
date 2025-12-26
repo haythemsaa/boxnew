@@ -70,14 +70,15 @@ class AuctionController extends Controller
      */
     public function store(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
-            'contract_id' => 'required|exists:contracts,id',
+            'contract_id' => ['required', 'exists:contracts,id', new \App\Rules\SameTenantResource(\App\Models\Contract::class, $tenantId)],
             'contents_description' => 'nullable|string|max:5000',
             'starting_bid' => 'nullable|numeric|min:0',
             'reserve_price' => 'nullable|numeric|min:0',
         ]);
 
-        $tenantId = auth()->user()->tenant_id;
         $contract = \App\Models\Contract::findOrFail($validated['contract_id']);
 
         // Calculate debt

@@ -100,11 +100,11 @@ class DynamicPricingController extends Controller
      */
     public function generateForecast(Request $request)
     {
-        $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
-        ]);
-
         $tenantId = $request->user()->tenant_id;
+
+        $validated = $request->validate([
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
+        ]);
         $forecasts = $this->pricingService->generateDemandForecast(
             $tenantId,
             $validated['site_id']
@@ -187,10 +187,12 @@ class DynamicPricingController extends Controller
      */
     public function createExperiment(Request $request)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string|max:1000',
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'variants' => 'required|array|min:2|max:4',
             'variants.*.name' => 'required|string|max:50',
             'variants.*.weight' => 'required|numeric|min:0|max:100',
@@ -503,8 +505,10 @@ class DynamicPricingController extends Controller
      */
     public function addCompetitorPrice(Request $request)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'competitor_name' => 'required|string|max:255',
             'competitor_location' => 'nullable|string|max:255',
             'distance_km' => 'nullable|numeric|min:0|max:100',

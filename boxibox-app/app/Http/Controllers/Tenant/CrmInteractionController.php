@@ -80,6 +80,8 @@ class CrmInteractionController extends Controller
      */
     public function store(Request $request): JsonResponse
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
             'entity_type' => 'required|in:lead,customer,prospect',
             'entity_id' => 'required|integer',
@@ -93,19 +95,19 @@ class CrmInteractionController extends Controller
             'priority' => 'nullable|in:low,normal,high,urgent',
             'sentiment' => 'nullable|in:positive,neutral,negative',
             'reminder_at' => 'nullable|date',
-            'related_contract_id' => 'nullable|exists:contracts,id',
-            'related_invoice_id' => 'nullable|exists:invoices,id',
-            'related_quote_id' => 'nullable|exists:quotes,id',
+            'related_contract_id' => ['nullable', 'exists:contracts,id', new \App\Rules\SameTenantResource(\App\Models\Contract::class, $tenantId)],
+            'related_invoice_id' => ['nullable', 'exists:invoices,id', new \App\Rules\SameTenantResource(\App\Models\Invoice::class, $tenantId)],
+            'related_quote_id' => ['nullable', 'exists:quotes,id', new \App\Rules\SameTenantResource(\App\Models\Quote::class, $tenantId)],
             'metadata' => 'nullable|array',
         ]);
 
-        // Get the entity
+        // Get the entity with tenant validation
         $entityClass = match ($validated['entity_type']) {
             'lead' => Lead::class,
             'customer' => Customer::class,
             'prospect' => Prospect::class,
         };
-        $entity = $entityClass::findOrFail($validated['entity_id']);
+        $entity = $entityClass::where('tenant_id', $tenantId)->findOrFail($validated['entity_id']);
 
         // Create interaction
         $interaction = CrmInteraction::create([

@@ -113,6 +113,18 @@ class ExternalLeadController extends Controller
             ], 422);
         }
 
+        // Validate site belongs to the API key's tenant
+        if ($request->site_id) {
+            $site = \App\Models\Site::find($request->site_id);
+            if (!$site || $site->tenant_id !== $apiKey->tenant_id) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'The specified site does not belong to your organization',
+                    'code' => 'INVALID_SITE'
+                ], 403);
+            }
+        }
+
         // Check for duplicate (same email in last 24h)
         $existingLead = Lead::where('tenant_id', $apiKey->tenant_id)
             ->where('email', $request->email)

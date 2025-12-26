@@ -186,12 +186,13 @@ class EmailAutomationController extends Controller
     public function enroll(Request $request, EmailSequence $sequence)
     {
         $this->authorize('update', $sequence);
+        $tenantId = $request->user()->tenant_id;
 
         $validated = $request->validate([
             'customer_ids' => 'array',
-            'customer_ids.*' => 'exists:customers,id',
+            'customer_ids.*' => ['exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
             'lead_ids' => 'array',
-            'lead_ids.*' => 'exists:leads,id',
+            'lead_ids.*' => ['exists:leads,id', new \App\Rules\SameTenantResource(\App\Models\Lead::class, $tenantId)],
         ]);
 
         $enrolled = 0;

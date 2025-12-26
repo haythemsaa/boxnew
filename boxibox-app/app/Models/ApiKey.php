@@ -62,6 +62,12 @@ class ApiKey extends Model
         'delete:bookings' => 'Cancel Bookings',
     ];
 
+    /**
+     * Store the plain secret temporarily for returning to user on creation.
+     * This is NOT persisted - only available immediately after creation.
+     */
+    protected ?string $plainSecret = null;
+
     protected static function boot()
     {
         parent::boot();
@@ -71,9 +77,30 @@ class ApiKey extends Model
                 $apiKey->key = 'bxb_' . Str::random(32);
             }
             if (empty($apiKey->secret)) {
-                $apiKey->secret = Str::random(40);
+                // Generate and store plain secret for one-time display
+                $plainSecret = Str::random(40);
+                $apiKey->plainSecret = $plainSecret;
+                // Hash before storing (SECURITY)
+                $apiKey->secret = hash('sha256', $plainSecret);
             }
         });
+    }
+
+    /**
+     * Get the plain secret (only available once, immediately after creation).
+     */
+    public function getPlainSecret(): ?string
+    {
+        return $this->plainSecret;
+    }
+
+    /**
+     * Verify a provided secret against the stored hash.
+     * SECURITY: Uses hash_equals to prevent timing attacks.
+     */
+    public function verifySecret(string $secret): bool
+    {
+        return hash_equals($this->secret, hash('sha256', $secret));
     }
 
     // Relationships
@@ -122,11 +149,15 @@ class ApiKey extends Model
         $this->update(['last_used_at' => now()]);
     }
 
+    /**
+     * Regenerate the secret and return the new plain secret.
+     * SECURITY: The secret is hashed before storing.
+     */
     public function regenerateSecret(): string
     {
         $newSecret = Str::random(40);
-        $this->update(['secret' => $newSecret]);
-        return $newSecret;
+        $this->update(['secret' => hash('sha256', $newSecret)]);
+        return $newSecret; // Return plain secret for one-time display to user
     }
 
     public function getMaskedKeyAttribute(): string

@@ -199,8 +199,10 @@ class SustainabilityController extends Controller
 
     public function storeEnergy(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'reading_date' => 'required|date',
             'electricity_kwh' => 'required|numeric|min:0',
             'gas_m3' => 'nullable|numeric|min:0',
@@ -229,9 +231,10 @@ class SustainabilityController extends Controller
     public function updateEnergy(Request $request, EnergyReading $reading)
     {
         $this->authorize('update', $reading);
+        $tenantId = Auth::user()->tenant_id;
 
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'reading_date' => 'required|date',
             'electricity_kwh' => 'required|numeric|min:0',
             'gas_m3' => 'nullable|numeric|min:0',
@@ -288,8 +291,10 @@ class SustainabilityController extends Controller
 
     public function storeWaste(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'record_date' => 'required|date',
             'general_waste_kg' => 'nullable|numeric|min:0',
             'recycling_kg' => 'nullable|numeric|min:0',
@@ -308,9 +313,10 @@ class SustainabilityController extends Controller
     public function updateWaste(Request $request, WasteRecord $record)
     {
         $this->authorize('update', $record);
+        $tenantId = Auth::user()->tenant_id;
 
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'record_date' => 'required|date',
             'general_waste_kg' => 'nullable|numeric|min:0',
             'recycling_kg' => 'nullable|numeric|min:0',
@@ -363,8 +369,10 @@ class SustainabilityController extends Controller
 
     public function storeInitiative(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'name' => 'required|string|max:255',
             'category' => 'required|in:' . implode(',', array_keys(SustainabilityInitiative::CATEGORIES)),
             'description' => 'nullable|string',
@@ -386,9 +394,10 @@ class SustainabilityController extends Controller
     public function updateInitiative(Request $request, SustainabilityInitiative $initiative)
     {
         $this->authorize('update', $initiative);
+        $tenantId = Auth::user()->tenant_id;
 
         $validated = $request->validate([
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'name' => 'required|string|max:255',
             'category' => 'required|in:' . implode(',', array_keys(SustainabilityInitiative::CATEGORIES)),
             'description' => 'nullable|string',
@@ -521,8 +530,10 @@ class SustainabilityController extends Controller
 
     public function storeCertification(Request $request)
     {
+        $tenantId = Auth::user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'name' => 'required|string|max:255',
             'type' => 'required|in:' . implode(',', array_keys(SustainabilityCertification::TYPES)),
             'issuing_body' => 'required|string|max:255',
@@ -545,9 +556,10 @@ class SustainabilityController extends Controller
     public function updateCertification(Request $request, SustainabilityCertification $certification)
     {
         $this->authorize('update', $certification);
+        $tenantId = Auth::user()->tenant_id;
 
         $validated = $request->validate([
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'name' => 'required|string|max:255',
             'type' => 'required|in:' . implode(',', array_keys(SustainabilityCertification::TYPES)),
             'issuing_body' => 'required|string|max:255',

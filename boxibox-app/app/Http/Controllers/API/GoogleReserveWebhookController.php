@@ -57,6 +57,16 @@ class GoogleReserveWebhookController extends Controller
      */
     public function checkAvailability(Request $request)
     {
+        // Verify webhook signature (SECURITY)
+        $merchantId = $request->input('slot.merchant_id');
+        if ($merchantId) {
+            $settings = GoogleReserveSettings::where('merchant_id', $merchantId)->first();
+            if ($settings && $settings->webhook_secret && !$this->verifySignature($request, $settings->webhook_secret)) {
+                Log::warning('Google Reserve invalid signature', ['merchant_id' => $merchantId]);
+                return response()->json(['error' => 'Invalid signature'], 401);
+            }
+        }
+
         $data = $request->validate([
             'slot' => 'required|array',
             'slot.merchant_id' => 'required|string',
@@ -112,6 +122,16 @@ class GoogleReserveWebhookController extends Controller
      */
     public function batchAvailabilityLookup(Request $request)
     {
+        // Verify webhook signature (SECURITY)
+        $merchantId = $request->input('merchant_id');
+        if ($merchantId) {
+            $settings = GoogleReserveSettings::where('merchant_id', $merchantId)->first();
+            if ($settings && $settings->webhook_secret && !$this->verifySignature($request, $settings->webhook_secret)) {
+                Log::warning('Google Reserve invalid signature', ['merchant_id' => $merchantId]);
+                return response()->json(['error' => 'Invalid signature'], 401);
+            }
+        }
+
         $data = $request->validate([
             'merchant_id' => 'required|string',
             'slot_time_range' => 'required|array',
@@ -170,6 +190,21 @@ class GoogleReserveWebhookController extends Controller
      */
     public function createBooking(Request $request)
     {
+        // Verify webhook signature (SECURITY - CRITICAL for booking creation)
+        $merchantId = $request->input('slot.merchant_id');
+        if ($merchantId) {
+            $settings = GoogleReserveSettings::where('merchant_id', $merchantId)->first();
+            if ($settings && $settings->webhook_secret && !$this->verifySignature($request, $settings->webhook_secret)) {
+                Log::warning('Google Reserve invalid signature on createBooking', ['merchant_id' => $merchantId]);
+                return response()->json([
+                    'booking_failure' => [
+                        'cause' => 'BOOKING_SYSTEM_ERROR',
+                        'description' => 'Authentication failed',
+                    ],
+                ], 401);
+            }
+        }
+
         $data = $request->validate([
             'slot' => 'required|array',
             'slot.merchant_id' => 'required|string',

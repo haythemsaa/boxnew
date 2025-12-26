@@ -136,9 +136,11 @@ class ValetStorageController extends Controller
 
     public function storeItem(Request $request)
     {
+        $tenantId = $this->tenantId();
+
         $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'site_id' => 'required|exists:sites,id',
+            'customer_id' => ['required', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'category' => 'nullable|string|max:100',
@@ -284,13 +286,15 @@ class ValetStorageController extends Controller
 
     public function storeOrder(Request $request)
     {
+        $tenantId = $this->tenantId();
+
         $validated = $request->validate([
-            'customer_id' => 'required|exists:customers,id',
-            'site_id' => 'required|exists:sites,id',
+            'customer_id' => ['required', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'type' => 'required|in:pickup,delivery,pickup_delivery',
             'requested_date' => 'required|date|after_or_equal:today',
             'time_slot' => 'required|string',
-            'assigned_driver_id' => 'nullable|exists:users,id',
+            'assigned_driver_id' => ['nullable', 'exists:users,id', new \App\Rules\SameTenantUser($tenantId)],
             'address_line1' => 'required|string|max:255',
             'address_line2' => 'nullable|string|max:255',
             'city' => 'required|string|max:100',
@@ -311,8 +315,6 @@ class ValetStorageController extends Controller
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.is_new_item' => 'boolean',
         ]);
-
-        $tenantId = $this->tenantId();
 
         DB::beginTransaction();
         try {
@@ -415,8 +417,10 @@ class ValetStorageController extends Controller
 
     public function assignDriver(Request $request, ValetOrder $valetOrder)
     {
+        $tenantId = $this->tenantId();
+
         $validated = $request->validate([
-            'driver_id' => 'required|exists:users,id',
+            'driver_id' => ['required', 'exists:users,id', new \App\Rules\SameTenantUser($tenantId)],
         ]);
 
         $valetOrder->update([
@@ -480,8 +484,10 @@ class ValetStorageController extends Controller
 
     public function storeDriver(Request $request)
     {
+        $tenantId = $this->tenantId();
+
         $validated = $request->validate([
-            'user_id' => 'required|exists:users,id',
+            'user_id' => ['required', 'exists:users,id', new \App\Rules\SameTenantUser($tenantId)],
             'phone' => 'required|string|max:50',
             'license_number' => 'nullable|string|max:100',
             'vehicle_type' => 'required|in:bike,van,truck',
@@ -603,8 +609,10 @@ class ValetStorageController extends Controller
 
     public function storeZone(Request $request)
     {
+        $tenantId = $this->tenantId();
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'name' => 'required|string|max:255',
             'postal_codes' => 'required|array|min:1',
             'postal_codes.*' => 'string|max:10',
@@ -663,8 +671,10 @@ class ValetStorageController extends Controller
 
     public function storePricing(Request $request)
     {
+        $tenantId = $this->tenantId();
+
         $validated = $request->validate([
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'name' => 'required|string|max:255',
             'type' => 'required|string',
             'price' => 'required|numeric|min:0',
@@ -720,8 +730,10 @@ class ValetStorageController extends Controller
 
     public function updateSettings(Request $request)
     {
+        $tenantId = $this->tenantId();
+
         $validated = $request->validate([
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'valet_enabled' => 'boolean',
             'allow_same_day' => 'boolean',
             'min_lead_time_hours' => 'required|integer|min:0',

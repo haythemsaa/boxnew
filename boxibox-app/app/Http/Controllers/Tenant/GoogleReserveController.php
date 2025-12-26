@@ -72,8 +72,10 @@ class GoogleReserveController extends Controller
 
     public function updateSettings(Request $request)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'is_enabled' => 'boolean',
             'merchant_id' => 'nullable|string',
             'place_id' => 'nullable|string',
@@ -130,13 +132,13 @@ class GoogleReserveController extends Controller
 
     public function generateSlots(Request $request)
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'start_date' => 'required|date',
             'end_date' => 'required|date|after_or_equal:start_date',
         ]);
-
-        $tenantId = $request->user()->tenant_id;
         $count = $this->service->generateSlots(
             $tenantId,
             $validated['site_id'],

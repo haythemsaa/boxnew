@@ -66,17 +66,17 @@ class ReviewRequestController extends Controller
      */
     public function store(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
-            'customer_id' => 'nullable|exists:customers,id',
-            'contract_id' => 'nullable|exists:contracts,id',
+            'customer_id' => ['nullable', 'exists:customers,id', new \App\Rules\SameTenantResource(\App\Models\Customer::class, $tenantId)],
+            'contract_id' => ['nullable', 'exists:contracts,id', new \App\Rules\SameTenantResource(\App\Models\Contract::class, $tenantId)],
             'customer_email' => 'required_without:customer_id|email',
             'customer_name' => 'required_without:customer_id|string|max:255',
             'customer_phone' => 'nullable|string|max:20',
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'delay_days' => 'integer|min:0|max:30',
         ]);
-
-        $tenantId = auth()->user()->tenant_id;
 
         // Get customer data
         if (!empty($validated['customer_id'])) {
@@ -152,9 +152,11 @@ class ReviewRequestController extends Controller
      */
     public function bulkSend(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
             'ids' => 'required|array',
-            'ids.*' => 'exists:review_requests,id',
+            'ids.*' => ['exists:review_requests,id', new \App\Rules\SameTenantResource(\App\Models\ReviewRequest::class, $tenantId)],
         ]);
 
         $tenantId = auth()->user()->tenant_id;
@@ -204,8 +206,10 @@ class ReviewRequestController extends Controller
      */
     public function updateSettings(Request $request)
     {
+        $tenantId = auth()->user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'nullable|exists:sites,id',
+            'site_id' => ['nullable', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'is_enabled' => 'boolean',
             'trigger_on_move_in' => 'boolean',
             'move_in_delay_days' => 'integer|min:1|max:30',

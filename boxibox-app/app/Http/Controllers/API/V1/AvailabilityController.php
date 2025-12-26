@@ -20,8 +20,10 @@ class AvailabilityController extends Controller
      */
     public function calendar(Request $request): JsonResponse
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'start_date' => 'required|date',
             'end_date' => 'required|date|after:start_date',
             'box_type' => 'nullable|string',
@@ -151,8 +153,10 @@ class AvailabilityController extends Controller
      */
     public function availableBoxes(Request $request): JsonResponse
     {
+        $tenantId = $request->user()->tenant_id;
+
         $validated = $request->validate([
-            'site_id' => 'required|exists:sites,id',
+            'site_id' => ['required', 'exists:sites,id', new \App\Rules\SameTenantResource(\App\Models\Site::class, $tenantId)],
             'date' => 'required|date',
             'duration_months' => 'nullable|integer|min:1|max:36',
             'box_type' => 'nullable|string',
