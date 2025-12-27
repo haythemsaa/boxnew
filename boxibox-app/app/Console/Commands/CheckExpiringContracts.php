@@ -28,7 +28,7 @@ class CheckExpiringContracts extends Command
      */
     public function handle(): int
     {
-        $days = $this->option('days');
+        $days = (int) $this->option('days');
         $this->info("Checking for contracts expiring in the next {$days} days...");
 
         // Get contracts expiring within the specified days

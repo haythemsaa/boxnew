@@ -12,16 +12,41 @@ use Illuminate\Support\Facades\DB;
 return new class extends Migration
 {
     /**
-     * Check if an index exists on a table
+     * Check if an index exists on a table (database-agnostic)
      */
     private function indexExists(string $table, string $indexName): bool
     {
         try {
-            $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$indexName]);
+            $driver = Schema::getConnection()->getDriverName();
+
+            if ($driver === 'sqlite') {
+                $indexes = DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name=? AND name=?", [$table, $indexName]);
+            } else {
+                $indexes = DB::select("SHOW INDEX FROM {$table} WHERE Key_name = ?", [$indexName]);
+            }
+
             return count($indexes) > 0;
         } catch (\Exception $e) {
             return false;
         }
+    }
+
+    /**
+     * Check if database supports generated columns
+     */
+    private function supportsGeneratedColumns(): bool
+    {
+        $driver = Schema::getConnection()->getDriverName();
+        return in_array($driver, ['mysql', 'mariadb']);
+    }
+
+    /**
+     * Check if database supports fulltext indexes
+     */
+    private function supportsFulltextIndex(): bool
+    {
+        $driver = Schema::getConnection()->getDriverName();
+        return in_array($driver, ['mysql', 'mariadb']);
     }
 
     /**
@@ -40,7 +65,7 @@ return new class extends Migration
         // =====================================================
         // 1. INVOICES - Generated column for remaining amount
         // =====================================================
-        if (!$this->columnExists('invoices', 'remaining_amount')) {
+        if ($this->supportsGeneratedColumns() && !$this->columnExists('invoices', 'remaining_amount')) {
             try {
                 DB::statement("
                     ALTER TABLE invoices
@@ -67,7 +92,7 @@ return new class extends Migration
         // =====================================================
         // 2. BOXES - Generated column for area and covering indexes
         // =====================================================
-        if (!$this->columnExists('boxes', 'area_m2')) {
+        if ($this->supportsGeneratedColumns() && !$this->columnExists('boxes', 'area_m2')) {
             try {
                 DB::statement("
                     ALTER TABLE boxes
@@ -110,16 +135,18 @@ return new class extends Migration
         });
 
         // =====================================================
-        // 4. CUSTOMERS - Fulltext search for fast name lookups
+        // 4. CUSTOMERS - Fulltext search for fast name lookups (MySQL/MariaDB only)
         // =====================================================
-        try {
-            // Check if fulltext index exists
-            $ftIndex = DB::select("SHOW INDEX FROM customers WHERE Index_type = 'FULLTEXT' AND Key_name = 'ft_customer_search'");
-            if (empty($ftIndex)) {
-                DB::statement("ALTER TABLE customers ADD FULLTEXT INDEX ft_customer_search (first_name, last_name, email, company_name)");
+        if ($this->supportsFulltextIndex()) {
+            try {
+                // Check if fulltext index exists
+                $ftIndex = DB::select("SHOW INDEX FROM customers WHERE Index_type = 'FULLTEXT' AND Key_name = 'ft_customer_search'");
+                if (empty($ftIndex)) {
+                    DB::statement("ALTER TABLE customers ADD FULLTEXT INDEX ft_customer_search (first_name, last_name, email, company_name)");
+                }
+            } catch (\Exception $e) {
+                // Fulltext might not be supported or columns don't exist
             }
-        } catch (\Exception $e) {
-            // Fulltext might not be supported or columns don't exist
         }
 
         // =====================================================

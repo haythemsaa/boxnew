@@ -84,9 +84,15 @@ return new class extends Migration
             }
         });
 
-        // Add indexes
+        // Add indexes (database-agnostic)
         Schema::table('review_requests', function (Blueprint $table) {
-            $indexes = collect(\DB::select("SHOW INDEX FROM review_requests"))->pluck('Key_name')->unique();
+            $driver = Schema::getConnection()->getDriverName();
+
+            if ($driver === 'sqlite') {
+                $indexes = collect(\DB::select("SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='review_requests'"))->pluck('name')->unique();
+            } else {
+                $indexes = collect(\DB::select("SHOW INDEX FROM review_requests"))->pluck('Key_name')->unique();
+            }
 
             if (!$indexes->contains('review_requests_tracking_token_index') && Schema::hasColumn('review_requests', 'tracking_token')) {
                 $table->index('tracking_token');

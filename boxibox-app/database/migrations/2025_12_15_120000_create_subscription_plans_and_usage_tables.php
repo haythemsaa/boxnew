@@ -15,8 +15,9 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Table des plans d'abonnement
-        Schema::create('subscription_plans', function (Blueprint $table) {
+        // Table des plans d'abonnement (skip if already exists from another migration)
+        if (!Schema::hasTable('subscription_plans')) {
+            Schema::create('subscription_plans', function (Blueprint $table) {
             $table->id();
             $table->string('name'); // Starter, Pro, Enterprise
             $table->string('slug')->unique();
@@ -55,7 +56,8 @@ return new class extends Migration
             $table->boolean('is_default')->default(false); // Plan par défaut pour nouveaux tenants
 
             $table->timestamps();
-        });
+            });
+        }
 
         // Table des abonnements des tenants
         Schema::create('tenant_subscriptions', function (Blueprint $table) {

@@ -72,12 +72,12 @@ class CalculateLeadScores extends Command
         $this->info('<fg=cyan>╔══════════════════════════════════════════════════════╗</>');
         $this->info('<fg=cyan>║</>                  <fg=white;options=bold>SUMMARY</>                           <fg=cyan>║</>');
         $this->info('<fg=cyan>╠══════════════════════════════════════════════════════╣</>');
-        $this->info("<fg=cyan>║</>  Total processed:   <fg=white;options=bold>" . str_pad($totalProcessed, 6) . "</>                     <fg=cyan>║</>");
-        $this->info("<fg=cyan>║</>  Very Hot leads:    <fg=red;options=bold>" . str_pad($totalVeryHot, 6) . "</>                     <fg=cyan>║</>");
-        $this->info("<fg=cyan>║</>  Hot leads:         <fg=yellow;options=bold>" . str_pad($totalHot, 6) . "</>                     <fg=cyan>║</>");
-        $this->info("<fg=cyan>║</>  Warm leads:        <fg=green;options=bold>" . str_pad($totalWarm, 6) . "</>                     <fg=cyan>║</>");
+        $this->info("<fg=cyan>║</>  Total processed:   <fg=white;options=bold>" . str_pad((string) $totalProcessed, 6) . "</>                     <fg=cyan>║</>");
+        $this->info("<fg=cyan>║</>  Very Hot leads:    <fg=red;options=bold>" . str_pad((string) $totalVeryHot, 6) . "</>                     <fg=cyan>║</>");
+        $this->info("<fg=cyan>║</>  Hot leads:         <fg=yellow;options=bold>" . str_pad((string) $totalHot, 6) . "</>                     <fg=cyan>║</>");
+        $this->info("<fg=cyan>║</>  Warm leads:        <fg=green;options=bold>" . str_pad((string) $totalWarm, 6) . "</>                     <fg=cyan>║</>");
         if ($totalErrors > 0) {
-            $this->info("<fg=cyan>║</>  Errors:            <fg=red>" . str_pad($totalErrors, 6) . "</>                     <fg=cyan>║</>");
+            $this->info("<fg=cyan>║</>  Errors:            <fg=red>" . str_pad((string) $totalErrors, 6) . "</>                     <fg=cyan>║</>");
         }
         $this->info('<fg=cyan>╚══════════════════════════════════════════════════════╝</>');
         $this->newLine();

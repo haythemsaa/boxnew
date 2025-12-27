@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Log;
 class PayPalService
 {
     protected string $baseUrl;
-    protected ?string $clientId;
-    protected ?string $clientSecret;
+    protected string $clientId;
+    protected string $clientSecret;
     protected ?string $accessToken = null;
 
     public function __construct()
@@ -21,8 +21,8 @@ class PayPalService
             ? 'https://api-m.paypal.com'
             : 'https://api-m.sandbox.paypal.com';
 
-        $this->clientId = config('services.paypal.client_id') ?? '';
-        $this->clientSecret = config('services.paypal.client_secret') ?? '';
+        $this->clientId = (string) (config('services.paypal.client_id') ?? '');
+        $this->clientSecret = (string) (config('services.paypal.client_secret') ?? '');
     }
 
     /**
