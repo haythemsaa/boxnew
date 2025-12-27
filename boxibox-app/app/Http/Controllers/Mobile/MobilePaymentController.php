@@ -10,6 +10,7 @@ use App\Models\PaymentMethod;
 use App\Services\PayPalService;
 use App\Services\StripeConnectService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -157,38 +158,46 @@ class MobilePaymentController extends Controller
                 ], 400);
             }
 
-            // Get invoices
+            // Get invoices with lock to prevent race conditions
             $invoices = Invoice::whereIn('id', $validated['invoice_ids'])
                 ->where('customer_id', $customer->id)
+                ->lockForUpdate()
                 ->get();
 
-            // Create payment records for each invoice
-            foreach ($invoices as $invoice) {
-                $amount = $invoice->total - $invoice->paid_amount;
+            // Use transaction to ensure atomicity
+            DB::transaction(function () use ($invoices, $customer, $paymentIntent) {
+                // Create payment records for each invoice
+                foreach ($invoices as $invoice) {
+                    $amount = $invoice->total - $invoice->paid_amount;
 
-                $payment = Payment::create([
-                    'tenant_id' => $customer->tenant_id,
-                    'customer_id' => $customer->id,
-                    'invoice_id' => $invoice->id,
-                    'contract_id' => $invoice->contract_id,
-                    'payment_number' => 'PAY-' . strtoupper(uniqid()),
-                    'amount' => $amount,
-                    'method' => 'card',
-                    'gateway' => 'stripe',
-                    'status' => 'completed',
-                    'stripe_payment_intent_id' => $paymentIntent->id,
-                    'stripe_charge_id' => $paymentIntent->latest_charge,
-                    'card_brand' => $paymentIntent->payment_method_details?->card?->brand ?? null,
-                    'card_last_four' => $paymentIntent->payment_method_details?->card?->last4 ?? null,
-                    'paid_at' => now(),
-                    'processed_at' => now(),
-                ]);
+                    if ($amount <= 0) {
+                        continue; // Skip already paid invoices
+                    }
 
-                // Update invoice
-                $invoice->recordPayment($amount);
-            }
+                    Payment::create([
+                        'tenant_id' => $customer->tenant_id,
+                        'customer_id' => $customer->id,
+                        'invoice_id' => $invoice->id,
+                        'contract_id' => $invoice->contract_id,
+                        'payment_number' => 'PAY-' . strtoupper(uniqid()),
+                        'amount' => $amount,
+                        'method' => 'card',
+                        'gateway' => 'stripe',
+                        'status' => 'completed',
+                        'stripe_payment_intent_id' => $paymentIntent->id,
+                        'stripe_charge_id' => $paymentIntent->latest_charge,
+                        'card_brand' => $paymentIntent->payment_method_details?->card?->brand ?? null,
+                        'card_last_four' => $paymentIntent->payment_method_details?->card?->last4 ?? null,
+                        'paid_at' => now(),
+                        'processed_at' => now(),
+                    ]);
 
-            // Save payment method if requested
+                    // Update invoice
+                    $invoice->recordPayment($amount);
+                }
+            });
+
+            // Save payment method if requested (outside transaction - non-critical)
             if ($paymentIntent->setup_future_usage && $paymentIntent->payment_method) {
                 $this->savePaymentMethod($customer, $paymentIntent->payment_method);
             }
@@ -278,33 +287,40 @@ class MobilePaymentController extends Controller
                     ->with('error', 'Le paiement PayPal n\'a pas ete complete');
             }
 
-            // Get invoices
+            // Get invoices with lock to prevent race conditions
             $invoices = Invoice::whereIn('id', $invoiceIds)
                 ->where('customer_id', $customer->id)
+                ->lockForUpdate()
                 ->get();
 
-            // Create payment records
-            foreach ($invoices as $invoice) {
-                $amount = $invoice->total - $invoice->paid_amount;
+            // Use transaction to ensure atomicity
+            DB::transaction(function () use ($invoices, $customer, $capture) {
+                foreach ($invoices as $invoice) {
+                    $amount = $invoice->total - $invoice->paid_amount;
 
-                Payment::create([
-                    'tenant_id' => $customer->tenant_id,
-                    'customer_id' => $customer->id,
-                    'invoice_id' => $invoice->id,
-                    'contract_id' => $invoice->contract_id,
-                    'payment_number' => 'PAY-' . strtoupper(uniqid()),
-                    'amount' => $amount,
-                    'method' => 'paypal',
-                    'gateway' => 'paypal',
-                    'status' => 'completed',
-                    'gateway_payment_id' => $capture['capture_id'],
-                    'gateway_response' => $capture,
-                    'paid_at' => now(),
-                    'processed_at' => now(),
-                ]);
+                    if ($amount <= 0) {
+                        continue; // Skip already paid invoices
+                    }
 
-                $invoice->recordPayment($amount);
-            }
+                    Payment::create([
+                        'tenant_id' => $customer->tenant_id,
+                        'customer_id' => $customer->id,
+                        'invoice_id' => $invoice->id,
+                        'contract_id' => $invoice->contract_id,
+                        'payment_number' => 'PAY-' . strtoupper(uniqid()),
+                        'amount' => $amount,
+                        'method' => 'paypal',
+                        'gateway' => 'paypal',
+                        'status' => 'completed',
+                        'gateway_payment_id' => $capture['capture_id'],
+                        'gateway_response' => $capture,
+                        'paid_at' => now(),
+                        'processed_at' => now(),
+                    ]);
+
+                    $invoice->recordPayment($amount);
+                }
+            });
 
             return redirect()->route('mobile.pay.success');
         } catch (\Exception $e) {
@@ -372,9 +388,14 @@ class MobilePaymentController extends Controller
         $invoices = Invoice::whereIn('id', $validated['invoice_ids'])
             ->where('customer_id', $customer->id)
             ->whereIn('status', ['sent', 'overdue', 'partial'])
+            ->lockForUpdate()
             ->get();
 
         $totalAmount = $invoices->sum(fn($inv) => $inv->total - $inv->paid_amount);
+
+        if ($totalAmount <= 0) {
+            return response()->json(['error' => 'Montant invalide ou factures deja payees'], 422);
+        }
 
         try {
             $result = $this->stripeService->chargeCustomer(
@@ -383,29 +404,35 @@ class MobilePaymentController extends Controller
                 $paymentMethod->stripe_payment_method_id
             );
 
-            // Create payment records
-            foreach ($invoices as $invoice) {
-                $amount = $invoice->total - $invoice->paid_amount;
+            // Use transaction to ensure atomicity
+            DB::transaction(function () use ($invoices, $customer, $paymentMethod, $result) {
+                foreach ($invoices as $invoice) {
+                    $amount = $invoice->total - $invoice->paid_amount;
 
-                Payment::create([
-                    'tenant_id' => $customer->tenant_id,
-                    'customer_id' => $customer->id,
-                    'invoice_id' => $invoice->id,
-                    'contract_id' => $invoice->contract_id,
-                    'payment_number' => 'PAY-' . strtoupper(uniqid()),
-                    'amount' => $amount,
-                    'method' => 'card',
-                    'gateway' => 'stripe',
-                    'status' => 'completed',
-                    'stripe_payment_intent_id' => $result['payment_intent_id'],
-                    'card_brand' => $paymentMethod->card_brand,
-                    'card_last_four' => $paymentMethod->card_last_four,
-                    'paid_at' => now(),
-                    'processed_at' => now(),
-                ]);
+                    if ($amount <= 0) {
+                        continue; // Skip already paid invoices
+                    }
 
-                $invoice->recordPayment($amount);
-            }
+                    Payment::create([
+                        'tenant_id' => $customer->tenant_id,
+                        'customer_id' => $customer->id,
+                        'invoice_id' => $invoice->id,
+                        'contract_id' => $invoice->contract_id,
+                        'payment_number' => 'PAY-' . strtoupper(uniqid()),
+                        'amount' => $amount,
+                        'method' => 'card',
+                        'gateway' => 'stripe',
+                        'status' => 'completed',
+                        'stripe_payment_intent_id' => $result['payment_intent_id'],
+                        'card_brand' => $paymentMethod->card_brand,
+                        'card_last_four' => $paymentMethod->card_last_four,
+                        'paid_at' => now(),
+                        'processed_at' => now(),
+                    ]);
+
+                    $invoice->recordPayment($amount);
+                }
+            });
 
             return response()->json([
                 'success' => true,

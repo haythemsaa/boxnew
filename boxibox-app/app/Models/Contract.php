@@ -202,17 +202,25 @@ class Contract extends Model
 
     public function calculateFinalPrice(): float
     {
-        $price = $this->monthly_price;
+        $basePrice = $this->monthly_price;
+        $totalDiscount = 0;
 
-        if ($this->discount_percentage > 0) {
-            $price -= ($price * ($this->discount_percentage / 100));
+        // Calculate percentage discount (capped at 30%)
+        $effectivePercentage = min(30, $this->discount_percentage ?? 0);
+        if ($effectivePercentage > 0) {
+            $totalDiscount += ($basePrice * ($effectivePercentage / 100));
         }
 
+        // Add fixed discount amount
         if ($this->discount_amount > 0) {
-            $price -= $this->discount_amount;
+            $totalDiscount += $this->discount_amount;
         }
 
-        return max(0, $price);
+        // Cap total discount at 30% of base price (protection against revenue loss)
+        $maxDiscount = $basePrice * 0.30;
+        $totalDiscount = min($totalDiscount, $maxDiscount);
+
+        return max(0, $basePrice - $totalDiscount);
     }
 
     public function getMonthlyAddonsTotal(): float

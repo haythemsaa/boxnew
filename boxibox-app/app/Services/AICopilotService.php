@@ -388,6 +388,10 @@ class AICopilotService
         $customers = Customer::where('tenant_id', $this->tenantId)
             ->whereHas('contracts', fn($q) => $q->where('status', 'active'))
             ->with(['contracts' => fn($q) => $q->where('status', 'active')])
+            ->withCount(['invoices as late_payments_count' => function ($query) use ($now) {
+                $query->where('due_date', '<', $now)
+                    ->where('status', '!=', 'paid');
+            }])
             ->get();
 
         $riskCustomers = [];
@@ -404,11 +408,8 @@ class AICopilotService
                     $riskFactors[] = "Contrat expire dans {$daysToEnd} jours";
                 }
 
-                // Factor 2: Payment history
-                $latePayments = Invoice::where('customer_id', $customer->id)
-                    ->where('due_date', '<', $now)
-                    ->where('status', '!=', 'paid')
-                    ->count();
+                // Factor 2: Payment history (pre-loaded with withCount to avoid N+1)
+                $latePayments = $customer->late_payments_count;
                 if ($latePayments > 0) {
                     $riskScore += min(20, $latePayments * 5);
                     $riskFactors[] = "{$latePayments} paiement(s) en retard";

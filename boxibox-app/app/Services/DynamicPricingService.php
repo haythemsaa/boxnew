@@ -33,9 +33,9 @@ class DynamicPricingService
         // Apply promotional rules if any
         $promotionalPrice = $this->applyPromotions($adjustedPrice, $box, $options);
 
-        // Ensure price stays within acceptable bounds
-        $minPrice = $basePrice * 0.5; // Never go below 50% of base
-        $maxPrice = $basePrice * 1.5; // Never go above 150% of base
+        // Ensure price stays within acceptable bounds (max 30% discount for revenue protection)
+        $minPrice = $basePrice * 0.70; // Never go below 70% of base (max 30% discount)
+        $maxPrice = $basePrice * 1.5;  // Never go above 150% of base
 
         return max($minPrice, min($maxPrice, $promotionalPrice));
     }

@@ -45,7 +45,7 @@ class UpdateContractRequest extends FormRequest
             'monthly_price' => ['required', 'numeric', 'min:0'],
             'deposit_amount' => ['required', 'numeric', 'min:0'],
             'deposit_paid' => ['required', 'boolean'],
-            'discount_percentage' => ['nullable', 'numeric', 'min:0', 'max:100'],
+            'discount_percentage' => ['nullable', 'numeric', 'min:0', 'max:30'], // Max 30% to prevent revenue loss
             'discount_amount' => ['nullable', 'numeric', 'min:0'],
             'billing_frequency' => ['required', 'in:monthly,quarterly,yearly'],
             'billing_day' => ['required', 'integer', 'min:1', 'max:31'],

@@ -56,8 +56,8 @@ class AdvancedDynamicPricingService
             // Final price calculation
             $calculatedPrice = $basePrice * $mlMultiplier;
 
-            // Apply bounds
-            $minPrice = $basePrice * 0.5;
+            // Apply bounds (max 30% discount for revenue protection)
+            $minPrice = $basePrice * 0.70; // Max 30% discount
             $maxPrice = $basePrice * 2.0;
             $finalPrice = max($minPrice, min($maxPrice, $calculatedPrice));
 
@@ -75,7 +75,7 @@ class AdvancedDynamicPricingService
                 'factors' => $factors,
                 'confidence' => $confidence,
                 'ab_test' => $abTestResult,
-                'price_change_percentage' => round(($finalPrice - $basePrice) / $basePrice * 100, 1),
+                'price_change_percentage' => $basePrice > 0 ? round(($finalPrice - $basePrice) / $basePrice * 100, 1) : 0,
             ];
         });
     }

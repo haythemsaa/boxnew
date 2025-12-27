@@ -393,11 +393,15 @@ class ReservationPaymentController extends Controller
             return response()->json(['error' => 'Box non disponible'], 403);
         }
 
-        // Calculate total
+        // Calculate total with correct tax rates (FISCAL COMPLIANCE)
+        // - Storage/rent: 20% VAT
+        // - Deposit: 0% VAT (security deposit, not taxable)
+        // - Insurance: 9% tax (assurance tax in France)
         $monthlyPrice = $box->monthly_price;
-        $depositAmount = $validated['include_deposit'] ? ($monthlyPrice * 2) : 0;
-        $insuranceAmount = $validated['include_insurance'] ? 15.00 : 0;
-        $total = $monthlyPrice + $depositAmount + $insuranceAmount;
+        $monthlyPriceWithVat = $monthlyPrice * 1.20; // 20% VAT on storage
+        $depositAmount = $validated['include_deposit'] ? ($monthlyPrice * 2) : 0; // No VAT on deposit
+        $insuranceAmount = $validated['include_insurance'] ? (15.00 * 1.09) : 0; // 9% tax on insurance
+        $total = round($monthlyPriceWithVat + $depositAmount + $insuranceAmount, 2);
 
         // Create reservation token
         $reservationToken = bin2hex(random_bytes(16));
@@ -503,7 +507,61 @@ class ReservationPaymentController extends Controller
 
                 $box->update(['status' => 'occupied']);
 
-                // Create invoice
+                // Calculate VAT correctly per item (FISCAL COMPLIANCE)
+                // - Storage/rent: 20% VAT
+                // - Deposit: 0% VAT (security deposit, not taxable in France)
+                // - Insurance: 9% tax (assurance tax in France)
+                $invoiceItems = [];
+                $subtotal = 0;
+                $totalTax = 0;
+
+                // Storage item (20% VAT)
+                $storagePrice = $reservationData['monthly_price'];
+                $storageTax = $storagePrice * 0.20;
+                $invoiceItems[] = [
+                    'description' => "Location Box {$box->number} - 1er mois",
+                    'quantity' => 1,
+                    'unit_price' => $storagePrice,
+                    'tax_rate' => 20,
+                    'tax_amount' => $storageTax,
+                    'total' => $storagePrice + $storageTax,
+                ];
+                $subtotal += $storagePrice;
+                $totalTax += $storageTax;
+
+                // Deposit (0% VAT - not taxable per French fiscal law)
+                if ($reservationData['include_deposit']) {
+                    $depositAmount = $reservationData['deposit_amount'];
+                    $invoiceItems[] = [
+                        'description' => 'Depot de garantie (non soumis a TVA)',
+                        'quantity' => 1,
+                        'unit_price' => $depositAmount,
+                        'tax_rate' => 0,
+                        'tax_amount' => 0,
+                        'total' => $depositAmount,
+                    ];
+                    $subtotal += $depositAmount;
+                }
+
+                // Insurance (9% assurance tax in France)
+                if ($reservationData['include_insurance']) {
+                    $insurancePrice = 15.00;
+                    $insuranceTax = $insurancePrice * 0.09;
+                    $invoiceItems[] = [
+                        'description' => 'Assurance',
+                        'quantity' => 1,
+                        'unit_price' => $insurancePrice,
+                        'tax_rate' => 9,
+                        'tax_amount' => $insuranceTax,
+                        'total' => $insurancePrice + $insuranceTax,
+                    ];
+                    $subtotal += $insurancePrice;
+                    $totalTax += $insuranceTax;
+                }
+
+                $grandTotal = $subtotal + $totalTax;
+
+                // Create invoice with correct tax calculation
                 $invoice = Invoice::create([
                     'tenant_id' => $customer->tenant_id,
                     'customer_id' => $customer->id,
@@ -514,14 +572,12 @@ class ReservationPaymentController extends Controller
                     'invoice_date' => now(),
                     'due_date' => now()->addDays(30),
                     'paid_at' => now(),
-                    'subtotal' => $reservationData['total'] / 1.20,
-                    'tax_rate' => 20,
-                    'tax_amount' => $reservationData['total'] - ($reservationData['total'] / 1.20),
-                    'total' => $reservationData['total'],
-                    'paid_amount' => $reservationData['total'],
-                    'items' => json_encode([
-                        ['description' => "Location Box {$box->number}", 'quantity' => 1, 'unit_price' => $reservationData['monthly_price']],
-                    ]),
+                    'subtotal' => round($subtotal, 2),
+                    'tax_rate' => null, // Mixed rates, see items
+                    'tax_amount' => round($totalTax, 2),
+                    'total' => round($grandTotal, 2),
+                    'paid_amount' => round($grandTotal, 2),
+                    'items' => $invoiceItems,
                 ]);
 
                 // Create payment

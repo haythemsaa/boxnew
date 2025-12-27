@@ -425,10 +425,11 @@ class AILeadScoringService
         $cacheKey = "lead_similarity_{$tenantId}_{$entity->id}";
 
         return Cache::remember($cacheKey, 3600, function () use ($entity, $tenantId) {
-            // Get converted customers from last 6 months
+            // Get converted customers from last 6 months with avg contract price (avoid N+1)
             $convertedCustomers = Customer::where('tenant_id', $tenantId)
                 ->where('created_at', '>=', now()->subMonths(6))
                 ->whereHas('contracts')
+                ->withAvg('contracts', 'monthly_price')
                 ->get();
 
             if ($convertedCustomers->isEmpty()) {
@@ -454,9 +455,9 @@ class AILeadScoringService
                     $similarity += 0.2;
                 }
 
-                // Compare budget range
+                // Compare budget range (using pre-loaded avg from withAvg to avoid N+1)
                 $entityBudget = $entity->budget ?? 0;
-                $customerBudget = $customer->contracts()->avg('monthly_price') ?? 0;
+                $customerBudget = $customer->contracts_avg_monthly_price ?? 0;
                 if (abs($entityBudget - $customerBudget) < 50) {
                     $similarity += 0.3;
                 }

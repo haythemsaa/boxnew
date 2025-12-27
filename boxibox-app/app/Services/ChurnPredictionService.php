@@ -168,7 +168,7 @@ class ChurnPredictionService
                 'failed_payments' => $failedPayments,
                 'unpaid_invoices' => $unpaidInvoices,
                 'total_invoices' => $totalInvoices,
-                'payment_reliability' => round((($totalInvoices - $latePayments) / $totalInvoices) * 100, 1),
+                'payment_reliability' => $totalInvoices > 0 ? round((($totalInvoices - $latePayments) / $totalInvoices) * 100, 1) : 100,
             ],
         ];
     }
