@@ -36,7 +36,7 @@
             <nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
                 <!-- Main Section -->
                 <div class="mb-5">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Principal
                     </p>
                     <SidebarLink
@@ -86,7 +86,7 @@
                         </template>
                         <span class="flex items-center gap-2">
                             Plan Interactif
-                            <span class="text-[10px] bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold">PRO</span>
+                            <span class="text-xs bg-gradient-to-r from-cyan-500 to-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold">PRO</span>
                         </span>
                     </SidebarLink>
 
@@ -102,46 +102,6 @@
                         Editeur de Plan
                     </SidebarLink>
 
-                    <!-- Anciennes versions (a supprimer plus tard) -->
-                    <div v-if="!sidebarCollapsed" class="pl-4 border-l-2 border-gray-200 dark:border-gray-700 ml-3 mt-2 mb-2">
-                        <p class="px-2 mb-2 text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
-                            Anciennes versions
-                        </p>
-                        <SidebarLink
-                            :href="route('tenant.plan.interactive')"
-                            :active="route().current('tenant.plan.interactive') && !route().current('tenant.plan.interactive-pro') && !route().current('tenant.plan.interactive-enhanced')"
-                            :collapsed="sidebarCollapsed"
-                            class="text-sm opacity-70 hover:opacity-100"
-                        >
-                            <template #icon>
-                                <MapIcon class="h-4 w-4" />
-                            </template>
-                            Plan v1
-                        </SidebarLink>
-                        <SidebarLink
-                            :href="route('tenant.plan.interactive-enhanced')"
-                            :active="route().current('tenant.plan.interactive-enhanced')"
-                            :collapsed="sidebarCollapsed"
-                            class="text-sm opacity-70 hover:opacity-100"
-                        >
-                            <template #icon>
-                                <MapIcon class="h-4 w-4" />
-                            </template>
-                            Plan Enhanced
-                        </SidebarLink>
-                        <SidebarLink
-                            :href="route('tenant.plan.editor')"
-                            :active="route().current('tenant.plan.editor') && !route().current('tenant.plan.editor-pro')"
-                            :collapsed="sidebarCollapsed"
-                            class="text-sm opacity-70 hover:opacity-100"
-                        >
-                            <template #icon>
-                                <PencilSquareIcon class="h-4 w-4" />
-                            </template>
-                            Editeur v1
-                        </SidebarLink>
-                    </div>
-
                     <SidebarLink
                         :href="route('tenant.bookings.index')"
                         :active="route().current('tenant.bookings.*')"
@@ -156,7 +116,7 @@
 
                 <!-- CRM Section -->
                 <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         CRM
                     </p>
 
@@ -172,7 +132,7 @@
                         </template>
                         <span class="flex items-center gap-2">
                             AI Lead Scoring
-                            <span class="text-[10px] bg-gradient-to-r from-rose-500 to-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">IA</span>
+                            <span class="text-xs bg-gradient-to-r from-rose-500 to-orange-500 text-white px-1.5 py-0.5 rounded-full font-bold">IA</span>
                         </span>
                         <template #badge>
                             <span v-if="$page.props.hotLeadsCount" class="ml-auto bg-rose-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
@@ -246,7 +206,7 @@
 
                 <!-- Boutique Section -->
                 <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Boutique
                     </p>
                     <SidebarLink
@@ -271,14 +231,14 @@
                         </template>
                         <span class="flex items-center gap-2">
                             Ventes
-                            <span class="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-bold">POS</span>
+                            <span class="text-xs bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-bold">POS</span>
                         </span>
                     </SidebarLink>
                 </div>
 
                 <!-- Finance Section -->
                 <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Finance
                     </p>
                     <SidebarLink
@@ -356,7 +316,7 @@
 
                 <!-- Analytics & AI Section -->
                 <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Analytics & IA
                     </p>
 
@@ -372,7 +332,7 @@
                         </template>
                         <span class="flex items-center gap-2">
                             Copilot IA
-                            <span class="text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
+                            <span class="text-xs bg-purple-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
                         </span>
                     </SidebarLink>
 
@@ -442,14 +402,14 @@
                         </template>
                         <span class="flex items-center gap-2">
                             KPIs Self-Storage
-                            <span class="text-[10px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">PRO</span>
+                            <span class="text-xs bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">PRO</span>
                         </span>
                     </SidebarLink>
                 </div>
 
                 <!-- Communication Section -->
                 <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Communication
                     </p>
                     <SidebarLink
@@ -501,7 +461,7 @@
                         </template>
                         <span class="flex items-center gap-2">
                             Chatbot IA
-                            <span class="text-[10px] bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold">24/7</span>
+                            <span class="text-xs bg-blue-500 text-white px-1.5 py-0.5 rounded-full font-bold">24/7</span>
                         </span>
                     </SidebarLink>
 
@@ -530,7 +490,7 @@
 
                 <!-- Operations Section -->
                 <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Opérations
                     </p>
                     <SidebarLink
@@ -588,7 +548,7 @@
                         </template>
                         <span class="flex items-center gap-2">
                             Smart Locks
-                            <span class="text-[10px] bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">PRO</span>
+                            <span class="text-xs bg-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">PRO</span>
                         </span>
                     </SidebarLink>
 
@@ -625,7 +585,7 @@
                         </template>
                         <span class="flex items-center gap-2">
                             Galerie Media
-                            <span class="text-[10px] bg-purple-500 text-white px-1.5 py-0.5 rounded-full font-bold">360°</span>
+                            <span class="text-xs bg-purple-500 text-white px-1.5 py-0.5 rounded-full font-bold">360°</span>
                         </span>
                     </SidebarLink>
 
@@ -640,14 +600,14 @@
                         </template>
                         <span class="flex items-center gap-2">
                             Self-Service 24/7
-                            <span class="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
+                            <span class="text-xs bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
                         </span>
                     </SidebarLink>
                 </div>
 
                 <!-- Reports Section -->
                 <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Rapports
                     </p>
                     <SidebarLink
@@ -675,7 +635,7 @@
 
                 <!-- Marketing Section -->
                 <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Marketing
                     </p>
                     <SidebarLink
@@ -724,7 +684,7 @@
                         </template>
                         <span class="flex items-center gap-2">
                             Google Reserve
-                            <span class="text-[10px] bg-gradient-to-r from-red-500 to-yellow-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
+                            <span class="text-xs bg-gradient-to-r from-red-500 to-yellow-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
                         </span>
                     </SidebarLink>
 
@@ -739,7 +699,7 @@
                         </template>
                         <span class="flex items-center gap-2">
                             Marketplaces
-                            <span class="text-[10px] bg-gradient-to-r from-green-500 to-teal-500 text-white px-1.5 py-0.5 rounded-full font-bold">+30%</span>
+                            <span class="text-xs bg-gradient-to-r from-green-500 to-teal-500 text-white px-1.5 py-0.5 rounded-full font-bold">+30%</span>
                         </span>
                     </SidebarLink>
 
@@ -765,7 +725,7 @@
                         </template>
                         <span class="flex items-center gap-2">
                             Kiosques
-                            <span class="text-[10px] bg-gradient-to-r from-sky-500 to-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">24/7</span>
+                            <span class="text-xs bg-gradient-to-r from-sky-500 to-indigo-500 text-white px-1.5 py-0.5 rounded-full font-bold">24/7</span>
                         </span>
                     </SidebarLink>
 
@@ -783,7 +743,7 @@
 
                 <!-- Assurances & Services Section -->
                 <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Assurances & Services
                     </p>
                     <SidebarLink
@@ -797,7 +757,7 @@
                         </template>
                         <span class="flex items-center gap-2">
                             Assurances
-                            <span class="text-[10px] bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
+                            <span class="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">NEW</span>
                         </span>
                     </SidebarLink>
 
@@ -830,7 +790,7 @@
 
                 <!-- Conformité Section -->
                 <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Conformité
                     </p>
                     <SidebarLink
@@ -860,7 +820,7 @@
 
                 <!-- Settings Section -->
                 <div class="mb-6">
-                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    <p v-if="!sidebarCollapsed" class="px-3 mb-3 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                         Configuration
                     </p>
                     <SidebarLink
@@ -894,7 +854,7 @@
                         </template>
                         Email & SMS
                         <template #badge>
-                            <span class="ml-auto text-[10px] bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-1.5 py-0.5 rounded-full font-bold">
+                            <span class="ml-auto text-xs bg-gradient-to-r from-indigo-500 to-purple-500 text-white px-1.5 py-0.5 rounded-full font-bold">
                                 API
                             </span>
                         </template>
@@ -1142,7 +1102,7 @@
             </header>
 
             <!-- Page Content -->
-            <main class="p-4 sm:p-6 lg:p-8" role="main" aria-label="Contenu principal">
+            <main class="p-4 pb-20 sm:p-6 sm:pb-6 lg:p-8" role="main" aria-label="Contenu principal">
                 <!-- Flash Messages -->
                 <transition name="slide-down">
                     <div v-if="$page.props.flash?.success" class="mb-6 flex items-center p-4 rounded-xl bg-emerald-50 border border-emerald-200 animate-fade-in-down" role="alert" aria-live="polite">
@@ -1184,13 +1144,105 @@
                 <slot />
             </main>
 
-            <!-- Footer -->
-            <footer class="border-t border-gray-200 bg-white/50 py-4 px-8">
+            <!-- Footer (hidden on mobile to make room for bottom nav) -->
+            <footer class="hidden sm:block border-t border-gray-200 bg-white/50 py-4 px-8">
                 <div class="flex items-center justify-between text-sm text-gray-500">
                     <p>&copy; {{ new Date().getFullYear() }} Boxibox. Tous droits réservés.</p>
                     <p>Version 1.0.0</p>
                 </div>
             </footer>
+
+            <!-- Mobile Bottom Navigation -->
+            <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 sm:hidden pb-safe" role="navigation" aria-label="Navigation mobile">
+                <div class="flex items-center justify-around h-16">
+                    <Link
+                        :href="route('tenant.dashboard')"
+                        :class="[
+                            'flex flex-col items-center justify-center flex-1 h-full transition-colors',
+                            route().current('tenant.dashboard') ? 'text-primary-600' : 'text-gray-500 hover:text-gray-700'
+                        ]"
+                    >
+                        <HomeIcon class="h-6 w-6" />
+                        <span class="text-xs mt-1 font-medium">Accueil</span>
+                    </Link>
+                    <Link
+                        :href="route('tenant.customers.index')"
+                        :class="[
+                            'flex flex-col items-center justify-center flex-1 h-full transition-colors',
+                            route().current('tenant.customers.*') ? 'text-primary-600' : 'text-gray-500 hover:text-gray-700'
+                        ]"
+                    >
+                        <UsersIcon class="h-6 w-6" />
+                        <span class="text-xs mt-1 font-medium">Clients</span>
+                    </Link>
+                    <button
+                        @click="showMobileQuickActions = true"
+                        class="flex flex-col items-center justify-center flex-1 h-full text-white -mt-4"
+                    >
+                        <div class="flex items-center justify-center h-12 w-12 rounded-full bg-gradient-to-r from-primary-500 to-primary-600 shadow-lg">
+                            <PlusIcon class="h-6 w-6" />
+                        </div>
+                    </button>
+                    <Link
+                        :href="route('tenant.contracts.index')"
+                        :class="[
+                            'flex flex-col items-center justify-center flex-1 h-full transition-colors',
+                            route().current('tenant.contracts.*') ? 'text-primary-600' : 'text-gray-500 hover:text-gray-700'
+                        ]"
+                    >
+                        <DocumentTextIcon class="h-6 w-6" />
+                        <span class="text-xs mt-1 font-medium">Contrats</span>
+                    </Link>
+                    <button
+                        @click="sidebarOpen = true"
+                        class="flex flex-col items-center justify-center flex-1 h-full text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                        <Bars3Icon class="h-6 w-6" />
+                        <span class="text-xs mt-1 font-medium">Menu</span>
+                    </button>
+                </div>
+            </nav>
+
+            <!-- Mobile Quick Actions Bottom Sheet -->
+            <transition name="slide-up">
+                <div v-if="showMobileQuickActions" class="fixed inset-0 z-50 sm:hidden">
+                    <div class="fixed inset-0 bg-gray-900/60 backdrop-blur-sm" @click="showMobileQuickActions = false"></div>
+                    <div class="fixed bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-2xl pb-safe">
+                        <div class="flex justify-center py-3">
+                            <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
+                        </div>
+                        <div class="px-4 pb-6">
+                            <h3 class="text-lg font-semibold text-gray-900 mb-4">Actions rapides</h3>
+                            <div class="grid grid-cols-3 gap-4">
+                                <Link :href="route('tenant.customers.create')" class="flex flex-col items-center p-4 rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors">
+                                    <UserPlusIcon class="h-8 w-8 text-blue-600 mb-2" />
+                                    <span class="text-sm font-medium text-blue-900">Client</span>
+                                </Link>
+                                <Link :href="route('tenant.contracts.create')" class="flex flex-col items-center p-4 rounded-xl bg-emerald-50 hover:bg-emerald-100 transition-colors">
+                                    <DocumentPlusIcon class="h-8 w-8 text-emerald-600 mb-2" />
+                                    <span class="text-sm font-medium text-emerald-900">Contrat</span>
+                                </Link>
+                                <Link :href="route('tenant.invoices.create')" class="flex flex-col items-center p-4 rounded-xl bg-purple-50 hover:bg-purple-100 transition-colors">
+                                    <DocumentTextIcon class="h-8 w-8 text-purple-600 mb-2" />
+                                    <span class="text-sm font-medium text-purple-900">Facture</span>
+                                </Link>
+                                <Link :href="route('tenant.payments.create')" class="flex flex-col items-center p-4 rounded-xl bg-amber-50 hover:bg-amber-100 transition-colors">
+                                    <BanknotesIcon class="h-8 w-8 text-amber-600 mb-2" />
+                                    <span class="text-sm font-medium text-amber-900">Paiement</span>
+                                </Link>
+                                <Link :href="route('tenant.bookings.index')" class="flex flex-col items-center p-4 rounded-xl bg-rose-50 hover:bg-rose-100 transition-colors">
+                                    <CalendarDaysIcon class="h-8 w-8 text-rose-600 mb-2" />
+                                    <span class="text-sm font-medium text-rose-900">Réservation</span>
+                                </Link>
+                                <button @click="showSearch = true; showMobileQuickActions = false" class="flex flex-col items-center p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors">
+                                    <MagnifyingGlassIcon class="h-8 w-8 text-gray-600 mb-2" />
+                                    <span class="text-sm font-medium text-gray-900">Recherche</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </transition>
         </div>
 
         <!-- Search Modal -->
@@ -1315,6 +1367,7 @@ const showUserMenu = ref(false)
 const showNotifications = ref(false)
 const showQuickActions = ref(false)
 const showSearch = ref(false)
+const showMobileQuickActions = ref(false)
 const tutorialGuideRef = ref(null)
 const showTutorialMenu = ref(false)
 
@@ -1353,6 +1406,7 @@ const handleKeydown = (e) => {
         showQuickActions.value = false
         showUserMenu.value = false
         showTutorialMenu.value = false
+        showMobileQuickActions.value = false
     }
 }
 
@@ -1417,5 +1471,26 @@ onUnmounted(() => {
 .modal-enter-from > div:last-child,
 .modal-leave-to > div:last-child {
     transform: scale(0.95);
+}
+
+/* Slide up transition for mobile bottom sheet */
+.slide-up-enter-active,
+.slide-up-leave-active {
+    transition: all 0.3s ease;
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+    opacity: 0;
+}
+
+.slide-up-enter-from > div:last-child,
+.slide-up-leave-to > div:last-child {
+    transform: translateY(100%);
+}
+
+/* Safe area padding for iOS */
+.pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0);
 }
 </style>
