@@ -238,53 +238,42 @@ class DashboardController extends Controller
 
     /**
      * Get monthly summary for current month.
+     * Optimized: Uses single queries with selectRaw instead of multiple queries
      */
     private function getMonthlySummary(int $tenantId): array
     {
         $monthStart = now()->startOfMonth();
         $monthEnd = now()->endOfMonth();
 
-        // Revenue this month (completed payments)
-        $revenue = Payment::where('tenant_id', $tenantId)
+        // Revenue and payments this month (single optimized query)
+        $paymentStats = Payment::where('tenant_id', $tenantId)
             ->where('status', 'completed')
-            ->where('type', 'payment')
             ->whereBetween('paid_at', [$monthStart, $monthEnd])
-            ->sum('amount');
+            ->selectRaw("
+                COUNT(*) as payments_count,
+                COALESCE(SUM(amount), 0) as payments_total,
+                SUM(CASE WHEN type = 'payment' THEN 1 ELSE 0 END) as revenue_count,
+                COALESCE(SUM(CASE WHEN type = 'payment' THEN amount ELSE 0 END), 0) as revenue
+            ")
+            ->first();
 
-        $revenueCount = Payment::where('tenant_id', $tenantId)
-            ->where('status', 'completed')
-            ->where('type', 'payment')
-            ->whereBetween('paid_at', [$monthStart, $monthEnd])
-            ->count();
-
-        // Invoices this month
-        $invoicesCount = Invoice::where('tenant_id', $tenantId)
+        // Invoices this month (single optimized query)
+        $invoiceStats = Invoice::where('tenant_id', $tenantId)
             ->whereBetween('invoice_date', [$monthStart, $monthEnd])
-            ->count();
+            ->selectRaw("
+                COUNT(*) as invoices_count,
+                COALESCE(SUM(total), 0) as invoices_total
+            ")
+            ->first();
 
-        $invoicesTotal = Invoice::where('tenant_id', $tenantId)
-            ->whereBetween('invoice_date', [$monthStart, $monthEnd])
-            ->sum('total');
-
-        // Payments this month
-        $paymentsCount = Payment::where('tenant_id', $tenantId)
-            ->where('status', 'completed')
-            ->whereBetween('paid_at', [$monthStart, $monthEnd])
-            ->count();
-
-        $paymentsTotal = Payment::where('tenant_id', $tenantId)
-            ->where('status', 'completed')
-            ->whereBetween('paid_at', [$monthStart, $monthEnd])
-            ->sum('amount');
-
-        // New contracts this month
-        $newContracts = Contract::where('tenant_id', $tenantId)
+        // New contracts this month (single optimized query)
+        $contractStats = Contract::where('tenant_id', $tenantId)
             ->whereBetween('start_date', [$monthStart, $monthEnd])
-            ->count();
-
-        $newContractsValue = Contract::where('tenant_id', $tenantId)
-            ->whereBetween('start_date', [$monthStart, $monthEnd])
-            ->sum('monthly_price');
+            ->selectRaw("
+                COUNT(*) as new_contracts,
+                COALESCE(SUM(monthly_price), 0) as new_contracts_value
+            ")
+            ->first();
 
         // New customers this month
         $newCustomers = Customer::where('tenant_id', $tenantId)
@@ -292,14 +281,14 @@ class DashboardController extends Controller
             ->count();
 
         return [
-            'revenue' => $revenue,
-            'revenue_count' => $revenueCount,
-            'invoices_count' => $invoicesCount,
-            'invoices_total' => $invoicesTotal,
-            'payments_count' => $paymentsCount,
-            'payments_total' => $paymentsTotal,
-            'new_contracts' => $newContracts,
-            'new_contracts_value' => $newContractsValue,
+            'revenue' => $paymentStats->revenue ?? 0,
+            'revenue_count' => $paymentStats->revenue_count ?? 0,
+            'invoices_count' => $invoiceStats->invoices_count ?? 0,
+            'invoices_total' => $invoiceStats->invoices_total ?? 0,
+            'payments_count' => $paymentStats->payments_count ?? 0,
+            'payments_total' => $paymentStats->payments_total ?? 0,
+            'new_contracts' => $contractStats->new_contracts ?? 0,
+            'new_contracts_value' => $contractStats->new_contracts_value ?? 0,
             'new_customers' => $newCustomers,
         ];
     }

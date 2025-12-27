@@ -50,13 +50,23 @@ class BoxController extends Controller
                 ];
             });
 
-        // Calculate statistics
+        // Calculate statistics with a single optimized query (instead of 5 separate queries)
+        $statsRaw = Box::where('tenant_id', $tenantId)
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'occupied' THEN 1 ELSE 0 END) as occupied,
+                SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available,
+                SUM(CASE WHEN status = 'reserved' THEN 1 ELSE 0 END) as reserved,
+                SUM(CASE WHEN status = 'maintenance' THEN 1 ELSE 0 END) as maintenance
+            ")
+            ->first();
+
         $stats = [
-            'total' => Box::where('tenant_id', $tenantId)->count(),
-            'occupied' => Box::where('tenant_id', $tenantId)->where('status', 'occupied')->count(),
-            'available' => Box::where('tenant_id', $tenantId)->where('status', 'available')->count(),
-            'reserved' => Box::where('tenant_id', $tenantId)->where('status', 'reserved')->count(),
-            'maintenance' => Box::where('tenant_id', $tenantId)->where('status', 'maintenance')->count(),
+            'total' => $statsRaw->total ?? 0,
+            'occupied' => $statsRaw->occupied ?? 0,
+            'available' => $statsRaw->available ?? 0,
+            'reserved' => $statsRaw->reserved ?? 0,
+            'maintenance' => $statsRaw->maintenance ?? 0,
         ];
 
         // Get plan elements from tenant
@@ -166,12 +176,23 @@ class BoxController extends Controller
             ->paginate(10)
             ->withQueryString();
 
+        // Calculate statistics with a single optimized query (instead of 5 separate queries)
+        $statsRaw = Box::where('tenant_id', $tenantId)
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available,
+                SUM(CASE WHEN status = 'occupied' THEN 1 ELSE 0 END) as occupied,
+                SUM(CASE WHEN status = 'maintenance' THEN 1 ELSE 0 END) as maintenance,
+                SUM(CASE WHEN status = 'occupied' THEN current_price ELSE 0 END) as total_revenue
+            ")
+            ->first();
+
         $stats = [
-            'total' => Box::where('tenant_id', $tenantId)->count(),
-            'available' => Box::where('tenant_id', $tenantId)->where('status', 'available')->count(),
-            'occupied' => Box::where('tenant_id', $tenantId)->where('status', 'occupied')->count(),
-            'maintenance' => Box::where('tenant_id', $tenantId)->where('status', 'maintenance')->count(),
-            'total_revenue' => Box::where('tenant_id', $tenantId)->where('status', 'occupied')->sum('current_price'),
+            'total' => $statsRaw->total ?? 0,
+            'available' => $statsRaw->available ?? 0,
+            'occupied' => $statsRaw->occupied ?? 0,
+            'maintenance' => $statsRaw->maintenance ?? 0,
+            'total_revenue' => $statsRaw->total_revenue ?? 0,
         ];
 
         $sites = Site::where('tenant_id', $tenantId)

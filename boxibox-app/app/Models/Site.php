@@ -131,29 +131,61 @@ class Site extends Model
     }
 
     // Helper Methods
+    /**
+     * Update occupation rate using a single optimized query
+     */
     public function updateOccupationRate(): void
     {
-        $totalBoxes = $this->boxes()->count();
-        $occupiedBoxes = $this->boxes()->where('status', 'occupied')->count();
+        // Single query instead of 2 separate queries
+        $stats = $this->boxes()
+            ->selectRaw("
+                COUNT(*) as total,
+                SUM(CASE WHEN status = 'occupied' THEN 1 ELSE 0 END) as occupied,
+                SUM(CASE WHEN status = 'available' THEN 1 ELSE 0 END) as available
+            ")
+            ->first();
+
+        $totalBoxes = $stats->total ?? 0;
+        $occupiedBoxes = $stats->occupied ?? 0;
+        $availableBoxes = $stats->available ?? 0;
 
         $occupationRate = $totalBoxes > 0 ? ($occupiedBoxes / $totalBoxes) * 100 : 0;
 
-        $this->update([
+        $updateData = [
             'occupation_rate' => $occupationRate,
             'total_boxes' => $totalBoxes,
-            'occupied_capacity' => $occupiedBoxes,
-            'available_capacity' => $totalBoxes - $occupiedBoxes,
-        ]);
+        ];
+
+        // Only update if columns exist
+        if (\Schema::hasColumn('sites', 'occupied_capacity')) {
+            $updateData['occupied_capacity'] = $occupiedBoxes;
+        }
+        if (\Schema::hasColumn('sites', 'available_capacity')) {
+            $updateData['available_capacity'] = $availableBoxes;
+        }
+
+        $this->update($updateData);
     }
 
+    /**
+     * Update statistics using optimized queries
+     */
     public function updateStatistics(): void
     {
-        $this->update([
-            'total_buildings' => $this->buildings()->count(),
-            'total_floors' => Floor::whereHas('building', function($q) {
-                $q->where('site_id', $this->id);
-            })->count(),
-            'total_boxes' => $this->boxes()->count(),
-        ]);
+        // Get all stats in a single subquery
+        $buildingCount = $this->buildings()->count();
+        $floorCount = Floor::whereIn('building_id', $this->buildings()->select('id'))->count();
+        $boxCount = $this->boxes()->count();
+
+        $updateData = ['total_boxes' => $boxCount];
+
+        if (\Schema::hasColumn('sites', 'total_buildings')) {
+            $updateData['total_buildings'] = $buildingCount;
+        }
+        if (\Schema::hasColumn('sites', 'total_floors')) {
+            $updateData['total_floors'] = $floorCount;
+        }
+
+        $this->update($updateData);
     }
 }
