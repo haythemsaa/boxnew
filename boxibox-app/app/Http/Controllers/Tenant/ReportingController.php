@@ -12,6 +12,8 @@ use App\Models\Payment;
 use App\Models\Box;
 use App\Models\Customer;
 use App\Models\Site;
+use App\Services\ReportDataService;
+use App\Services\ReportExportService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +22,11 @@ use Carbon\Carbon;
 
 class ReportingController extends Controller
 {
+    public function __construct(
+        protected ReportDataService $reportDataService,
+        protected ReportExportService $reportExportService
+    ) {}
+
     public function index()
     {
         $tenantId = Auth::user()->tenant_id;
@@ -45,8 +52,8 @@ class ReportingController extends Controller
     public function create()
     {
         return Inertia::render('Tenant/Reports/Create', [
-            'reportTypes' => $this->getReportTypes(),
-            'availableColumns' => $this->getAvailableColumns(),
+            'reportTypes' => $this->reportDataService->getReportTypes(),
+            'availableColumns' => $this->reportDataService->getAvailableColumns(),
         ]);
     }
 
@@ -84,8 +91,9 @@ class ReportingController extends Controller
     {
         $this->authorize('view', $report);
 
+        $tenantId = Auth::user()->tenant_id;
         $filters = $request->only(['date_from', 'date_to', 'site_id', 'status', 'customer_id']);
-        $data = $this->generateReportData($report, $filters);
+        $data = $this->reportDataService->generateReportData($report, $tenantId, $filters);
 
         return Inertia::render('Tenant/Reports/Show', [
             'report' => $report,
@@ -100,8 +108,8 @@ class ReportingController extends Controller
 
         return Inertia::render('Tenant/Reports/Edit', [
             'report' => $report,
-            'reportTypes' => $this->getReportTypes(),
-            'availableColumns' => $this->getAvailableColumns(),
+            'reportTypes' => $this->reportDataService->getReportTypes(),
+            'availableColumns' => $this->reportDataService->getAvailableColumns(),
         ]);
     }
 
@@ -139,69 +147,29 @@ class ReportingController extends Controller
     {
         $this->authorize('view', $report);
 
+        $tenantId = Auth::user()->tenant_id;
         $format = $request->input('format', 'csv');
-        $startTime = microtime(true);
+        $filters = $request->only(['date_from', 'date_to', 'site_id', 'status', 'customer_id']);
 
-        try {
-            $filters = $request->only(['date_from', 'date_to', 'site_id', 'status', 'customer_id']);
-            $data = $this->generateReportData($report, $filters);
+        // Generate report data using the service
+        $data = $this->reportDataService->generateReportData($report, $tenantId, $filters);
 
-            if (empty($data)) {
-                return redirect()->back()
-                    ->with('warning', 'Aucune donnee a exporter pour ce rapport.');
-            }
-
-            // Générer le fichier selon le format
-            $content = match ($format) {
-                'csv' => $this->generateCsv($data, $report->columns),
-                'xlsx' => $this->generateExcel($data, $report->columns),
-                'pdf' => $this->generatePdf($data, $report),
-                default => $this->generateCsv($data, $report->columns),
-            };
-
-            $generationTime = (microtime(true) - $startTime) * 1000;
-
-            // Enregistrer dans l'historique
-            ReportHistory::create([
-                'custom_report_id' => $report->id,
-                'generated_by' => Auth::id(),
-                'format' => $format,
-                'row_count' => count($data),
-                'generation_time_ms' => $generationTime,
-                'parameters_used' => $filters,
-                'status' => 'completed',
-            ]);
-
-            $filename = $report->name . '_' . now()->format('Y-m-d') . '.' . $format;
-
-            return response($content)
-                ->header('Content-Type', $this->getContentType($format))
-                ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
-
-        } catch (\Exception $e) {
-            $generationTime = (microtime(true) - $startTime) * 1000;
-
-            // Enregistrer l'echec dans l'historique
-            ReportHistory::create([
-                'custom_report_id' => $report->id,
-                'generated_by' => Auth::id(),
-                'format' => $format,
-                'row_count' => 0,
-                'generation_time_ms' => $generationTime,
-                'parameters_used' => $request->only(['date_from', 'date_to', 'site_id', 'status', 'customer_id']),
-                'status' => 'failed',
-                'error_message' => $e->getMessage(),
-            ]);
-
-            \Log::error("Failed to export report #{$report->id}: " . $e->getMessage(), [
-                'report_id' => $report->id,
-                'format' => $format,
-                'trace' => $e->getTraceAsString(),
-            ]);
-
+        if (empty($data)) {
             return redirect()->back()
-                ->with('error', 'Une erreur est survenue lors de la generation du rapport. Veuillez reessayer.');
+                ->with('warning', 'Aucune donnée à exporter pour ce rapport.');
         }
+
+        // Export using the service (handles history recording)
+        $result = $this->reportExportService->exportReport($report, $data, $format, $filters);
+
+        if (!$result['success']) {
+            return redirect()->back()
+                ->with('error', $result['error']);
+        }
+
+        return response($result['content'])
+            ->header('Content-Type', $result['content_type'])
+            ->header('Content-Disposition', 'attachment; filename="' . $result['filename'] . '"');
     }
 
     // Rapports prédéfinis
@@ -609,32 +577,24 @@ class ReportingController extends Controller
     {
         $tenantId = Auth::user()->tenant_id;
 
+        // Get cash flow projection from service
+        $cashFlowData = $this->reportDataService->getCashFlowProjection($tenantId);
+
         // Encaissements prévus (factures en attente)
         $expectedIncome = Invoice::where('tenant_id', $tenantId)
-            ->where('status', 'pending')
+            ->whereIn('status', ['sent', 'partial'])
             ->where('due_date', '>=', now())
             ->where('due_date', '<=', now()->addMonths(3))
-            ->selectRaw('DATE_FORMAT(due_date, "%Y-%m") as month, SUM(total) as total')
+            ->selectRaw('DATE_FORMAT(due_date, "%Y-%m") as month, SUM(total - paid_amount) as total')
             ->groupBy('month')
             ->orderBy('month')
             ->get();
 
-        // Impayés à recouvrer
-        $overdue = Invoice::where('tenant_id', $tenantId)
-            ->where('status', 'pending')
-            ->where('due_date', '<', now())
-            ->sum('total');
-
-        // Revenus récurrents mensuels (MRR)
-        $mrr = Contract::where('tenant_id', $tenantId)
-            ->where('status', 'active')
-            ->sum('monthly_price');
-
         return Inertia::render('Tenant/Reports/CashFlow', [
             'expectedIncome' => $expectedIncome,
-            'overdue' => $overdue,
-            'mrr' => $mrr,
-            'projectedCashFlow' => $this->projectCashFlow($tenantId),
+            'overdue' => $cashFlowData['overdue'],
+            'mrr' => $cashFlowData['mrr'],
+            'projectedCashFlow' => $cashFlowData['projection'],
         ]);
     }
 
