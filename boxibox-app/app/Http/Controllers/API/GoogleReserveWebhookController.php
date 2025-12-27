@@ -330,6 +330,7 @@ class GoogleReserveWebhookController extends Controller
         $googleBookingId = $data['booking']['booking_id'];
         $newStatus = $data['booking']['status'];
 
+        // Find the booking first
         $booking = GoogleReserveBooking::where('google_booking_id', $googleBookingId)->first();
 
         if (!$booking) {
@@ -339,6 +340,15 @@ class GoogleReserveWebhookController extends Controller
                     'description' => 'Booking not found',
                 ],
             ], 404);
+        }
+
+        // Verify webhook signature (SECURITY)
+        $settings = GoogleReserveSettings::where('tenant_id', $booking->tenant_id)
+            ->where('site_id', $booking->site_id)
+            ->first();
+        if ($settings && $settings->webhook_secret && !$this->verifySignature($request, $settings->webhook_secret)) {
+            Log::warning('Google Reserve invalid signature on updateBooking', ['booking_id' => $googleBookingId]);
+            return response()->json(['error' => 'Invalid signature'], 401);
         }
 
         // Map Google status to our status
@@ -403,6 +413,15 @@ class GoogleReserveWebhookController extends Controller
             ], 404);
         }
 
+        // Verify webhook signature (SECURITY)
+        $settings = GoogleReserveSettings::where('tenant_id', $booking->tenant_id)
+            ->where('site_id', $booking->site_id)
+            ->first();
+        if ($settings && $settings->webhook_secret && !$this->verifySignature($request, $settings->webhook_secret)) {
+            Log::warning('Google Reserve invalid signature on getBookingStatus', ['booking_id' => $data['booking_id']]);
+            return response()->json(['error' => 'Invalid signature'], 401);
+        }
+
         return $this->formatBookingResponse($booking);
     }
 
@@ -423,6 +442,12 @@ class GoogleReserveWebhookController extends Controller
 
         if (!$settings) {
             return response()->json(['bookings' => []]);
+        }
+
+        // Verify webhook signature (SECURITY)
+        if ($settings->webhook_secret && !$this->verifySignature($request, $settings->webhook_secret)) {
+            Log::warning('Google Reserve invalid signature on listBookings', ['merchant_id' => $data['merchant_id']]);
+            return response()->json(['error' => 'Invalid signature'], 401);
         }
 
         $query = GoogleReserveBooking::where('tenant_id', $settings->tenant_id)

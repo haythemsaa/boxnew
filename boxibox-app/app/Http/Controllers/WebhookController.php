@@ -25,12 +25,25 @@ class WebhookController extends Controller
     {
         $payload = $request->getContent();
         $signature = $request->header('Stripe-Signature');
+        $webhookSecret = config('services.stripe.webhook_secret');
+
+        // SECURITY: Validate webhook secret is configured
+        if (empty($webhookSecret)) {
+            Log::error('Stripe webhook secret not configured');
+            return response()->json(['error' => 'Webhook not configured'], 500);
+        }
+
+        // SECURITY: Validate signature header is present
+        if (empty($signature)) {
+            Log::warning('Stripe webhook missing signature header');
+            return response()->json(['error' => 'Missing signature'], 400);
+        }
 
         try {
             $event = \Stripe\Webhook::constructEvent(
                 $payload,
                 $signature,
-                config('services.stripe.webhook_secret')
+                $webhookSecret
             );
 
             // Handle the event
@@ -73,9 +86,20 @@ class WebhookController extends Controller
 
             return response()->json(['status' => 'success']);
 
+        } catch (\Stripe\Exception\SignatureVerificationException $e) {
+            Log::warning('Stripe webhook signature verification failed', [
+                'error' => $e->getMessage(),
+                'ip' => $request->ip(),
+            ]);
+            return response()->json(['error' => 'Invalid signature'], 400);
+        } catch (\UnexpectedValueException $e) {
+            Log::warning('Stripe webhook invalid payload', [
+                'error' => $e->getMessage(),
+            ]);
+            return response()->json(['error' => 'Invalid payload'], 400);
         } catch (\Exception $e) {
-            Log::error('Webhook error: ' . $e->getMessage());
-            return response()->json(['error' => $e->getMessage()], 400);
+            Log::error('Stripe webhook processing error: ' . $e->getMessage());
+            return response()->json(['error' => 'Processing error'], 500);
         }
     }
 

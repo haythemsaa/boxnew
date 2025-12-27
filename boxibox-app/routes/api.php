@@ -172,8 +172,9 @@ Route::prefix('widget')->middleware('throttle:120,1')->group(function () {
 |--------------------------------------------------------------------------
 | Self-Service Access Control API (For gate/lock systems)
 |--------------------------------------------------------------------------
+| Rate limited to prevent brute-force attacks on access codes
 */
-Route::prefix('v1/access')->group(function () {
+Route::prefix('v1/access')->middleware('throttle:10,1')->group(function () {
     Route::post('/validate', [\App\Http\Controllers\Tenant\SelfServiceController::class, 'validateAccess'])->name('api.v1.access.validate');
 });
 
