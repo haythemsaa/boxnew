@@ -6,35 +6,37 @@
             @click="openChat"
             class="chat-toggle-btn"
             :class="{ 'has-notification': hasUnread }"
+            aria-label="Ouvrir le chat d'assistance"
+            :aria-expanded="isOpen"
         >
-            <ChatBubbleLeftRightIcon class="w-6 h-6" />
-            <span v-if="hasUnread" class="notification-badge">1</span>
+            <ChatBubbleLeftRightIcon class="w-6 h-6" aria-hidden="true" />
+            <span v-if="hasUnread" class="notification-badge" aria-hidden="true">1</span>
         </button>
 
         <!-- Chat Window -->
         <Transition name="chat-slide">
-            <div v-if="isOpen" class="chat-window">
+            <div v-if="isOpen" class="chat-window" role="dialog" aria-modal="true" aria-labelledby="chat-title">
                 <!-- Header -->
                 <div class="chat-header">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                        <div class="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center" aria-hidden="true">
                             <SparklesIcon class="w-5 h-5" />
                         </div>
                         <div>
-                            <h3 class="font-semibold text-white">Assistant BoxiBox</h3>
+                            <h3 id="chat-title" class="font-semibold text-white">Assistant BoxiBox</h3>
                             <p class="text-xs text-white/70">
-                                <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-1"></span>
-                                En ligne
+                                <span class="inline-block w-2 h-2 bg-green-400 rounded-full mr-1" aria-hidden="true"></span>
+                                <span class="sr-only">Statut:</span> En ligne
                             </p>
                         </div>
                     </div>
-                    <button @click="closeChat" class="text-white/70 hover:text-white transition">
-                        <XMarkIcon class="w-5 h-5" />
+                    <button @click="closeChat" class="text-white/70 hover:text-white transition focus:outline-none focus:ring-2 focus:ring-white/50 rounded" aria-label="Fermer le chat">
+                        <XMarkIcon class="w-5 h-5" aria-hidden="true" />
                     </button>
                 </div>
 
                 <!-- Messages -->
-                <div ref="messagesContainer" class="chat-messages">
+                <div ref="messagesContainer" class="chat-messages" aria-live="polite" aria-label="Historique des messages">
                     <!-- Welcome Message -->
                     <div v-if="messages.length === 0" class="welcome-message">
                         <div class="text-center mb-4">
@@ -88,34 +90,41 @@
                     </template>
 
                     <!-- Typing Indicator -->
-                    <div v-if="isTyping" class="message message-assistant">
-                        <div class="message-avatar">
+                    <div v-if="isTyping" class="message message-assistant" role="status" aria-label="L'assistant est en train de taper">
+                        <div class="message-avatar" aria-hidden="true">
                             <SparklesIcon class="w-4 h-4 text-primary-600" />
                         </div>
-                        <div class="typing-indicator">
+                        <div class="typing-indicator" aria-hidden="true">
                             <span></span>
                             <span></span>
                             <span></span>
                         </div>
+                        <span class="sr-only">L'assistant écrit une réponse...</span>
                     </div>
                 </div>
 
                 <!-- Input -->
                 <div class="chat-input">
+                    <label for="chat-input-field" class="sr-only">Votre message</label>
                     <input
+                        id="chat-input-field"
                         v-model="inputMessage"
                         @keyup.enter="sendMessage"
                         type="text"
                         placeholder="Tapez votre message..."
                         :disabled="isTyping"
+                        :aria-disabled="isTyping"
                         class="chat-input-field"
+                        autocomplete="off"
                     />
                     <button
                         @click="sendMessage"
                         :disabled="!inputMessage.trim() || isTyping"
+                        :aria-disabled="!inputMessage.trim() || isTyping"
                         class="send-btn"
+                        aria-label="Envoyer le message"
                     >
-                        <PaperAirplaneIcon class="w-5 h-5" />
+                        <PaperAirplaneIcon class="w-5 h-5" aria-hidden="true" />
                     </button>
                 </div>
 

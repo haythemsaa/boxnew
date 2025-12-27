@@ -12,6 +12,12 @@
                 type="button"
                 :id="id"
                 :disabled="disabled"
+                :aria-expanded="isOpen"
+                :aria-haspopup="'listbox'"
+                :aria-controls="dropdownId"
+                :aria-invalid="!!error"
+                :aria-describedby="error ? errorId : null"
+                :aria-required="required"
                 class="select-trigger"
                 :class="[size, { 'has-icon': $slots.icon }]"
                 @click="toggleDropdown"
@@ -42,25 +48,34 @@
                 leave-from-class="opacity-100 scale-100 translate-y-0"
                 leave-to-class="opacity-0 scale-95 -translate-y-2"
             >
-                <div v-show="isOpen" class="select-dropdown" :class="dropdownPosition">
+                <div
+                    v-show="isOpen"
+                    :id="dropdownId"
+                    role="listbox"
+                    :aria-label="label || 'Options'"
+                    class="select-dropdown"
+                    :class="dropdownPosition"
+                >
                     <!-- Search -->
                     <div v-if="searchable" class="dropdown-search">
-                        <MagnifyingGlassIcon class="w-4 h-4 text-gray-400" />
+                        <MagnifyingGlassIcon class="w-4 h-4 text-gray-400" aria-hidden="true" />
                         <input
                             ref="searchInputRef"
                             v-model="searchQuery"
                             type="text"
                             placeholder="Rechercher..."
+                            aria-label="Rechercher dans les options"
                             class="search-input"
                             @click.stop
                         />
                     </div>
 
                     <!-- Options -->
-                    <div class="dropdown-options" ref="optionsRef">
+                    <div class="dropdown-options" ref="optionsRef" aria-live="polite">
                         <div
                             v-if="filteredOptions.length === 0"
                             class="no-options"
+                            role="status"
                         >
                             Aucun resultat
                         </div>
@@ -69,6 +84,8 @@
                             v-for="(option, index) in filteredOptions"
                             :key="getOptionValue(option)"
                             type="button"
+                            role="option"
+                            :aria-selected="isSelected(option)"
                             class="dropdown-option"
                             :class="{
                                 'is-selected': isSelected(option),
@@ -78,7 +95,7 @@
                             @mouseenter="highlightedIndex = index"
                         >
                             <span class="option-label">{{ getOptionLabel(option) }}</span>
-                            <CheckIcon v-if="isSelected(option)" class="w-4 h-4 text-primary-600" />
+                            <CheckIcon v-if="isSelected(option)" class="w-4 h-4 text-primary-600" aria-hidden="true" />
                         </button>
                     </div>
                 </div>
@@ -87,8 +104,8 @@
 
         <!-- Error message -->
         <transition name="slide-fade">
-            <p v-if="error" class="error-message">
-                <ExclamationCircleIcon class="w-4 h-4 mr-1" />
+            <p v-if="error" :id="errorId" class="error-message" role="alert" aria-live="assertive">
+                <ExclamationCircleIcon class="w-4 h-4 mr-1" aria-hidden="true" />
                 {{ error }}
             </p>
         </transition>
@@ -129,6 +146,11 @@ const isOpen = ref(false)
 const searchQuery = ref('')
 const highlightedIndex = ref(0)
 const dropdownPosition = ref('bottom')
+
+// Generate unique IDs for accessibility
+const uniqueId = Math.random().toString(36).substr(2, 9)
+const dropdownId = computed(() => `dropdown-${props.id || uniqueId}`)
+const errorId = computed(() => `error-${props.id || uniqueId}`)
 
 const hasValue = computed(() => {
     return props.modelValue !== null && props.modelValue !== undefined && props.modelValue !== ''

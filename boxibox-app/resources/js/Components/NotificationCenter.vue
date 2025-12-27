@@ -3,9 +3,12 @@
         <!-- Notification Bell Button -->
         <button
             @click="toggleNotifications"
-            class="relative p-2 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-200"
+            :aria-expanded="showNotifications"
+            aria-haspopup="true"
+            :aria-label="`Notifications${unreadCount > 0 ? ` (${unreadCount} non lues)` : ''}`"
+            class="relative p-2 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
             </svg>
@@ -13,6 +16,7 @@
             <span
                 v-if="unreadCount > 0"
                 class="absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 text-xs font-bold text-white bg-red-500 rounded-full animate-pulse"
+                aria-hidden="true"
             >
                 {{ unreadCount > 99 ? '99+' : unreadCount }}
             </span>
@@ -20,6 +24,7 @@
             <span
                 v-if="criticalCount > 0"
                 class="absolute top-0 right-0 w-2 h-2 bg-red-600 rounded-full ring-2 ring-white dark:ring-gray-800"
+                aria-hidden="true"
             ></span>
         </button>
 
@@ -34,6 +39,8 @@
         >
             <div
                 v-if="showNotifications"
+                role="region"
+                aria-label="Centre de notifications"
                 class="absolute right-0 mt-2 w-96 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50 overflow-hidden"
             >
                 <!-- Header -->
@@ -64,34 +71,38 @@
                 </div>
 
                 <!-- Filtres -->
-                <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex space-x-2">
+                <div class="px-4 py-2 border-b border-gray-200 dark:border-gray-700 flex space-x-2" role="tablist" aria-label="Filtrer les notifications">
                     <button
                         v-for="filter in filters"
                         :key="filter.key"
                         @click="activeFilter = filter.key"
+                        role="tab"
+                        :aria-selected="activeFilter === filter.key"
+                        :aria-controls="'notification-list'"
                         :class="[
-                            'px-3 py-1 text-xs font-medium rounded-full transition-colors',
+                            'px-3 py-1 text-xs font-medium rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-primary-500',
                             activeFilter === filter.key
                                 ? 'bg-primary-100 text-primary-700 dark:bg-primary-900/50 dark:text-primary-300'
                                 : 'text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
                         ]"
                     >
                         {{ filter.label }}
-                        <span v-if="filter.count > 0" class="ml-1 text-xs">{{ filter.count }}</span>
+                        <span v-if="filter.count > 0" class="ml-1 text-xs" aria-hidden="true">{{ filter.count }}</span>
+                        <span class="sr-only" v-if="filter.count > 0"> ({{ filter.count }})</span>
                     </button>
                 </div>
 
                 <!-- Liste des notifications -->
-                <div class="max-h-[400px] overflow-y-auto">
+                <div id="notification-list" role="tabpanel" class="max-h-[400px] overflow-y-auto" aria-live="polite">
                     <!-- Loading -->
-                    <div v-if="isLoading" class="p-8 text-center">
-                        <div class="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full mx-auto"></div>
+                    <div v-if="isLoading" class="p-8 text-center" role="status" aria-live="polite">
+                        <div class="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full mx-auto" aria-hidden="true"></div>
                         <p class="mt-2 text-sm text-gray-500">Chargement...</p>
                     </div>
 
                     <!-- Empty state -->
-                    <div v-else-if="filteredNotifications.length === 0" class="p-8 text-center">
-                        <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                    <div v-else-if="filteredNotifications.length === 0" class="p-8 text-center" role="status">
+                        <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center" aria-hidden="true">
                             <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
                             </svg>

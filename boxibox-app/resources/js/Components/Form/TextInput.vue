@@ -16,6 +16,9 @@
                 :disabled="disabled"
                 :readonly="readonly"
                 :required="required"
+                :aria-required="required"
+                :aria-invalid="!!error"
+                :aria-describedby="ariaDescribedBy"
                 :autocomplete="autocomplete"
                 :class="[
                     'form-input',
@@ -49,9 +52,10 @@
                 v-if="clearable && hasValue && !disabled"
                 type="button"
                 class="clear-button"
+                aria-label="Effacer le champ"
                 @click="clearInput"
             >
-                <XMarkIcon class="w-4 h-4" />
+                <XMarkIcon class="w-4 h-4" aria-hidden="true" />
             </button>
 
             <!-- Focus ring animation -->
@@ -66,17 +70,17 @@
 
         <!-- Helper text / Error -->
         <transition name="slide-fade">
-            <p v-if="error" class="error-message">
-                <ExclamationCircleIcon class="w-4 h-4 mr-1" />
+            <p v-if="error" :id="errorId" class="error-message" role="alert" aria-live="assertive">
+                <ExclamationCircleIcon class="w-4 h-4 mr-1" aria-hidden="true" />
                 {{ error }}
             </p>
-            <p v-else-if="hint" class="hint-message">
+            <p v-else-if="hint" :id="hintId" class="hint-message">
                 {{ hint }}
             </p>
         </transition>
 
         <!-- Character count -->
-        <div v-if="showCount && maxlength" class="char-count">
+        <div v-if="showCount && maxlength" class="char-count" aria-live="polite" aria-atomic="true">
             <span :class="{ 'text-red-500': charCount > maxlength }">{{ charCount }}</span>
             / {{ maxlength }}
         </div>
@@ -111,6 +115,17 @@ const emit = defineEmits(['update:modelValue', 'focus', 'blur', 'clear', 'keydow
 
 const inputRef = ref(null)
 const isFocused = ref(false)
+
+// Generate unique IDs for accessibility
+const uniqueId = Math.random().toString(36).substr(2, 9)
+const errorId = computed(() => props.error ? `error-${props.id || uniqueId}` : null)
+const hintId = computed(() => props.hint && !props.error ? `hint-${props.id || uniqueId}` : null)
+const ariaDescribedBy = computed(() => {
+    const ids = []
+    if (errorId.value) ids.push(errorId.value)
+    if (hintId.value) ids.push(hintId.value)
+    return ids.length > 0 ? ids.join(' ') : null
+})
 
 const hasValue = computed(() => {
     return props.modelValue !== null && props.modelValue !== undefined && props.modelValue !== ''
