@@ -179,8 +179,10 @@ class CalculateDailyStats extends Command
                 ->count();
         }
 
-        $totalLeads = $newLeads > 0 ? $newLeads : 1; // Avoid division by zero
-        $conversionRate = round(($convertedLeads / $totalLeads) * 100, 2);
+        // Calculate conversion rate safely
+        $conversionRate = $newLeads > 0
+            ? round(($convertedLeads / $newLeads) * 100, 2)
+            : 0;
 
         // Upsert the stats
         TenantDailyStat::updateOrCreate(

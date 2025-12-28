@@ -7,6 +7,7 @@ use App\Models\Invoice;
 use App\Models\Payment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Stripe\Webhook;
 use Stripe\Exception\SignatureVerificationException;
@@ -70,52 +71,77 @@ class StripeWebhookController extends Controller
 
     /**
      * Handle payment intent succeeded.
+     * SECURITY: Uses DB transaction with lock to prevent duplicate payments.
      */
     protected function handlePaymentIntentSucceeded(array $data): void
     {
         $invoiceId = $data['metadata']['invoice_id'] ?? null;
+        $paymentIntentId = $data['id'] ?? null;
 
-        if (!$invoiceId) {
+        if (!$invoiceId || !$paymentIntentId) {
             return;
         }
 
-        $invoice = Invoice::find($invoiceId);
-        if (!$invoice) {
-            Log::warning('Invoice not found for payment intent', ['invoice_id' => $invoiceId]);
+        // Safely convert amount from cents
+        $amount = isset($data['amount_received']) && is_numeric($data['amount_received'])
+            ? $data['amount_received'] / 100
+            : 0;
+
+        if ($amount <= 0) {
+            Log::error('Invalid amount in Stripe webhook', ['data' => $data]);
             return;
         }
 
-        // Create payment record
-        $amount = $data['amount_received'] / 100; // Convert from cents
+        // Use transaction with lock to prevent race condition (duplicate payments)
+        DB::transaction(function () use ($invoiceId, $paymentIntentId, $amount, $data) {
+            // Lock the invoice row
+            $invoice = Invoice::lockForUpdate()->find($invoiceId);
+            if (!$invoice) {
+                Log::warning('Invoice not found for payment intent', ['invoice_id' => $invoiceId]);
+                return;
+            }
 
-        Payment::create([
-            'invoice_id' => $invoice->id,
-            'amount' => $amount,
-            'payment_method' => 'stripe',
-            'stripe_charge_id' => $data['charges']['data'][0]['id'] ?? null,
-            'stripe_payment_intent_id' => $data['id'],
-            'status' => 'completed',
-        ]);
+            // Check for existing payment with same intent (idempotency)
+            $existingPayment = Payment::where('stripe_payment_intent_id', $paymentIntentId)
+                ->lockForUpdate()
+                ->first();
 
-        // Update invoice status
-        $remaining = $invoice->total - ($invoice->amount_paid + $amount);
+            if ($existingPayment) {
+                Log::info('Payment already processed for intent', ['intent_id' => $paymentIntentId]);
+                return;
+            }
 
-        if ($remaining <= 0) {
-            $invoice->update([
-                'status' => 'paid',
+            // Create payment record
+            Payment::create([
+                'invoice_id' => $invoice->id,
+                'tenant_id' => $invoice->tenant_id,
+                'customer_id' => $invoice->customer_id,
+                'amount' => $amount,
+                'payment_method' => 'stripe',
+                'stripe_charge_id' => $data['charges']['data'][0]['id'] ?? null,
+                'stripe_payment_intent_id' => $paymentIntentId,
+                'status' => 'completed',
                 'paid_at' => now(),
-                'amount_paid' => $invoice->total,
             ]);
 
-            Log::info('Invoice marked as paid via Stripe', ['invoice_id' => $invoiceId]);
-        } else {
-            $invoice->update([
-                'status' => 'partial',
-                'amount_paid' => $invoice->amount_paid + $amount,
-            ]);
+            // Update invoice status
+            $remaining = $invoice->total - ($invoice->amount_paid + $amount);
 
-            Log::info('Partial payment recorded via Stripe', ['invoice_id' => $invoiceId, 'amount' => $amount]);
-        }
+            if ($remaining <= 0) {
+                $invoice->update([
+                    'status' => 'paid',
+                    'paid_at' => now(),
+                    'amount_paid' => $invoice->total,
+                ]);
+                Log::info('Invoice marked as paid via Stripe webhook', ['invoice_id' => $invoiceId]);
+            } else {
+                $invoice->update([
+                    'status' => 'partial',
+                    'amount_paid' => $invoice->amount_paid + $amount,
+                ]);
+                Log::info('Partial payment recorded via Stripe webhook', ['invoice_id' => $invoiceId, 'amount' => $amount]);
+            }
+        });
     }
 
     /**

@@ -138,10 +138,9 @@ class InvoiceController extends Controller
 
         $invoice = Invoice::create($data);
 
-        // Update customer total_revenue if invoice is paid
-        if ($invoice->status === 'paid' && $invoice->customer) {
-            $invoice->customer->increment('total_revenue', $invoice->total);
-        }
+        // NOTE: Revenue is tracked when actual payments are recorded,
+        // not when invoices are created. This prevents double counting.
+        // If an invoice is created as 'paid', a separate payment record should be created.
 
         return redirect()
             ->route('tenant.invoices.index')
@@ -387,7 +386,7 @@ class InvoiceController extends Controller
 
         $paymentDate = $validated['payment_date'] ?? now()->toDateString();
 
-        // Record payment
+        // Record the payment amount on the invoice
         $invoice->recordPayment($validated['amount']);
 
         // Create payment record
@@ -400,9 +399,10 @@ class InvoiceController extends Controller
             'reference' => $validated['reference'] ?? 'Manual payment',
         ]);
 
-        // Update customer revenue if invoice is now paid
-        if ($invoice->status === 'paid' && $invoice->customer) {
-            $invoice->customer->increment('total_revenue', $invoice->total);
+        // Update customer revenue with the PAYMENT amount (not invoice total)
+        // This ensures we only count the actual payment received
+        if ($invoice->customer) {
+            $invoice->customer->increment('total_revenue', $validated['amount']);
         }
 
         return redirect()
