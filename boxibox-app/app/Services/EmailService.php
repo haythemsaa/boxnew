@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendEmailJob;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Mail\Message;
@@ -10,8 +11,11 @@ class EmailService
 {
     /**
      * Send email notification (legacy signature for backward compatibility).
+     * Emails are now queued by default for better performance.
+     *
+     * @param bool $queue Whether to queue the email (default: true)
      */
-    public function send(string|array $to, string $subject = '', string $view = '', array $data = []): bool
+    public function send(string|array $to, string $subject = '', string $view = '', array $data = [], bool $queue = true): bool
     {
         // Handle new array-based calling convention from CRMService
         if (is_array($to)) {
@@ -28,28 +32,47 @@ class EmailService
             // Check if view exists, otherwise use raw HTML
             $viewExists = view()->exists($view);
 
-            Mail::send([], [], function (Message $message) use ($to, $subject, $view, $data, $viewExists) {
+            if ($viewExists) {
+                $html = view($view, $data)->render();
+            } else {
+                $html = $this->generateHtmlEmail($data['body'] ?? '', $subject);
+            }
+
+            // Use queue for non-blocking email sending (default)
+            if ($queue) {
+                SendEmailJob::dispatch(
+                    $to,
+                    $subject,
+                    $html,
+                    null, // text content
+                    null, // attachments
+                    null, // reply-to
+                    $data['tenant_id'] ?? null
+                );
+
+                Log::info('Email queued successfully', [
+                    'to' => $to,
+                    'subject' => $subject,
+                ]);
+
+                return true;
+            }
+
+            // Synchronous sending (for urgent emails or testing)
+            Mail::send([], [], function (Message $message) use ($to, $subject, $html) {
                 $message->to($to)
-                    ->subject($subject);
-
-                if ($viewExists) {
-                    $html = view($view, $data)->render();
-                } else {
-                    // Use body from data or generate simple HTML
-                    $html = $this->generateHtmlEmail($data['body'] ?? '', $subject);
-                }
-
-                $message->html($html);
+                    ->subject($subject)
+                    ->html($html);
             });
 
-            Log::info('Email sent successfully', [
+            Log::info('Email sent successfully (sync)', [
                 'to' => $to,
                 'subject' => $subject,
             ]);
 
             return true;
         } catch (\Exception $e) {
-            Log::error('Failed to send email', [
+            Log::error('Failed to send/queue email', [
                 'to' => $to,
                 'subject' => $subject,
                 'error' => $e->getMessage(),

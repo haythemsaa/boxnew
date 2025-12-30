@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
@@ -21,6 +22,10 @@ class SecurityHeaders
      */
     public function handle(Request $request, Closure $next): Response
     {
+        // Generate a nonce for this request (for inline scripts)
+        $nonce = base64_encode(Str::random(32));
+        $request->attributes->set('csp_nonce', $nonce);
+
         $response = $next($request);
 
         // Prevent clickjacking attacks
@@ -38,12 +43,15 @@ class SecurityHeaders
         // Permissions Policy (formerly Feature-Policy)
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self), payment=(self)');
 
-        // Content Security Policy - Adjust based on your needs
+        // Content Security Policy - Stricter version with nonce support
         if (app()->environment('production')) {
             $csp = implode('; ', [
                 "default-src 'self'",
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdn.jsdelivr.net",
-                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://fonts.bunny.net",
+                // Use nonce for inline scripts, keep unsafe-eval only for Vue.js runtime compiler
+                // Note: unsafe-eval can be removed if using Vue runtime-only build
+                "script-src 'self' 'nonce-{$nonce}' 'strict-dynamic' https://js.stripe.com https://cdn.jsdelivr.net",
+                // Use nonce for inline styles where possible
+                "style-src 'self' 'nonce-{$nonce}' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://fonts.bunny.net",
                 "img-src 'self' data: https: blob:",
                 "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://fonts.bunny.net data:",
                 "connect-src 'self' https://api.stripe.com wss: https:",
@@ -53,6 +61,8 @@ class SecurityHeaders
                 "form-action 'self'",
                 "frame-ancestors 'self'",
                 "upgrade-insecure-requests",
+                // Report CSP violations (configure endpoint as needed)
+                // "report-uri /api/csp-report",
             ]);
             $response->headers->set('Content-Security-Policy', $csp);
         }
@@ -67,5 +77,14 @@ class SecurityHeaders
         $response->headers->remove('Server');
 
         return $response;
+    }
+
+    /**
+     * Get the CSP nonce for the current request
+     * Use this in Blade templates: <script nonce="{{ csp_nonce() }}">
+     */
+    public static function getNonce(): ?string
+    {
+        return request()->attributes->get('csp_nonce');
     }
 }

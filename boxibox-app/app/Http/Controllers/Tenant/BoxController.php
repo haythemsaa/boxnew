@@ -276,8 +276,13 @@ class BoxController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Box $box): Response
+    public function show(Request $request, Box $box): Response
     {
+        // Verify tenant ownership to prevent IDOR
+        if ($box->tenant_id !== $request->user()->tenant_id) {
+            abort(403, 'Unauthorized access to this resource.');
+        }
+
         $box->load(['site', 'building', 'floor', 'contract.customer', 'contracts' => function ($query) {
             $query->latest()->limit(5);
         }]);
@@ -301,6 +306,11 @@ class BoxController extends Controller
     public function edit(Request $request, Box $box): Response
     {
         $tenantId = $request->user()->tenant_id;
+
+        // Verify tenant ownership to prevent IDOR
+        if ($box->tenant_id !== $tenantId) {
+            abort(403, 'Unauthorized access to this resource.');
+        }
 
         $sites = Site::where('tenant_id', $tenantId)
             ->select('id', 'name', 'code')
@@ -330,6 +340,11 @@ class BoxController extends Controller
      */
     public function update(UpdateBoxRequest $request, Box $box): RedirectResponse
     {
+        // Verify tenant ownership to prevent IDOR
+        if ($box->tenant_id !== $request->user()->tenant_id) {
+            abort(403, 'Unauthorized access to this resource.');
+        }
+
         $data = $request->validated();
 
         // Recalculate volume if dimensions changed
@@ -349,8 +364,13 @@ class BoxController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Box $box): RedirectResponse
+    public function destroy(Request $request, Box $box): RedirectResponse
     {
+        // Verify tenant ownership to prevent IDOR
+        if ($box->tenant_id !== $request->user()->tenant_id) {
+            abort(403, 'Unauthorized access to this resource.');
+        }
+
         $box->delete();
 
         // Update tenant statistics

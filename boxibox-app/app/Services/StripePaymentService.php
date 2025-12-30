@@ -5,6 +5,10 @@ namespace App\Services;
 use App\Models\Invoice;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * @deprecated Use StripeUnifiedService instead
+ * This class is kept for backwards compatibility
+ */
 class StripePaymentService
 {
     protected $stripeKey;

@@ -120,11 +120,10 @@ class AnalyticsService
             ->whereYear('created_at', now()->year)
             ->count();
 
-        // Customer lifetime value (average)
-        $avgLifetimeValue = Payment::where('tenant_id', $this->tenantId)
-            ->where('status', 'completed')
+        // Customer lifetime value (average) - using parameterized query to prevent SQL injection
+        $avgLifetimeValue = DB::table(DB::raw('(SELECT customer_id, SUM(amount) as customer_total FROM payments WHERE tenant_id = ? AND status = ? GROUP BY customer_id) as customer_totals'))
+            ->setBindings([$this->tenantId, 'completed'])
             ->selectRaw('AVG(customer_total) as avg_ltv')
-            ->from(DB::raw('(SELECT customer_id, SUM(amount) as customer_total FROM payments WHERE tenant_id = ' . $this->tenantId . ' AND status = "completed" GROUP BY customer_id) as customer_totals'))
             ->value('avg_ltv') ?? 0;
 
         return [

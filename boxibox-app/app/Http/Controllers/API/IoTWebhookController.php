@@ -229,6 +229,11 @@ class IoTWebhookController extends Controller
      */
     public function saltoWebhook(Request $request)
     {
+        // Verify webhook signature
+        if (!$this->verifySaltoSignature($request)) {
+            return response()->json(['error' => 'Invalid signature'], 401);
+        }
+
         // Log only safe fields, never log full payload
         Log::info('Salto webhook received', [
             'eventType' => $request->input('eventType'),
@@ -287,6 +292,11 @@ class IoTWebhookController extends Controller
      */
     public function kisiWebhook(Request $request)
     {
+        // Verify webhook signature
+        if (!$this->verifyKisiSignature($request)) {
+            return response()->json(['error' => 'Invalid signature'], 401);
+        }
+
         // Log only safe fields, never log full payload
         Log::info('Kisi webhook received', [
             'event_type' => $request->input('event.type'),
@@ -331,6 +341,11 @@ class IoTWebhookController extends Controller
      */
     public function ptiWebhook(Request $request)
     {
+        // Verify webhook signature
+        if (!$this->verifyPtiSignature($request)) {
+            return response()->json(['error' => 'Invalid signature'], 401);
+        }
+
         // Log only safe fields, never log full payload
         Log::info('PTI webhook received', [
             'event_code' => $request->input('event_code'),
@@ -483,13 +498,105 @@ class IoTWebhookController extends Controller
      */
     protected function verifyNokeSignature(Request $request, ?string $signature): bool
     {
-        if (!$signature) {
-            return true; // Skip if no signature configured
+        $secret = config('services.noke.webhook_secret');
+
+        // If no secret is configured, reject webhooks in production for security
+        if (empty($secret)) {
+            if (app()->environment('production')) {
+                Log::warning('Noke webhook rejected: No webhook secret configured');
+                return false;
+            }
+            return true; // Allow in development only
         }
 
-        // Implement Noke signature verification
-        // This is a simplified version - implement according to Noke docs
-        return true;
+        if (!$signature) {
+            Log::warning('Noke webhook rejected: Missing signature header');
+            return false;
+        }
+
+        // Verify HMAC signature
+        $payload = $request->getContent();
+        $expectedSignature = hash_hmac('sha256', $payload, $secret);
+
+        return hash_equals($expectedSignature, $signature);
+    }
+
+    /**
+     * Verify Salto webhook signature
+     */
+    protected function verifySaltoSignature(Request $request): bool
+    {
+        $secret = config('services.salto.webhook_secret');
+
+        if (empty($secret)) {
+            if (app()->environment('production')) {
+                Log::warning('Salto webhook rejected: No webhook secret configured');
+                return false;
+            }
+            return true;
+        }
+
+        $signature = $request->header('X-Salto-Signature');
+        if (!$signature) {
+            return false;
+        }
+
+        $payload = $request->getContent();
+        $expectedSignature = hash_hmac('sha256', $payload, $secret);
+
+        return hash_equals($expectedSignature, $signature);
+    }
+
+    /**
+     * Verify Kisi webhook signature
+     */
+    protected function verifyKisiSignature(Request $request): bool
+    {
+        $secret = config('services.kisi.webhook_secret');
+
+        if (empty($secret)) {
+            if (app()->environment('production')) {
+                Log::warning('Kisi webhook rejected: No webhook secret configured');
+                return false;
+            }
+            return true;
+        }
+
+        $signature = $request->header('X-Kisi-Signature');
+        if (!$signature) {
+            return false;
+        }
+
+        $payload = $request->getContent();
+        $expectedSignature = hash_hmac('sha256', $payload, $secret);
+
+        return hash_equals($expectedSignature, $signature);
+    }
+
+    /**
+     * Verify PTI webhook signature
+     */
+    protected function verifyPtiSignature(Request $request): bool
+    {
+        $secret = config('services.pti.webhook_secret');
+
+        if (empty($secret)) {
+            if (app()->environment('production')) {
+                Log::warning('PTI webhook rejected: No webhook secret configured');
+                return false;
+            }
+            return true;
+        }
+
+        $signature = $request->header('X-PTI-Signature');
+        if (!$signature) {
+            return false;
+        }
+
+        $payload = $request->getContent();
+        $expectedSignature = hash_hmac('sha256', $payload, $secret);
+
+        return hash_equals($expectedSignature, $signature);
     }
 
     /**

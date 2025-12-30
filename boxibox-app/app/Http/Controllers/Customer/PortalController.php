@@ -1053,16 +1053,13 @@ class PortalController extends Controller
      */
     protected function getAuthenticatedCustomer(): Customer
     {
-        // In production, this would get the customer from the portal auth guard
-        // For now, we'll use a demo customer or the first one
         $customerId = session('customer_portal_id');
 
-        if ($customerId) {
-            return Customer::findOrFail($customerId);
+        if (!$customerId) {
+            abort(403, 'No customer authenticated. Please log in.');
         }
 
-        // Demo fallback
-        return Customer::first() ?? abort(403, 'No customer authenticated');
+        return Customer::findOrFail($customerId);
     }
 
     // ============================================

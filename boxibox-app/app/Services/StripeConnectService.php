@@ -8,6 +8,10 @@ use App\Models\PaymentMethod;
 use Stripe\StripeClient;
 use Stripe\Exception\ApiErrorException;
 
+/**
+ * @deprecated Use StripeUnifiedService instead
+ * This class is kept for backwards compatibility
+ */
 class StripeConnectService
 {
     protected StripeClient $stripe;

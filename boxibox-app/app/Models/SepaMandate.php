@@ -19,7 +19,7 @@ class SepaMandate extends Model
         'ics',
         'type',
         'status',
-        'iban',
+        // Note: 'iban' removed from fillable for security - use setIban() method for explicit assignment
         'bic',
         'account_holder',
         'signature_date',
@@ -38,6 +38,18 @@ class SepaMandate extends Model
         'gocardless_bank_account_id',
         'scheme',
     ];
+
+    /**
+     * Securely set the IBAN after validation
+     */
+    public function setIban(string $iban): void
+    {
+        if (!self::validateIban($iban)) {
+            throw new \InvalidArgumentException('Invalid IBAN format');
+        }
+        $this->iban = strtoupper(str_replace(' ', '', $iban));
+        $this->save();
+    }
 
     protected $casts = [
         'signature_date' => 'date',

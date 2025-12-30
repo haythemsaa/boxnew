@@ -39,7 +39,7 @@ class Customer extends Model
         'outstanding_balance',
         'total_contracts',
         'total_revenue',
-        'password',
+        // Note: 'password' removed from fillable for security - use setPasswordAttribute or explicit assignment
     ];
 
     protected $hidden = [

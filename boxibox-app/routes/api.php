@@ -30,9 +30,14 @@ use App\Http\Controllers\API\V1\PushNotificationController;
 */
 
 Route::prefix('health')->group(function () {
+    // Public health checks for load balancers and monitoring
     Route::get('/', [\App\Http\Controllers\API\HealthController::class, 'liveness'])->name('health.liveness');
     Route::get('/ready', [\App\Http\Controllers\API\HealthController::class, 'readiness'])->name('health.readiness');
-    Route::get('/detailed', [\App\Http\Controllers\API\HealthController::class, 'detailed'])->name('health.detailed');
+});
+
+// Protected health check - requires authentication (exposes sensitive system info)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/health/detailed', [\App\Http\Controllers\API\HealthController::class, 'detailed'])->name('health.detailed');
 });
 
 /*

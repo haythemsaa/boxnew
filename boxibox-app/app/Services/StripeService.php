@@ -9,11 +9,18 @@ use Stripe\PaymentMethod;
 use Stripe\Charge;
 use Exception;
 
+/**
+ * @deprecated Use StripeUnifiedService instead
+ * This class is kept for backwards compatibility
+ */
 class StripeService
 {
+    protected StripeUnifiedService $unifiedService;
+
     public function __construct()
     {
         Stripe::setApiKey(config('services.stripe.secret'));
+        $this->unifiedService = app(StripeUnifiedService::class);
     }
 
     /**
