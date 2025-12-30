@@ -43,15 +43,14 @@ class SecurityHeaders
         // Permissions Policy (formerly Feature-Policy)
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=(self), payment=(self)');
 
-        // Content Security Policy - Stricter version with nonce support
+        // Content Security Policy - Compatible with Vue.js/Inertia
+        // Note: unsafe-inline and unsafe-eval are required for Vue.js to work properly
         if (app()->environment('production')) {
             $csp = implode('; ', [
                 "default-src 'self'",
-                // Use nonce for inline scripts, keep unsafe-eval only for Vue.js runtime compiler
-                // Note: unsafe-eval can be removed if using Vue runtime-only build
-                "script-src 'self' 'nonce-{$nonce}' 'strict-dynamic' https://js.stripe.com https://cdn.jsdelivr.net",
-                // Use nonce for inline styles where possible
-                "style-src 'self' 'nonce-{$nonce}' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://fonts.bunny.net",
+                // Vue.js requires unsafe-inline and unsafe-eval for reactivity and templates
+                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdn.jsdelivr.net",
+                "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com https://fonts.bunny.net",
                 "img-src 'self' data: https: blob:",
                 "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://fonts.bunny.net data:",
                 "connect-src 'self' https://api.stripe.com wss: https:",
@@ -61,8 +60,6 @@ class SecurityHeaders
                 "form-action 'self'",
                 "frame-ancestors 'self'",
                 "upgrade-insecure-requests",
-                // Report CSP violations (configure endpoint as needed)
-                // "report-uri /api/csp-report",
             ]);
             $response->headers->set('Content-Security-Policy', $csp);
         }

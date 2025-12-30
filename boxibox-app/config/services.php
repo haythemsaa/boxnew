@@ -71,14 +71,33 @@ return [
         'from' => env('VONAGE_SMS_FROM', 'BoxiBox'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | IoT & Smart Lock Providers
+    |--------------------------------------------------------------------------
+    */
+
     'noke' => [
         'api_key' => env('NOKE_API_KEY'),
         'api_secret' => env('NOKE_API_SECRET'),
+        'webhook_secret' => env('NOKE_WEBHOOK_SECRET'),
+    ],
+
+    'salto' => [
+        'api_key' => env('SALTO_API_KEY'),
+        'api_secret' => env('SALTO_API_SECRET'),
+        'webhook_secret' => env('SALTO_WEBHOOK_SECRET'),
+    ],
+
+    'kisi' => [
+        'api_key' => env('KISI_API_KEY'),
+        'webhook_secret' => env('KISI_WEBHOOK_SECRET'),
     ],
 
     'pti' => [
         'api_key' => env('PTI_API_KEY'),
         'api_url' => env('PTI_API_URL', 'https://api.ptisecurity.com'),
+        'webhook_secret' => env('PTI_WEBHOOK_SECRET'),
     ],
 
     'firebase' => [

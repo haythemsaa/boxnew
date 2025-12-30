@@ -1,0 +1,28 @@
+# BoxiBox Queue Worker Service
+# Copy this file to /etc/systemd/system/boxibox-queue.service
+# Then run: systemctl daemon-reload && systemctl enable boxibox-queue && systemctl start boxibox-queue
+
+[Unit]
+Description=BoxiBox Queue Worker
+After=network.target mysql.service redis.service
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+RestartSec=5
+WorkingDirectory=/var/www/vhosts/2emeservice.be/httpdocs/boxnew/boxibox-app
+
+# Process emails on dedicated queue, then default
+ExecStart=/opt/plesk/php/8.2/bin/php artisan queue:work database --queue=emails,default --sleep=3 --tries=3 --max-time=3600
+
+# Graceful shutdown
+ExecStop=/bin/kill -s TERM $MAINPID
+TimeoutStopSec=30
+
+# Restart policy
+StartLimitInterval=60
+StartLimitBurst=3
+
+[Install]
+WantedBy=multi-user.target
