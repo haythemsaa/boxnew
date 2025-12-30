@@ -99,11 +99,18 @@ return new class extends Migration
                         $indexName = substr($indexName, 0, 60) . '_idx';
                     }
 
-                    // Only add if index doesn't exist
-                    try {
-                        $blueprint->index($columns, $indexName);
-                    } catch (\Exception $e) {
-                        // Index might already exist, continue
+                    // Check if index already exists before adding
+                    $existingIndexes = collect(\DB::select("SHOW INDEX FROM `{$table}`"))
+                        ->pluck('Key_name')
+                        ->unique()
+                        ->toArray();
+
+                    if (!in_array($indexName, $existingIndexes)) {
+                        try {
+                            $blueprint->index($columns, $indexName);
+                        } catch (\Exception $e) {
+                            // Index might already exist, continue
+                        }
                     }
                 }
             });
