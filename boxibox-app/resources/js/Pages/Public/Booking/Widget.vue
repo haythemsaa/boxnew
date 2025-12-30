@@ -74,10 +74,12 @@ const continueBooking = () => {
                 </select>
 
                 <button
-                    v-if="selectedBox"
+                    v-if="selectedSite"
                     @click="continueBooking"
-                    class="w-full py-2 rounded-lg text-white font-medium"
-                    :style="{ backgroundColor: settings?.primary_color }"
+                    :disabled="!selectedBox"
+                    class="w-full py-2 rounded-lg text-white font-medium transition-opacity"
+                    :class="{ 'opacity-50 cursor-not-allowed': !selectedBox }"
+                    :style="{ backgroundColor: settings?.primary_color || '#3B82F6' }"
                 >
                     Continuer
                 </button>
@@ -176,10 +178,12 @@ const continueBooking = () => {
 
                     <!-- Continue Button -->
                     <button
-                        v-if="selectedBox"
+                        v-if="selectedSite"
                         @click="continueBooking"
-                        class="w-full py-3 rounded-xl text-white font-medium flex items-center justify-center"
-                        :style="{ backgroundColor: settings?.primary_color }"
+                        :disabled="!selectedBox"
+                        class="w-full py-3 rounded-xl text-white font-medium flex items-center justify-center transition-opacity"
+                        :class="{ 'opacity-50 cursor-not-allowed': !selectedBox }"
+                        :style="{ backgroundColor: settings?.primary_color || '#3B82F6' }"
                     >
                         Continuer la réservation
                         <ArrowRightIcon class="h-5 w-5 ml-2" />

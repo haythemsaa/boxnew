@@ -590,7 +590,7 @@
         }
 
         getBookingUrl() {
-            const baseUrl = this.data?.settings?.booking_url ||
+            const baseUrl = this.data?.booking_url ||
                            `${API_BASE}/book/tenant/${this.data?.tenant?.id}`;
 
             const params = new URLSearchParams();

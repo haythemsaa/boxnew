@@ -19,6 +19,9 @@ import {
     CodeBracketIcon,
     TicketIcon,
     KeyIcon,
+    CreditCardIcon,
+    BanknotesIcon,
+    BuildingLibraryIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
@@ -80,6 +83,30 @@ const getStatusClass = (status) => {
         expired: 'bg-gray-100 text-gray-600',
     }
     return classes[status] || 'bg-gray-100 text-gray-800'
+}
+
+const getPaymentMethodLabel = (method) => {
+    const labels = {
+        'card_now': 'Carte bancaire',
+        'at_signing': 'À la signature',
+        'bank_transfer': 'Virement',
+        'sepa_debit': 'Prélèvement SEPA',
+        'cash': 'Espèces',
+        'check': 'Chèque',
+    }
+    return labels[method] || method || 'Non défini'
+}
+
+const getPaymentMethodClass = (method) => {
+    const classes = {
+        'card_now': 'bg-green-100 text-green-800',
+        'at_signing': 'bg-blue-100 text-blue-800',
+        'bank_transfer': 'bg-purple-100 text-purple-800',
+        'sepa_debit': 'bg-indigo-100 text-indigo-800',
+        'cash': 'bg-orange-100 text-orange-800',
+        'check': 'bg-gray-100 text-gray-800',
+    }
+    return classes[method] || 'bg-gray-100 text-gray-600'
 }
 </script>
 
@@ -214,6 +241,7 @@ const getStatusClass = (status) => {
                                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Box</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Date début</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Prix/mois</th>
+                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Paiement</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Source</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Statut</th>
                                 <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase">Actions</th>
@@ -257,6 +285,20 @@ const getStatusClass = (status) => {
                                     <div class="flex items-center space-x-2">
                                         <CurrencyEuroIcon class="h-4 w-4 text-gray-400" />
                                         <span class="font-medium text-gray-900">{{ formatCurrency(booking.monthly_price) }}</span>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span
+                                        :class="getPaymentMethodClass(booking.payment_method)"
+                                        class="px-2 py-1 rounded-full text-xs font-medium inline-flex items-center"
+                                    >
+                                        <CreditCardIcon v-if="booking.payment_method === 'card_now'" class="h-3 w-3 mr-1" />
+                                        <BanknotesIcon v-else-if="booking.payment_method === 'cash'" class="h-3 w-3 mr-1" />
+                                        <BuildingLibraryIcon v-else-if="booking.payment_method === 'bank_transfer'" class="h-3 w-3 mr-1" />
+                                        {{ getPaymentMethodLabel(booking.payment_method) }}
+                                    </span>
+                                    <div v-if="booking.amount_paid > 0" class="text-xs text-green-600 mt-1">
+                                        ✓ Payé: {{ formatCurrency(booking.amount_paid) }}
                                     </div>
                                 </td>
                                 <td class="px-6 py-4">

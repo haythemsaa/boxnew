@@ -111,7 +111,7 @@
 <script setup>
 import { Link } from '@inertiajs/vue3'
 import PublicLayout from '@/Layouts/PublicLayout.vue'
-import { useTranslation } from '@/Composables/useTranslation'
+import { useTranslation } from '@/composables/useTranslation'
 
 const { t } = useTranslation()
 

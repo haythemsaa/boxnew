@@ -9,8 +9,10 @@ use App\Models\BookingPromoCode;
 use App\Models\BookingSettings;
 use App\Models\BookingWidget;
 use App\Models\Box;
+use App\Models\Lead;
 use App\Models\Site;
 use App\Models\Tenant;
+use App\Services\AILeadScoringService;
 use App\Services\NotificationService;
 use App\Services\PricingService;
 use Carbon\Carbon;
@@ -183,13 +185,54 @@ class BookingController extends Controller
      */
     public function showByTenant(int $tenantId)
     {
+        $tenant = Tenant::findOrFail($tenantId);
         $settings = BookingSettings::getForTenant($tenantId);
 
-        if (!$settings || !$settings->is_enabled) {
-            abort(404, 'Page de réservation non trouvée');
+        // If settings exist and have a slug, redirect to the slug URL
+        if ($settings && $settings->booking_url_slug) {
+            return redirect()->route('public.booking.show', $settings->booking_url_slug);
         }
 
-        return redirect()->route('booking.show', $settings->booking_url_slug ?? "tenant/{$tenantId}");
+        // Otherwise render directly with or without settings
+        $sites = Site::where('tenant_id', $tenant->id)
+            ->where('is_active', true)
+            ->with(['boxes' => function ($q) {
+                $q->where('status', 'available')
+                    ->orderBy('current_price');
+            }])
+            ->get();
+
+        return Inertia::render('Public/Booking/Index', [
+            'settings' => $settings,
+            'tenant' => $tenant->only(['id', 'name', 'slug']),
+            'sites' => $sites->map(function ($site) {
+                return [
+                    'id' => $site->id,
+                    'name' => $site->name,
+                    'address' => $site->address,
+                    'city' => $site->city,
+                    'postal_code' => $site->postal_code,
+                    'available_boxes_count' => $site->boxes->count(),
+                    'boxes' => $site->boxes->map(function ($box) {
+                        return [
+                            'id' => $box->id,
+                            'name' => $box->display_name,
+                            'number' => $box->number,
+                            'volume' => $box->volume,
+                            'formatted_volume' => $box->formatted_volume,
+                            'dimensions' => $box->formatted_dimensions,
+                            'current_price' => $box->current_price,
+                            'climate_controlled' => $box->climate_controlled,
+                            'has_electricity' => $box->has_electricity,
+                            'has_24_7_access' => $box->has_24_7_access ?? false,
+                            'is_ground_floor' => $box->ground_floor ?? false,
+                            'images' => $box->images ?? [],
+                            'photo_url' => $box->photo_url ?? null,
+                        ];
+                    }),
+                ];
+            }),
+        ]);
     }
 
     /**
@@ -461,30 +504,31 @@ class BookingController extends Controller
             // If paid online, update status and create payment record
             if ($request->payment_intent_id && $request->amount_paid > 0) {
                 $booking->update([
-                    'payment_method' => 'card',
-                    'payment_intent_id' => $request->payment_intent_id,
-                    'amount_paid' => $request->amount_paid,
-                    'paid_at' => now(),
+                    'payment_method' => 'card_now',
                 ]);
 
                 // Create payment record
                 BookingPayment::create([
                     'booking_id' => $booking->id,
-                    'tenant_id' => $request->tenant_id,
+                    'type' => 'full_payment',
                     'amount' => $request->amount_paid,
-                    'payment_method' => 'card',
-                    'stripe_payment_intent_id' => $request->payment_intent_id,
+                    'payment_method' => 'stripe',
+                    'transaction_id' => $request->payment_intent_id,
                     'status' => 'completed',
-                    'paid_at' => now(),
+                    'notes' => 'Paiement en ligne via Stripe',
+                    'payment_data' => json_encode([
+                        'payment_intent_id' => $request->payment_intent_id,
+                        'paid_at' => now()->toIso8601String(),
+                    ]),
                 ]);
 
                 $initialStatus = 'confirmed';
                 $statusNotes = 'Réservation payée en ligne - ' . number_format($request->amount_paid, 2) . ' €';
 
                 // Auto-confirm since paid
-                $booking->update(['status' => 'confirmed', 'confirmed_at' => now()]);
+                $booking->update(['status' => 'confirmed']);
             } else {
-                // Mark payment method as at_signing
+                // Mark payment method
                 $booking->update([
                     'payment_method' => $request->payment_method ?? 'at_signing',
                 ]);
@@ -502,6 +546,22 @@ class BookingController extends Controller
             // Auto-confirm if enabled and not already confirmed
             if ($settings && $settings->auto_confirm && $booking->status !== 'confirmed') {
                 $booking->confirm(null, 'Confirmation automatique');
+            }
+
+            // ===== CREATE LEAD IN CRM =====
+            // This ensures every booking is tracked as a lead for follow-up and conversion tracking
+            try {
+                $lead = $this->createLeadFromBooking($booking, $request);
+                \Illuminate\Support\Facades\Log::info('Lead created from booking', [
+                    'booking_id' => $booking->id,
+                    'lead_id' => $lead->id,
+                ]);
+            } catch (\Exception $e) {
+                // Log but don't fail the booking
+                \Illuminate\Support\Facades\Log::error('Failed to create lead from booking', [
+                    'booking_id' => $booking->id,
+                    'error' => $e->getMessage(),
+                ]);
             }
 
             DB::commit();
@@ -717,5 +777,104 @@ class BookingController extends Controller
                 ];
             }),
         ]);
+    }
+
+    /**
+     * Create a Lead in CRM from a booking
+     * This ensures all bookings are tracked for follow-up and conversion analytics
+     */
+    protected function createLeadFromBooking(Booking $booking, Request $request): Lead
+    {
+        // Check for existing lead with same email to avoid duplicates
+        $existingLead = Lead::where('tenant_id', $booking->tenant_id)
+            ->where('email', $booking->customer_email)
+            ->whereNull('converted_at')
+            ->first();
+
+        if ($existingLead) {
+            // Update existing lead with new booking info
+            $existingLead->update([
+                'last_activity_at' => now(),
+                'metadata' => array_merge($existingLead->metadata ?? [], [
+                    'latest_booking_id' => $booking->id,
+                    'booking_date' => $booking->created_at->toDateTimeString(),
+                    'booking_status' => $booking->status,
+                ]),
+            ]);
+            return $existingLead;
+        }
+
+        // Determine lead source from booking
+        $source = match ($booking->source) {
+            'widget' => 'widget',
+            'api' => 'api',
+            default => 'website',
+        };
+
+        // Build metadata for AI scoring
+        $metadata = [
+            'booking_id' => $booking->id,
+            'booking_number' => $booking->booking_number,
+            'booking_status' => $booking->status,
+            'booking_source' => $booking->source,
+            'box_id' => $booking->box_id,
+            'box_price' => $booking->monthly_price,
+            'requested_quote' => true,
+            'visited_pricing' => true,
+            'utm_source' => $booking->utm_source,
+            'utm_medium' => $booking->utm_medium,
+            'utm_campaign' => $booking->utm_campaign,
+            'ip_address' => $booking->ip_address,
+            'user_agent' => $booking->user_agent,
+            'needs_24h_access' => $booking->needs_24h_access,
+            'needs_climate_control' => $booking->needs_climate_control,
+            'needs_insurance' => $booking->needs_insurance,
+        ];
+
+        // Determine customer type
+        $type = !empty($booking->customer_company) ? 'company' : 'individual';
+
+        // Create the lead
+        $lead = Lead::create([
+            'tenant_id' => $booking->tenant_id,
+            'site_id' => $booking->site_id,
+            'first_name' => $booking->customer_first_name,
+            'last_name' => $booking->customer_last_name,
+            'email' => $booking->customer_email,
+            'phone' => $booking->customer_phone,
+            'company' => $booking->customer_company,
+            'type' => $type,
+            'status' => $booking->status === 'confirmed' ? 'qualified' : 'new',
+            'source' => $source,
+            'budget_min' => $booking->monthly_price,
+            'budget_max' => $booking->monthly_price * 1.5,
+            'move_in_date' => $booking->start_date,
+            'box_type_interest' => $booking->box?->type ?? 'standard',
+            'notes' => "Réservation automatique #{$booking->booking_number}\n" .
+                      ($booking->notes ? "Notes client: {$booking->notes}\n" : '') .
+                      ($booking->special_requests ? "Demandes spéciales: {$booking->special_requests}" : ''),
+            'metadata' => $metadata,
+            'last_activity_at' => now(),
+        ]);
+
+        // Calculate AI score
+        try {
+            $scoringService = app(AILeadScoringService::class);
+            $scoreResult = $scoringService->calculateScore($lead, 'lead');
+
+            $lead->update([
+                'score' => $scoreResult['score'],
+                'priority' => $scoreResult['priority'],
+                'conversion_probability' => $scoreResult['conversion_probability'],
+                'score_breakdown' => $scoreResult['breakdown'],
+                'score_factors' => $scoreResult['factors'],
+                'score_calculated_at' => now(),
+            ]);
+        } catch (\Exception $e) {
+            // Fallback to basic scoring
+            $lead->updateScore();
+        }
+
+        return $lead;
     }
 }

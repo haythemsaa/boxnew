@@ -19,6 +19,8 @@ import {
     BuildingOfficeIcon,
     GlobeAltIcon,
     TagIcon,
+    CreditCardIcon,
+    BanknotesIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
@@ -47,6 +49,30 @@ const getStatusClass = (status) => {
         rejected: 'bg-red-100 text-red-800 border-red-200',
     }
     return classes[status] || 'bg-gray-100 text-gray-800 border-gray-200'
+}
+
+const getPaymentMethodLabel = (method) => {
+    const labels = {
+        'card_now': 'Carte bancaire (payé en ligne)',
+        'at_signing': 'Paiement à la signature',
+        'bank_transfer': 'Virement bancaire',
+        'sepa_debit': 'Prélèvement SEPA',
+        'cash': 'Espèces',
+        'check': 'Chèque',
+    }
+    return labels[method] || method || 'Non défini'
+}
+
+const getPaymentMethodClass = (method) => {
+    const classes = {
+        'card_now': 'bg-green-100 text-green-800',
+        'at_signing': 'bg-blue-100 text-blue-800',
+        'bank_transfer': 'bg-purple-100 text-purple-800',
+        'sepa_debit': 'bg-indigo-100 text-indigo-800',
+        'cash': 'bg-orange-100 text-orange-800',
+        'check': 'bg-gray-100 text-gray-800',
+    }
+    return classes[method] || 'bg-gray-100 text-gray-600'
 }
 
 const confirmBooking = () => {
@@ -270,6 +296,37 @@ const convertToContract = () => {
                                     Code promo
                                 </span>
                                 <span class="font-mono bg-gray-100 px-2 py-0.5 rounded">{{ booking.promo_code }}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div class="bg-white rounded-2xl shadow-xl p-6">
+                        <h2 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <CreditCardIcon class="h-5 w-5 mr-2 text-teal-600" />
+                            Mode de paiement
+                        </h2>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-gray-600">Méthode choisie</span>
+                                <span
+                                    :class="getPaymentMethodClass(booking.payment_method)"
+                                    class="px-3 py-1 rounded-full text-sm font-medium"
+                                >
+                                    {{ getPaymentMethodLabel(booking.payment_method) }}
+                                </span>
+                            </div>
+                            <div v-if="booking.total_paid > 0" class="flex justify-between items-center pt-2 border-t">
+                                <span class="text-gray-600">Montant payé</span>
+                                <span class="font-bold text-green-600">{{ formatCurrency(booking.total_paid) }}</span>
+                            </div>
+                            <div v-else class="flex justify-between items-center pt-2 border-t">
+                                <span class="text-gray-600">Statut paiement</span>
+                                <span class="text-orange-600 font-medium">En attente</span>
+                            </div>
+                            <div v-if="booking.payment_notes" class="pt-2 border-t">
+                                <span class="text-gray-600 text-sm">Notes:</span>
+                                <p class="text-gray-800 mt-1">{{ booking.payment_notes }}</p>
                             </div>
                         </div>
                     </div>

@@ -43,7 +43,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { usePushNotifications } from '@/Composables/usePushNotifications';
+import { usePushNotifications } from '@/composables/usePushNotifications';
 
 const {
     isSupported,

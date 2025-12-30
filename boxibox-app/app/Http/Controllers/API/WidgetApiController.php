@@ -124,7 +124,7 @@ class WidgetApiController extends Controller
                     }),
                 ];
             }),
-            'booking_url' => url("/booking/{$tenant->slug}"),
+            'booking_url' => url("/book/{$tenant->slug}"),
         ]), $request);
     }
 

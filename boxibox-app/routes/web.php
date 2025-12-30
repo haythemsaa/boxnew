@@ -32,7 +32,7 @@ use App\Http\Controllers\Mobile\MobileController;
 use App\Http\Controllers\Tenant\PlanController;
 use App\Http\Controllers\Tenant\BookingManagementController;
 use App\Http\Controllers\Public\BookingController as PublicBookingController;
-use App\Http\Controllers\Api\BookingApiController;
+use App\Http\Controllers\API\BookingApiController;
 use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
 use App\Http\Controllers\SuperAdmin\TenantController as SuperAdminTenantController;
 use App\Http\Controllers\SuperAdmin\SubscriptionController as SuperAdminSubscriptionController;
@@ -274,21 +274,21 @@ Route::prefix('api/v1/booking')->name('api.booking.')->group(function () {
 
 Route::prefix('api/iot')->name('api.iot.')->group(function () {
     // Health check
-    Route::get('/health', [\App\Http\Controllers\Api\IoTWebhookController::class, 'healthCheck'])->name('health');
+    Route::get('/health', [\App\Http\Controllers\API\IoTWebhookController::class, 'healthCheck'])->name('health');
 
     // Generic sensor data
-    Route::post('/sensor-data', [\App\Http\Controllers\Api\IoTWebhookController::class, 'sensorData'])->name('sensor-data');
-    Route::post('/sensor-data/batch', [\App\Http\Controllers\Api\IoTWebhookController::class, 'sensorDataBatch'])->name('sensor-data-batch');
+    Route::post('/sensor-data', [\App\Http\Controllers\API\IoTWebhookController::class, 'sensorData'])->name('sensor-data');
+    Route::post('/sensor-data/batch', [\App\Http\Controllers\API\IoTWebhookController::class, 'sensorDataBatch'])->name('sensor-data-batch');
 
     // Smart lock provider webhooks
-    Route::post('/webhooks/noke', [\App\Http\Controllers\Api\IoTWebhookController::class, 'nokeWebhook'])->name('webhook.noke');
-    Route::post('/webhooks/salto', [\App\Http\Controllers\Api\IoTWebhookController::class, 'saltoWebhook'])->name('webhook.salto');
-    Route::post('/webhooks/kisi', [\App\Http\Controllers\Api\IoTWebhookController::class, 'kisiWebhook'])->name('webhook.kisi');
-    Route::post('/webhooks/pti', [\App\Http\Controllers\Api\IoTWebhookController::class, 'ptiWebhook'])->name('webhook.pti');
+    Route::post('/webhooks/noke', [\App\Http\Controllers\API\IoTWebhookController::class, 'nokeWebhook'])->name('webhook.noke');
+    Route::post('/webhooks/salto', [\App\Http\Controllers\API\IoTWebhookController::class, 'saltoWebhook'])->name('webhook.salto');
+    Route::post('/webhooks/kisi', [\App\Http\Controllers\API\IoTWebhookController::class, 'kisiWebhook'])->name('webhook.kisi');
+    Route::post('/webhooks/pti', [\App\Http\Controllers\API\IoTWebhookController::class, 'ptiWebhook'])->name('webhook.pti');
 
     // Specialized sensor webhooks
-    Route::post('/door-sensor', [\App\Http\Controllers\Api\IoTWebhookController::class, 'doorSensorWebhook'])->name('door-sensor');
-    Route::post('/climate-sensor', [\App\Http\Controllers\Api\IoTWebhookController::class, 'climateSensorWebhook'])->name('climate-sensor');
+    Route::post('/door-sensor', [\App\Http\Controllers\API\IoTWebhookController::class, 'doorSensorWebhook'])->name('door-sensor');
+    Route::post('/climate-sensor', [\App\Http\Controllers\API\IoTWebhookController::class, 'climateSensorWebhook'])->name('climate-sensor');
 });
 
 /*
@@ -1496,152 +1496,6 @@ Route::middleware('auth')->group(function () {
 
     /*
     |--------------------------------------------------------------------------
-    | Mobile Application Routes (PWA) - Customer Only
-    |--------------------------------------------------------------------------
-    */
-    // Mobile Auth Routes (Public)
-    Route::prefix('mobile')->name('mobile.')->group(function () {
-        Route::get('/login', [MobileController::class, 'loginPage'])->name('login');
-        Route::post('/login', [MobileController::class, 'login'])->name('login.submit');
-        Route::post('/logout', [MobileController::class, 'logout'])->name('logout');
-    });
-
-    // Mobile Protected Routes (Customer Auth Required)
-    Route::prefix('mobile')->name('mobile.')->middleware('mobile.customer')->group(function () {
-        // Dashboard
-        Route::get('/', [MobileController::class, 'dashboard'])->name('dashboard');
-
-        // Boxes
-        Route::get('/boxes', [MobileController::class, 'boxes'])->name('boxes');
-
-        // Invoices
-        Route::get('/invoices', [MobileController::class, 'invoices'])->name('invoices');
-        Route::get('/invoices/{invoice}', [MobileController::class, 'invoiceShow'])->name('invoices.show');
-        Route::get('/invoices/{invoice}/pdf', [MobileController::class, 'invoicePdf'])->name('invoices.pdf');
-
-        // Payments
-        Route::get('/payments', [MobileController::class, 'payments'])->name('payments');
-        Route::get('/payments/{payment}', [MobileController::class, 'paymentShow'])->name('payments.show');
-        Route::get('/payments/{payment}/receipt', [MobileController::class, 'paymentReceipt'])->name('payments.receipt');
-
-        // Contracts
-        Route::get('/contracts', [MobileController::class, 'contracts'])->name('contracts');
-        Route::get('/contracts/{contract}', [MobileController::class, 'contractShow'])->name('contracts.show');
-        Route::get('/contracts/{contract}/pdf', [MobileController::class, 'contractPdf'])->name('contracts.pdf');
-        Route::get('/contracts/{contract}/renew', function ($contract) {
-            return Inertia::render('Mobile/Contracts/Renew', ['contract_id' => $contract]);
-        })->name('contracts.renew-form');
-        Route::post('/contracts/{contract}/renew', [MobileController::class, 'renewContract'])->name('contracts.renew');
-        Route::post('/contracts/{contract}/terminate', [MobileController::class, 'terminateContract'])->name('contracts.terminate');
-
-        // Reserve (with payment)
-        Route::prefix('reserve')->name('reserve.')->controller(\App\Http\Controllers\Mobile\ReservationPaymentController::class)->group(function () {
-            Route::get('/', 'index')->name('index');
-            Route::post('/calculate', 'calculateTotal')->name('calculate');
-            Route::post('/payment-intent', 'createPaymentIntent')->name('payment-intent');
-            Route::post('/confirm', 'confirmReservation')->name('confirm');
-            // PayPal
-            Route::post('/paypal/create', 'createPayPalOrder')->name('paypal.create');
-            Route::get('/paypal/success', 'capturePayPalOrder')->name('paypal.success');
-            Route::get('/paypal/cancel', 'paymentCancel')->name('paypal.cancel');
-        });
-
-        // Pay (Stripe + PayPal)
-        Route::prefix('pay')->name('pay.')->controller(\App\Http\Controllers\Mobile\MobilePaymentController::class)->group(function () {
-            Route::get('/', 'index')->name('index');
-            // Stripe
-            Route::post('/stripe/intent', 'createStripeIntent')->name('stripe.intent');
-            Route::post('/stripe/confirm', 'confirmStripePayment')->name('stripe.confirm');
-            Route::post('/charge-saved', 'chargeSavedCard')->name('charge-saved');
-            // PayPal
-            Route::post('/paypal/create', 'createPayPalOrder')->name('paypal.create');
-            Route::get('/paypal/success', 'capturePayPalOrder')->name('paypal.success');
-            Route::get('/paypal/cancel', 'paymentCancel')->name('paypal.cancel');
-            // Success page
-            Route::get('/success', 'paymentSuccess')->name('success');
-        });
-
-        // Access
-        Route::get('/access', [MobileController::class, 'access'])->name('access');
-
-        // More menu
-        Route::get('/more', [MobileController::class, 'more'])->name('more');
-
-        // Profile
-        Route::get('/profile', [MobileController::class, 'profile'])->name('profile');
-        Route::put('/profile', [MobileController::class, 'updateProfile'])->name('profile.update');
-        Route::put('/profile/address', [MobileController::class, 'updateAddress'])->name('profile.update-address');
-        Route::put('/profile/password', [MobileController::class, 'changePassword'])->name('profile.change-password');
-        Route::delete('/profile', [MobileController::class, 'deleteAccount'])->name('profile.delete');
-
-        // Settings
-        Route::get('/settings', [MobileController::class, 'settings'])->name('settings');
-        Route::put('/settings', [MobileController::class, 'updateSettings'])->name('settings.update');
-        Route::get('/settings/export-data', [MobileController::class, 'exportData'])->name('settings.export-data');
-
-        // Help & Support
-        Route::get('/help', function () {
-            return Inertia::render('Mobile/Help/Index');
-        })->name('help');
-
-        Route::get('/support', [MobileController::class, 'support'])->name('support');
-        Route::post('/support/send', [MobileController::class, 'sendSupport'])->name('support.send');
-
-        Route::get('/faq', [MobileController::class, 'faq'])->name('faq');
-
-        // Documents
-        Route::get('/documents', [MobileController::class, 'documents'])->name('documents');
-        Route::post('/documents/upload', [MobileController::class, 'uploadDocument'])->name('documents.upload');
-        Route::get('/documents/{document}/download', [MobileController::class, 'downloadDocument'])->name('documents.download');
-
-        // Payment methods
-        Route::get('/payment-methods', [MobileController::class, 'paymentMethods'])->name('payment-methods');
-        Route::post('/payment-methods/add-card', [MobileController::class, 'addCard'])->name('payment-methods.add-card');
-        Route::put('/payment-methods/{card}/set-default', [MobileController::class, 'setDefaultCard'])->name('payment-methods.set-default');
-        Route::delete('/payment-methods/{card}', [MobileController::class, 'deleteCard'])->name('payment-methods.delete-card');
-        Route::post('/payment-methods/setup-sepa', [MobileController::class, 'setupSepa'])->name('payment-methods.setup-sepa');
-        Route::delete('/payment-methods/sepa', [MobileController::class, 'revokeSepa'])->name('payment-methods.revoke-sepa');
-        Route::put('/payment-methods/autopay', [MobileController::class, 'toggleAutoPay'])->name('payment-methods.toggle-autopay');
-
-        // Insurance
-        Route::get('/insurance', function () {
-            return Inertia::render('Mobile/Insurance/Index');
-        })->name('insurance');
-
-        // Live Chat (Real-time Customer <-> Tenant)
-        Route::prefix('chat')->name('chat.')->controller(\App\Http\Controllers\Mobile\ChatController::class)->group(function () {
-            Route::get('/', 'index')->name('index');
-            Route::post('/', 'store')->name('store');
-            Route::get('/{conversationId}', 'show')->name('show');
-            Route::post('/{conversationId}/messages', 'sendMessage')->name('send');
-            Route::post('/{conversationId}/read', 'markAsRead')->name('read');
-            Route::post('/{conversationId}/typing', 'typing')->name('typing');
-            Route::post('/{conversationId}/close', 'close')->name('close');
-        });
-
-        // Smart Lock / IoT Lock Control
-        Route::get('/smart-lock', function () {
-            return Inertia::render('Mobile/SmartLock/Index');
-        })->name('smart-lock');
-
-        // Share Access
-        Route::get('/share-access', function () {
-            return Inertia::render('Mobile/Share/Index');
-        })->name('share-access');
-
-        // Notifications
-        Route::get('/notifications', function () {
-            return Inertia::render('Mobile/Notifications/Index');
-        })->name('notifications');
-
-        // Help / FAQ
-        Route::get('/help', function () {
-            return Inertia::render('Mobile/Help/Index');
-        })->name('help');
-    });
-
-    /*
-    |--------------------------------------------------------------------------
     | SuperAdmin Routes (Protected by super_admin role + 2FA required)
     |--------------------------------------------------------------------------
     */
@@ -1822,6 +1676,196 @@ Route::middleware('auth')->group(function () {
             Route::post('/comments/bulk', [SuperAdminBlogController::class, 'bulkCommentAction'])->name('comments.bulk');
         });
     });
+});
+
+// ==============================================
+// Mobile App Public Routes (No Auth Required)
+// ==============================================
+Route::prefix('mobile')->name('mobile.')->group(function () {
+    Route::get('/login', [MobileController::class, 'loginPage'])->name('login');
+    Route::post('/login', [MobileController::class, 'login'])->name('login.submit');
+    Route::post('/logout', [MobileController::class, 'logout'])->name('logout');
+});
+
+// ==============================================
+// Mobile App Protected Routes (Customer Auth Required)
+// ==============================================
+Route::prefix('mobile')->name('mobile.')->middleware('mobile.customer')->group(function () {
+    // Dashboard
+    Route::get('/', [MobileController::class, 'dashboard'])->name('dashboard');
+
+    // Boxes
+    Route::get('/boxes', [MobileController::class, 'boxes'])->name('boxes');
+
+    // Invoices
+    Route::get('/invoices', [MobileController::class, 'invoices'])->name('invoices');
+    Route::get('/invoices/{invoice}', [MobileController::class, 'invoiceShow'])->name('invoices.show');
+    Route::get('/invoices/{invoice}/pdf', [MobileController::class, 'invoicePdf'])->name('invoices.pdf');
+
+    // Payments
+    Route::get('/payments', [MobileController::class, 'payments'])->name('payments');
+    Route::get('/payments/{payment}', [MobileController::class, 'paymentShow'])->name('payments.show');
+    Route::get('/payments/{payment}/receipt', [MobileController::class, 'paymentReceipt'])->name('payments.receipt');
+
+    // Contracts
+    Route::get('/contracts', [MobileController::class, 'contracts'])->name('contracts');
+    Route::get('/contracts/{contract}', [MobileController::class, 'contractShow'])->name('contracts.show');
+    Route::get('/contracts/{contract}/pdf', [MobileController::class, 'contractPdf'])->name('contracts.pdf');
+    Route::get('/contracts/{contract}/renew', function ($contract) {
+        return Inertia::render('Mobile/Contracts/Renew', ['contract_id' => $contract]);
+    })->name('contracts.renew-form');
+    Route::post('/contracts/{contract}/renew', [MobileController::class, 'renewContract'])->name('contracts.renew');
+    Route::post('/contracts/{contract}/terminate', [MobileController::class, 'terminateContract'])->name('contracts.terminate');
+
+    // Reserve (with payment)
+    Route::get('/reserve', [\App\Http\Controllers\Mobile\ReservationPaymentController::class, 'index'])->name('reserve');
+    Route::prefix('reserve')->name('reserve.')->controller(\App\Http\Controllers\Mobile\ReservationPaymentController::class)->group(function () {
+        Route::post('/calculate', 'calculateTotal')->name('calculate');
+        Route::post('/payment-intent', 'createPaymentIntent')->name('payment-intent');
+        Route::post('/confirm', 'confirmReservation')->name('confirm');
+        // PayPal
+        Route::post('/paypal/create', 'createPayPalOrder')->name('paypal.create');
+        Route::get('/paypal/success', 'capturePayPalOrder')->name('paypal.success');
+        Route::get('/paypal/cancel', 'paymentCancel')->name('paypal.cancel');
+        // Bancontact (via Stripe)
+        Route::post('/bancontact/create', 'createBancontactPayment')->name('bancontact.create');
+        Route::get('/bancontact/success', 'confirmBancontactPayment')->name('bancontact.success');
+        Route::get('/bancontact/cancel', 'paymentCancel')->name('bancontact.cancel');
+        // Apple Pay / Google Pay (Wallet)
+        Route::post('/wallet/create', 'createWalletPayment')->name('wallet.create');
+        // Bank Transfer
+        Route::post('/bank-transfer/create', 'createBankTransferReservation')->name('bank-transfer.create');
+    });
+
+    // Pay (Stripe + PayPal)
+    Route::get('/pay', [\App\Http\Controllers\Mobile\MobilePaymentController::class, 'index'])->name('pay');
+    Route::prefix('pay')->name('pay.')->controller(\App\Http\Controllers\Mobile\MobilePaymentController::class)->group(function () {
+        // Stripe
+        Route::post('/stripe/intent', 'createStripeIntent')->name('stripe.intent');
+        Route::post('/stripe/confirm', 'confirmStripePayment')->name('stripe.confirm');
+        Route::post('/charge-saved', 'chargeSavedCard')->name('charge-saved');
+        // PayPal
+        Route::post('/paypal/create', 'createPayPalOrder')->name('paypal.create');
+        Route::get('/paypal/success', 'capturePayPalOrder')->name('paypal.success');
+        Route::get('/paypal/cancel', 'paymentCancel')->name('paypal.cancel');
+        // Success page
+        Route::get('/success', 'paymentSuccess')->name('success');
+    });
+
+    // Access
+    Route::get('/access', [MobileController::class, 'access'])->name('access');
+
+    // More menu
+    Route::get('/more', [MobileController::class, 'more'])->name('more');
+
+    // Profile
+    Route::get('/profile', [MobileController::class, 'profile'])->name('profile');
+    Route::put('/profile', [MobileController::class, 'updateProfile'])->name('profile.update');
+    Route::put('/profile/address', [MobileController::class, 'updateAddress'])->name('profile.update-address');
+    Route::put('/profile/password', [MobileController::class, 'changePassword'])->name('profile.change-password');
+    Route::delete('/profile', [MobileController::class, 'deleteAccount'])->name('profile.delete');
+
+    // Settings
+    Route::get('/settings', [MobileController::class, 'settings'])->name('settings');
+    Route::put('/settings', [MobileController::class, 'updateSettings'])->name('settings.update');
+    Route::get('/settings/export-data', [MobileController::class, 'exportData'])->name('settings.export-data');
+
+    // Help & Support
+    Route::get('/help', function () {
+        return Inertia::render('Mobile/Help/Index');
+    })->name('help');
+
+    Route::get('/support', [MobileController::class, 'support'])->name('support');
+    Route::post('/support/send', [MobileController::class, 'sendSupport'])->name('support.send');
+
+    Route::get('/faq', [MobileController::class, 'faq'])->name('faq');
+
+    // Documents
+    Route::get('/documents', [MobileController::class, 'documents'])->name('documents');
+    Route::post('/documents/upload', [MobileController::class, 'uploadDocument'])->name('documents.upload');
+    Route::get('/documents/{document}/download', [MobileController::class, 'downloadDocument'])->name('documents.download');
+
+    // Payment methods
+    Route::get('/payment-methods', [MobileController::class, 'paymentMethods'])->name('payment-methods');
+    Route::post('/payment-methods/add-card', [MobileController::class, 'addCard'])->name('payment-methods.add-card');
+    Route::put('/payment-methods/{card}/set-default', [MobileController::class, 'setDefaultCard'])->name('payment-methods.set-default');
+    Route::delete('/payment-methods/{card}', [MobileController::class, 'deleteCard'])->name('payment-methods.delete-card');
+    Route::post('/payment-methods/setup-sepa', [MobileController::class, 'setupSepa'])->name('payment-methods.setup-sepa');
+    Route::delete('/payment-methods/sepa', [MobileController::class, 'revokeSepa'])->name('payment-methods.revoke-sepa');
+    Route::put('/payment-methods/autopay', [MobileController::class, 'toggleAutoPay'])->name('payment-methods.toggle-autopay');
+
+    // Insurance
+    Route::get('/insurance', function () {
+        return Inertia::render('Mobile/Insurance/Index');
+    })->name('insurance');
+
+    // Broadcasting auth for mobile (must be before chat routes)
+    Route::post('/broadcasting/auth', [\App\Http\Controllers\Mobile\ChatController::class, 'broadcastAuth'])->name('broadcasting.auth');
+
+    // Live Chat (Real-time Customer <-> Tenant)
+    Route::prefix('chat')->name('chat.')->controller(\App\Http\Controllers\Mobile\ChatController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/', 'store')->name('store');
+        Route::get('/{conversationId}', 'show')->name('show');
+        Route::post('/{conversationId}/messages', 'sendMessage')->name('send');
+        Route::post('/{conversationId}/read', 'markAsRead')->name('read');
+        Route::post('/{conversationId}/typing', 'typing')->name('typing');
+        Route::post('/{conversationId}/close', 'close')->name('close');
+    });
+
+    // Smart Lock / IoT Lock Control
+    Route::get('/smart-lock', function () {
+        return Inertia::render('Mobile/SmartLock/Index');
+    })->name('smart-lock');
+
+    // Box Access System (QR codes, sharing, history)
+    Route::get('/access', [\App\Http\Controllers\Mobile\MobileAccessController::class, 'index'])->name('access');
+    Route::prefix('access')->name('access.')->controller(\App\Http\Controllers\Mobile\MobileAccessController::class)->group(function () {
+        Route::get('/{contract}/qr', 'generateQrCode')->name('qr');
+        Route::get('/{contract}/history', 'history')->name('history');
+        Route::get('/{contract}/share', 'shareForm')->name('share.form');
+        Route::post('/{contract}/share', 'createShare')->name('share.create');
+        Route::get('/shares/{share}', 'getShare')->name('share.show');
+        Route::delete('/shares/{share}', 'revokeShare')->name('share.revoke');
+        Route::post('/{contract}/log', 'logAccess')->name('log');
+    });
+
+    // Inventory Management
+    Route::prefix('inventory')->name('inventory.')->controller(\App\Http\Controllers\Mobile\MobileInventoryController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/', 'store')->name('store');
+        Route::get('/stats', 'stats')->name('stats');
+        Route::get('/export', 'export')->name('export');
+        Route::get('/{uuid}', 'show')->name('show');
+        Route::get('/{uuid}/edit', 'edit')->name('edit');
+        Route::put('/{uuid}', 'update')->name('update');
+        Route::delete('/{uuid}', 'destroy')->name('destroy');
+        Route::post('/{uuid}/photos', 'uploadPhotos')->name('photos.upload');
+        Route::delete('/{uuid}/photos', 'deletePhoto')->name('photos.delete');
+        Route::post('/{uuid}/mark-removed', 'markRemoved')->name('mark-removed');
+        Route::post('/{uuid}/mark-stored', 'markStored')->name('mark-stored');
+    });
+
+    // Referral / Parrainage
+    Route::prefix('referral')->name('referral.')->controller(\App\Http\Controllers\Mobile\MobileReferralController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/invite', 'invite')->name('invite');
+        Route::get('/share', 'getShareContent')->name('share');
+        Route::post('/credits/use', 'useCredits')->name('credits.use');
+        Route::delete('/{referral}', 'cancelInvitation')->name('cancel');
+        Route::post('/{referral}/resend', 'resendInvitation')->name('resend');
+    });
+
+    // Notifications
+    Route::get('/notifications', function () {
+        return Inertia::render('Mobile/Notifications/Index');
+    })->name('notifications');
+
+    // Help / FAQ (duplicate but kept for compatibility)
+    Route::get('/help-faq', function () {
+        return Inertia::render('Mobile/Help/Index');
+    })->name('help-faq');
 });
 
 // ==============================================

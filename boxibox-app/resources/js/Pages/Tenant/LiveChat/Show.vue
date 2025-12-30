@@ -459,11 +459,21 @@ const reopenConversation = async () => {
 }
 
 // Setup Echo for real-time updates
-const setupEcho = () => {
-    if (!window.Echo || !props.conversation) return
+const setupEcho = async () => {
+    if (!props.conversation) return
 
-    echoChannel = window.Echo.private(`chat.${props.conversation.conversation_id}`)
+    // Wait for Echo to be ready
+    const echo = await window.echoReady
+    if (!echo) {
+        console.warn('Echo not available, real-time updates disabled')
+        return
+    }
+
+    console.log('Setting up Echo channel for conversation:', props.conversation.conversation_id)
+
+    echoChannel = echo.private(`chat.${props.conversation.conversation_id}`)
         .listen('.message.sent', (data) => {
+            console.log('Message received:', data)
             if (data.sender_type === 'customer') {
                 messages.value.push(data.message)
                 scrollToBottom()

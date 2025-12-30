@@ -1,5 +1,5 @@
 <template>
-    <MobileLayout title="Acces au Box" :show-back="true">
+    <MobileLayout title="Accès au Box" :show-back="true">
         <!-- Access Code Card -->
         <div class="bg-gradient-to-br from-purple-500 to-purple-700 rounded-2xl p-6 text-white mb-6 shadow-lg relative overflow-hidden">
             <!-- Background pattern -->
@@ -10,7 +10,7 @@
             <div class="relative">
                 <div class="flex items-center justify-between mb-4">
                     <div>
-                        <p class="text-purple-200 text-sm">Code d'acces</p>
+                        <p class="text-purple-200 text-sm">Code d'accès</p>
                         <h2 class="text-3xl font-bold tracking-wider mt-1">{{ accessCode }}</h2>
                     </div>
                     <button
@@ -69,7 +69,7 @@
 
         <!-- Site Access Hours -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Horaires d'acces</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Horaires d'accès</h3>
 
             <div class="space-y-3">
                 <div v-for="(hours, day) in accessHours" :key="day" class="flex justify-between items-center">
@@ -80,7 +80,7 @@
 
             <div class="mt-4 p-3 bg-green-50 dark:bg-green-900/30 rounded-xl flex items-center">
                 <CheckCircleIcon class="w-5 h-5 text-green-500 mr-2" />
-                <span class="text-sm text-green-700 dark:text-green-300">Acces 24h/24 disponible</span>
+                <span class="text-sm text-green-700 dark:text-green-300">Accès 24h/24 disponible</span>
             </div>
         </div>
 
@@ -104,7 +104,7 @@
                         class="flex-1 py-3 bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 font-semibold rounded-xl flex items-center justify-center active:scale-95 transition"
                     >
                         <MapIcon class="w-5 h-5 mr-2" />
-                        Itineraire
+                        Itinéraire
                     </a>
                     <a
                         :href="`tel:${contract?.box?.site?.phone || '0800123456'}`"
@@ -153,7 +153,7 @@
 
         <!-- QR Code -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">QR Code d'acces</h3>
+            <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4 text-center">QR Code d'accès</h3>
 
             <div class="flex justify-center mb-4">
                 <div class="relative">
@@ -190,7 +190,7 @@
                     class="py-3 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-medium rounded-xl flex items-center justify-center active:scale-95 transition"
                 >
                     <ArrowDownTrayIcon class="w-5 h-5 mr-2" />
-                    Telecharger
+                    Télécharger
                 </button>
                 <button
                     @click="shareQRCode"
@@ -205,8 +205,8 @@
         <!-- Access History -->
         <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm p-5 mb-4">
             <div class="flex items-center justify-between mb-4">
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Historique des acces</h3>
-                <span class="text-sm text-gray-500 dark:text-gray-400">{{ accessHistory.length }} acces</span>
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Historique des accès</h3>
+                <span class="text-sm text-gray-500 dark:text-gray-400">{{ accessHistory.length }} accès</span>
             </div>
 
             <div v-if="accessHistory.length > 0" class="space-y-3">
@@ -235,7 +235,7 @@
                                 />
                             </div>
                             <div>
-                                <p class="font-medium text-gray-900 dark:text-white">{{ access.type === 'entry' ? 'Entree' : 'Sortie' }}</p>
+                                <p class="font-medium text-gray-900 dark:text-white">{{ access.type === 'entry' ? 'Entrée' : 'Sortie' }}</p>
                                 <p class="text-sm text-gray-500 dark:text-gray-400">{{ access.location }}</p>
                             </div>
                         </div>
@@ -245,7 +245,7 @@
             </div>
             <div v-else class="text-center py-6 text-gray-500 dark:text-gray-400">
                 <ClockIcon class="w-12 h-12 mx-auto mb-2 text-gray-300 dark:text-gray-600" />
-                Aucun acces enregistre
+                Aucun accès enregistré
             </div>
         </div>
 
@@ -256,8 +256,8 @@
         >
             <div class="flex items-center justify-between">
                 <div>
-                    <h4 class="font-bold text-lg">Serrure Connectee</h4>
-                    <p class="text-indigo-100 text-sm mt-1">Controler votre serrure IoT</p>
+                    <h4 class="font-bold text-lg">Serrure Connectée</h4>
+                    <p class="text-indigo-100 text-sm mt-1">Contrôler votre serrure IoT</p>
                 </div>
                 <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                     <LockClosedIcon class="w-6 h-6" />
@@ -285,6 +285,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { Link } from '@inertiajs/vue3'
+import QRCode from 'qrcode'
 import MobileLayout from '@/Layouts/MobileLayout.vue'
 import {
     ClipboardDocumentIcon,
@@ -391,65 +392,28 @@ const getStaticMapUrl = () => {
     return `https://staticmap.openstreetmap.de/staticmap.php?center=${siteLat.value},${siteLng.value}&zoom=15&size=400x200&maptype=osmarenderer&markers=${siteLat.value},${siteLng.value},red-pushpin`
 }
 
-// Generate QR Code using Canvas
+// Generate QR Code using qrcode library (real scannable QR code)
 const generateQRCode = async () => {
     qrLoading.value = true
 
     try {
-        // Simple QR code generation using canvas
-        // In production, use a library like 'qrcode' npm package
         const canvas = qrCanvas.value
         if (!canvas) return
 
-        const ctx = canvas.getContext('2d')
-        const size = 200
-        canvas.width = size
-        canvas.height = size
-
-        // Generate QR pattern (simplified version)
-        // In production, use proper QR encoding
+        // Generate real QR code data
         const qrData = `BOXIBOX-ACCESS:${accessCode.value}:${props.contract?.id || 'demo'}`
 
-        // Create a simple visual representation
-        ctx.fillStyle = '#FFFFFF'
-        ctx.fillRect(0, 0, size, size)
-
-        // Draw QR-like pattern based on data hash
-        const cellSize = 5
-        const modules = Math.floor(size / cellSize)
-
-        ctx.fillStyle = '#1a1a2e'
-
-        // Generate deterministic pattern based on data
-        for (let row = 0; row < modules; row++) {
-            for (let col = 0; col < modules; col++) {
-                // Simple hash-based pattern
-                const hash = (qrData.charCodeAt(row % qrData.length) * col + row * 17) % 100
-
-                // Position patterns (corners)
-                const isCorner = (row < 7 && col < 7) ||
-                                (row < 7 && col >= modules - 7) ||
-                                (row >= modules - 7 && col < 7)
-
-                // Timing patterns
-                const isTiming = (row === 6 || col === 6) && !isCorner
-
-                if (isCorner) {
-                    // Draw finder patterns
-                    const cornerRow = row < 7 ? row : row - (modules - 7)
-                    const cornerCol = col < 7 ? col : col - (modules - 7)
-
-                    if (cornerRow === 0 || cornerRow === 6 || cornerCol === 0 || cornerCol === 6 ||
-                        (cornerRow >= 2 && cornerRow <= 4 && cornerCol >= 2 && cornerCol <= 4)) {
-                        ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize)
-                    }
-                } else if (isTiming && (row + col) % 2 === 0) {
-                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize)
-                } else if (!isCorner && !isTiming && hash > 50) {
-                    ctx.fillRect(col * cellSize, row * cellSize, cellSize, cellSize)
-                }
+        // Generate QR code with high error correction for better scanning
+        await QRCode.toCanvas(canvas, qrData, {
+            errorCorrectionLevel: 'H',
+            type: 'image/png',
+            width: 200,
+            margin: 2,
+            color: {
+                dark: '#1a1a2e',
+                light: '#ffffff'
             }
-        }
+        })
 
         qrLoading.value = false
     } catch (error) {

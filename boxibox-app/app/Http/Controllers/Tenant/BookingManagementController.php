@@ -25,7 +25,7 @@ class BookingManagementController extends Controller
     public function index(Request $request)
     {
         $query = Booking::where('tenant_id', $this->getTenantId())
-            ->with(['site', 'box', 'customer']);
+            ->with(['site', 'box', 'customer', 'payments']);
 
         // Filter by status
         if ($request->status) {
@@ -73,6 +73,8 @@ class BookingManagementController extends Controller
                     'status_color' => $booking->status_color,
                     'source' => $booking->source,
                     'source_label' => $booking->source_label,
+                    'payment_method' => $booking->payment_method,
+                    'amount_paid' => $booking->payments->where('status', 'completed')->sum('amount'),
                     'created_at' => $booking->created_at->format('d/m/Y H:i'),
                 ];
             });
@@ -150,6 +152,9 @@ class BookingManagementController extends Controller
                 'source' => $booking->source,
                 'source_label' => $booking->source_label,
                 'source_url' => $booking->source_url,
+                'payment_method' => $booking->payment_method,
+                'payment_notes' => $booking->payment_notes,
+                'total_paid' => $booking->payments->where('status', 'completed')->sum('amount'),
                 'utm' => [
                     'source' => $booking->utm_source,
                     'medium' => $booking->utm_medium,

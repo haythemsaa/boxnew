@@ -49,13 +49,13 @@ Route::middleware('throttle:webhooks')->group(function () {
 
     // Google Reserve with Google API v3
     Route::prefix('google-reserve/v3')->group(function () {
-        Route::get('/health', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'healthCheck'])->name('google-reserve.health');
-        Route::post('/CheckAvailability', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'checkAvailability'])->name('google-reserve.check-availability');
-        Route::post('/BatchAvailabilityLookup', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'batchAvailabilityLookup'])->name('google-reserve.batch-availability');
-        Route::post('/CreateBooking', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'createBooking'])->name('google-reserve.create-booking');
-        Route::post('/UpdateBooking', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'updateBooking'])->name('google-reserve.update-booking');
-        Route::post('/GetBookingStatus', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'getBookingStatus'])->name('google-reserve.get-booking');
-        Route::post('/ListBookings', [\App\Http\Controllers\Api\GoogleReserveWebhookController::class, 'listBookings'])->name('google-reserve.list-bookings');
+        Route::get('/health', [\App\Http\Controllers\API\GoogleReserveWebhookController::class, 'healthCheck'])->name('google-reserve.health');
+        Route::post('/CheckAvailability', [\App\Http\Controllers\API\GoogleReserveWebhookController::class, 'checkAvailability'])->name('google-reserve.check-availability');
+        Route::post('/BatchAvailabilityLookup', [\App\Http\Controllers\API\GoogleReserveWebhookController::class, 'batchAvailabilityLookup'])->name('google-reserve.batch-availability');
+        Route::post('/CreateBooking', [\App\Http\Controllers\API\GoogleReserveWebhookController::class, 'createBooking'])->name('google-reserve.create-booking');
+        Route::post('/UpdateBooking', [\App\Http\Controllers\API\GoogleReserveWebhookController::class, 'updateBooking'])->name('google-reserve.update-booking');
+        Route::post('/GetBookingStatus', [\App\Http\Controllers\API\GoogleReserveWebhookController::class, 'getBookingStatus'])->name('google-reserve.get-booking');
+        Route::post('/ListBookings', [\App\Http\Controllers\API\GoogleReserveWebhookController::class, 'listBookings'])->name('google-reserve.list-bookings');
     });
 
     // Email & SMS Tracking Webhooks
@@ -176,6 +176,18 @@ Route::prefix('widget')->middleware('throttle:120,1')->group(function () {
 */
 Route::prefix('v1/access')->middleware('throttle:10,1')->group(function () {
     Route::post('/validate', [\App\Http\Controllers\Tenant\SelfServiceController::class, 'validateAccess'])->name('api.v1.access.validate');
+
+    // Shared access validation (for temporary guest access)
+    Route::post('/validate-share', [\App\Http\Controllers\Mobile\MobileAccessController::class, 'validateShareCode'])->name('api.v1.access.validate-share');
+});
+
+/*
+|--------------------------------------------------------------------------
+| Public Referral Validation API (Improved)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1/referral')->middleware('throttle:30,1')->group(function () {
+    Route::post('/validate', [\App\Http\Controllers\Mobile\MobileReferralController::class, 'validateCode'])->name('api.v1.referral.validate');
 });
 
 /*

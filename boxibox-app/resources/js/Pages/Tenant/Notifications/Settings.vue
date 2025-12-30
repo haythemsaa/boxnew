@@ -203,7 +203,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
 import TenantLayout from '@/Layouts/TenantLayout.vue';
-import { usePushNotifications } from '@/Composables/usePushNotifications';
+import { usePushNotifications } from '@/composables/usePushNotifications';
 
 const {
     isSupported,

@@ -42,6 +42,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'api/iot/*',
             'api/webhooks/*',
             'widget/booking/*',
+            'mobile/broadcasting/auth',
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {

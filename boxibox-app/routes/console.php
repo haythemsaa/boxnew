@@ -125,6 +125,15 @@ Schedule::command('leads:calculate-scores')
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/crm.log'));
 
+// Process CRM automatic follow-ups - Run every 2 hours during business hours
+// This sends emails/SMS to leads that haven't responded
+Schedule::command('crm:auto-followup')
+    ->everyTwoHours()
+    ->between('09:00', '19:00')
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->appendOutputTo(storage_path('logs/crm.log'));
+
 /*
 |--------------------------------------------------------------------------
 | Scheduled Reports

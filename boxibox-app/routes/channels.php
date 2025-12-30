@@ -95,3 +95,45 @@ Broadcast::channel('presence.chat.{conversationId}', function ($user, $conversat
 
     return false;
 });
+
+/**
+ * Private channel for a specific support ticket
+ * Both tenant staff and customers can listen
+ */
+Broadcast::channel('support.ticket.{ticketId}', function ($user, $ticketId) {
+    $ticket = \App\Models\SupportTicket::find($ticketId);
+
+    if (!$ticket) {
+        return false;
+    }
+
+    // If user is a tenant staff member
+    if ($user instanceof User) {
+        return $user->tenant_id === $ticket->tenant_id;
+    }
+
+    // If user is a customer
+    if ($user instanceof Customer) {
+        return $ticket->customer_id === $user->id;
+    }
+
+    return false;
+});
+
+/**
+ * Private channel for tenant to receive all support ticket updates
+ */
+Broadcast::channel('tenant.{tenantId}.support', function (User $user, $tenantId) {
+    return $user->tenant_id === (int) $tenantId;
+});
+
+/**
+ * Private channel for customer to receive their support ticket updates
+ */
+Broadcast::channel('customer.{customerId}.support', function ($user, $customerId) {
+    if ($user instanceof Customer) {
+        return $user->id === (int) $customerId;
+    }
+
+    return false;
+});

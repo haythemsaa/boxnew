@@ -23,6 +23,7 @@ return new class extends Migration
             'contract',
             'invoice',
             'booking',
+            'new_booking',
             'system',
             'alert',
             'reminder',

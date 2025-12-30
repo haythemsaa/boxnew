@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Tenant;
 
+use App\Events\SupportMessageSent;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\SupportMessage;
@@ -143,6 +144,16 @@ class SupportChatController extends Controller
             ]);
         } elseif ($ticket->status === 'waiting_internal') {
             $ticket->update(['status' => 'waiting_customer']);
+        }
+
+        // Broadcast the message for real-time updates (only if not internal)
+        if (!($validated['is_internal'] ?? false)) {
+            broadcast(new SupportMessageSent(
+                $message,
+                $ticket,
+                'user',
+                $request->user()->name
+            ));
         }
 
         return back()->with('success', 'Message envoye.');

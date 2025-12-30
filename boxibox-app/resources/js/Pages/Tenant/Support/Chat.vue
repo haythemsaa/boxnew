@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick, onMounted } from 'vue'
+import { ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { Head, Link, router, useForm } from '@inertiajs/vue3'
 import TenantLayout from '@/Layouts/TenantLayout.vue'
 
@@ -12,6 +12,8 @@ const props = defineProps({
 
 const messagesContainer = ref(null)
 const showStatusModal = ref(false)
+const localMessages = ref([...props.messages])
+let echoChannel = null
 
 const form = useForm({
     message: '',
@@ -55,8 +57,40 @@ const formatTime = (date) => {
     return date
 }
 
+// Setup Echo for real-time updates
+const setupEcho = async () => {
+    if (!props.ticket) return
+
+    // Wait for Echo to be ready
+    const echo = await window.echoReady
+    if (!echo) {
+        console.warn('Echo not available, real-time updates disabled')
+        return
+    }
+
+    console.log('Setting up Echo channel for support ticket:', props.ticket.id)
+
+    echoChannel = echo.private(`support.ticket.${props.ticket.id}`)
+        .listen('.message.sent', (data) => {
+            console.log('Support message received:', data)
+            // Only add if not already present and not from current user
+            const exists = localMessages.value.some(m => m.id === data.message.id)
+            if (!exists) {
+                localMessages.value.push(data.message)
+                scrollToBottom()
+            }
+        })
+}
+
 onMounted(() => {
     scrollToBottom()
+    setupEcho()
+})
+
+onUnmounted(() => {
+    if (echoChannel && props.ticket) {
+        window.Echo?.leave(`support.ticket.${props.ticket.id}`)
+    }
 })
 
 const getStatusColor = (status) => {
@@ -123,7 +157,7 @@ const getStatusColor = (status) => {
 
                         <!-- Messages -->
                         <div
-                            v-for="message in messages"
+                            v-for="message in localMessages"
                             :key="message.id"
                             :class="[
                                 'flex',

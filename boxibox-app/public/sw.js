@@ -1,5 +1,5 @@
 // Boxibox Service Worker
-const CACHE_NAME = 'boxibox-v4';
+const CACHE_NAME = 'boxibox-v5';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache on install - only static files that don't change

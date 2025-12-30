@@ -1,172 +1,352 @@
 <template>
     <MobileLayout title="Facture" :show-back="true">
-        <!-- Invoice Header -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
-            <div class="p-5">
-                <div class="flex items-center justify-between mb-4">
+        <!-- Invoice Header Card -->
+        <div class="relative overflow-hidden bg-white dark:bg-gray-800 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-700 mb-5">
+            <!-- Status Indicator Bar -->
+            <div
+                class="h-1.5"
+                :class="getStatusBarClass(invoice.status)"
+            ></div>
+
+            <!-- Background Decoration -->
+            <div class="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br opacity-10 rounded-full -translate-y-1/2 translate-x-1/2"
+                 :class="getStatusDecorationClass(invoice.status)"></div>
+
+            <div class="p-6 relative">
+                <!-- Header Row -->
+                <div class="flex items-start justify-between mb-6">
                     <div>
-                        <h2 class="text-xl font-bold text-gray-900">{{ invoice.invoice_number }}</h2>
-                        <p class="text-sm text-gray-500">Emise le {{ formatDate(invoice.invoice_date) }}</p>
+                        <div class="flex items-center mb-2">
+                            <div
+                                class="w-12 h-12 rounded-xl flex items-center justify-center mr-3 shadow-lg"
+                                :class="getStatusGradientClass(invoice.status)"
+                            >
+                                <component :is="getStatusIcon(invoice.status)" class="w-6 h-6 text-white" />
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-900 dark:text-white">{{ invoice.invoice_number }}</h2>
+                                <p class="text-sm text-gray-500 dark:text-gray-400 flex items-center">
+                                    <CalendarDaysIcon class="w-4 h-4 mr-1" />
+                                    Emise le {{ formatDate(invoice.invoice_date) }}
+                                </p>
+                            </div>
+                        </div>
                     </div>
                     <span
-                        class="px-3 py-1.5 rounded-full text-sm font-medium"
+                        class="inline-flex items-center px-3.5 py-1.5 rounded-full text-sm font-semibold shadow-sm"
                         :class="getStatusBadgeClass(invoice.status)"
                     >
+                        <span
+                            class="w-2 h-2 rounded-full mr-2"
+                            :class="getStatusDotClass(invoice.status)"
+                        ></span>
                         {{ getStatusLabel(invoice.status) }}
                     </span>
                 </div>
 
-                <!-- Amount -->
-                <div class="text-center py-6 border-y border-gray-100">
-                    <p class="text-sm text-gray-500 mb-1">Montant total</p>
-                    <p class="text-4xl font-bold text-gray-900">{{ formatCurrency(invoice.total) }}</p>
-                    <div v-if="invoice.balance > 0 && invoice.balance !== invoice.total" class="mt-2">
-                        <p class="text-sm text-gray-500">Reste a payer: <span class="font-semibold text-red-600">{{ formatCurrency(invoice.balance) }}</span></p>
-                    </div>
+                <!-- Amount Section -->
+                <div class="text-center py-8 px-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700">
+                    <p class="text-sm text-gray-500 dark:text-gray-400 font-medium mb-2">Montant total</p>
+                    <p class="text-5xl font-extrabold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
+                        {{ formatCurrency(invoice.total) }}
+                    </p>
+                    <Transition
+                        enter-active-class="transition-all duration-300"
+                        enter-from-class="opacity-0 -translate-y-2"
+                        enter-to-class="opacity-100 translate-y-0"
+                    >
+                        <div v-if="invoice.balance > 0 && invoice.balance !== invoice.total" class="mt-4 inline-flex items-center px-4 py-2 bg-red-50 dark:bg-red-900/20 rounded-xl">
+                            <ExclamationCircleIcon class="w-5 h-5 text-red-500 mr-2" />
+                            <span class="text-sm text-gray-600 dark:text-gray-400">Reste a payer:</span>
+                            <span class="font-bold text-red-600 dark:text-red-400 ml-1.5">{{ formatCurrency(invoice.balance) }}</span>
+                        </div>
+                    </Transition>
                 </div>
 
-                <!-- Due Date -->
-                <div v-if="invoice.status === 'sent' || invoice.status === 'overdue'" class="mt-4">
-                    <div
-                        class="flex items-center justify-between p-3 rounded-xl"
-                        :class="invoice.status === 'overdue' ? 'bg-red-50' : 'bg-yellow-50'"
-                    >
-                        <div class="flex items-center">
-                            <CalendarIcon
-                                class="w-5 h-5 mr-2"
-                                :class="invoice.status === 'overdue' ? 'text-red-500' : 'text-yellow-500'"
-                            />
-                            <span :class="invoice.status === 'overdue' ? 'text-red-700' : 'text-yellow-700'">
-                                Echeance: {{ formatDate(invoice.due_date) }}
-                            </span>
-                        </div>
-                        <span
-                            v-if="invoice.status === 'overdue'"
-                            class="text-sm font-medium text-red-600"
+                <!-- Due Date Alert -->
+                <Transition
+                    enter-active-class="transition-all duration-500 ease-out"
+                    enter-from-class="opacity-0 scale-95"
+                    enter-to-class="opacity-100 scale-100"
+                >
+                    <div v-if="invoice.status === 'sent' || invoice.status === 'overdue'" class="mt-5">
+                        <div
+                            class="flex items-center justify-between p-4 rounded-2xl border"
+                            :class="invoice.status === 'overdue'
+                                ? 'bg-gradient-to-r from-red-50 to-rose-50 dark:from-red-900/20 dark:to-rose-900/20 border-red-200 dark:border-red-800'
+                                : 'bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border-amber-200 dark:border-amber-800'"
                         >
-                            {{ getDaysOverdue(invoice.due_date) }}j de retard
-                        </span>
+                            <div class="flex items-center">
+                                <div
+                                    class="w-10 h-10 rounded-xl flex items-center justify-center mr-3"
+                                    :class="invoice.status === 'overdue' ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30'"
+                                >
+                                    <CalendarIcon
+                                        class="w-5 h-5"
+                                        :class="invoice.status === 'overdue' ? 'text-red-600' : 'text-amber-600'"
+                                    />
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium uppercase tracking-wide" :class="invoice.status === 'overdue' ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'">
+                                        Echeance
+                                    </p>
+                                    <p class="font-bold" :class="invoice.status === 'overdue' ? 'text-red-700 dark:text-red-300' : 'text-amber-700 dark:text-amber-300'">
+                                        {{ formatDate(invoice.due_date) }}
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                v-if="invoice.status === 'overdue'"
+                                class="flex items-center px-3 py-1.5 bg-red-100 dark:bg-red-900/40 rounded-xl"
+                            >
+                                <ExclamationTriangleIcon class="w-5 h-5 text-red-600 mr-1.5" />
+                                <span class="text-sm font-bold text-red-700 dark:text-red-300">
+                                    {{ getDaysOverdue(invoice.due_date) }} jours de retard
+                                </span>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </Transition>
             </div>
         </div>
 
-        <!-- Invoice Details -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
-            <div class="p-5">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Details</h3>
+        <!-- Invoice Details Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-700 overflow-hidden mb-5">
+            <div class="p-6">
+                <div class="flex items-center mb-5">
+                    <div class="w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-primary-500/30">
+                        <DocumentTextIcon class="w-5 h-5 text-white" />
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Details de la facture</h3>
+                </div>
 
                 <!-- Line items -->
-                <div class="space-y-3">
-                    <div
-                        v-for="(item, index) in invoice.items"
-                        :key="index"
-                        class="flex justify-between items-start py-3 border-b border-gray-100 last:border-0"
+                <div class="space-y-1">
+                    <TransitionGroup
+                        enter-active-class="transition-all duration-300 ease-out"
+                        enter-from-class="opacity-0 translate-x-4"
+                        enter-to-class="opacity-100 translate-x-0"
                     >
-                        <div class="flex-1">
-                            <p class="font-medium text-gray-900">{{ item.description }}</p>
-                            <p class="text-sm text-gray-500">
-                                {{ item.quantity }} x {{ formatCurrency(item.unit_price) }}
-                            </p>
+                        <div
+                            v-for="(item, index) in invoice.items"
+                            :key="index"
+                            class="group relative"
+                            :style="{ transitionDelay: `${index * 100}ms` }"
+                        >
+                            <div class="flex justify-between items-start p-4 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-200">
+                                <!-- Item indicator -->
+                                <div class="flex items-start">
+                                    <div class="w-8 h-8 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mr-3 text-sm font-bold text-gray-500 dark:text-gray-400 flex-shrink-0">
+                                        {{ index + 1 }}
+                                    </div>
+                                    <div class="flex-1">
+                                        <p class="font-semibold text-gray-900 dark:text-white">{{ item.description }}</p>
+                                        <div class="flex items-center mt-1.5 text-sm text-gray-500 dark:text-gray-400">
+                                            <span class="inline-flex items-center px-2 py-0.5 bg-gray-100 dark:bg-gray-700 rounded-md mr-2">
+                                                {{ item.quantity }} x {{ formatCurrency(item.unit_price) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="font-bold text-gray-900 dark:text-white text-lg flex-shrink-0 ml-4">
+                                    {{ formatCurrency(item.total) }}
+                                </p>
+                            </div>
+                            <div v-if="index < invoice.items.length - 1" class="mx-4 border-b border-gray-100 dark:border-gray-700"></div>
                         </div>
-                        <p class="font-semibold text-gray-900">{{ formatCurrency(item.total) }}</p>
-                    </div>
+                    </TransitionGroup>
                 </div>
 
-                <!-- Totals -->
-                <div class="mt-4 pt-4 border-t border-gray-200 space-y-2">
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-500">Sous-total HT</span>
-                        <span class="text-gray-900">{{ formatCurrency(invoice.subtotal) }}</span>
-                    </div>
-                    <div class="flex justify-between text-sm">
-                        <span class="text-gray-500">TVA ({{ invoice.tax_rate || 20 }}%)</span>
-                        <span class="text-gray-900">{{ formatCurrency(invoice.tax_amount) }}</span>
-                    </div>
-                    <div class="flex justify-between text-lg font-bold pt-2 border-t border-gray-200">
-                        <span class="text-gray-900">Total TTC</span>
-                        <span class="text-gray-900">{{ formatCurrency(invoice.total) }}</span>
+                <!-- Totals Section -->
+                <div class="mt-6 pt-6 border-t-2 border-dashed border-gray-200 dark:border-gray-700">
+                    <div class="space-y-3">
+                        <div class="flex justify-between items-center p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <span class="text-gray-600 dark:text-gray-400 flex items-center">
+                                <div class="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center mr-2">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">HT</span>
+                                </div>
+                                Sous-total
+                            </span>
+                            <span class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(invoice.subtotal) }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <span class="text-gray-600 dark:text-gray-400 flex items-center">
+                                <div class="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded flex items-center justify-center mr-2">
+                                    <span class="text-xs text-gray-500 dark:text-gray-400">%</span>
+                                </div>
+                                TVA ({{ invoice.tax_rate || 21 }}%)
+                            </span>
+                            <span class="font-semibold text-gray-900 dark:text-white">{{ formatCurrency(invoice.tax_amount) }}</span>
+                        </div>
+                        <div class="flex justify-between items-center p-4 rounded-2xl bg-gradient-to-r from-primary-50 to-indigo-50 dark:from-primary-900/20 dark:to-indigo-900/20 border border-primary-100 dark:border-primary-800">
+                            <span class="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+                                <div class="w-8 h-8 bg-primary-100 dark:bg-primary-900/50 rounded-lg flex items-center justify-center mr-3">
+                                    <BanknotesIcon class="w-4 h-4 text-primary-600 dark:text-primary-400" />
+                                </div>
+                                Total TTC
+                            </span>
+                            <span class="text-2xl font-extrabold text-primary-600 dark:text-primary-400">{{ formatCurrency(invoice.total) }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Contract Info -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
-            <div class="p-5">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Contrat associe</h3>
+        <!-- Contract Info Section -->
+        <div class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-700 overflow-hidden mb-5">
+            <div class="p-6">
+                <div class="flex items-center mb-5">
+                    <div class="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-purple-500/30">
+                        <DocumentDuplicateIcon class="w-5 h-5 text-white" />
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 dark:text-white">Contrat associe</h3>
+                </div>
                 <Link
                     v-if="invoice.contract"
                     :href="route('mobile.contracts.show', invoice.contract.id)"
-                    class="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+                    class="group flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-700/50 dark:to-gray-800/50 rounded-2xl border border-gray-100 dark:border-gray-700 hover:shadow-lg transition-all duration-300 active:scale-[0.98]"
                 >
                     <div class="flex items-center">
-                        <div class="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center mr-3">
-                            <CubeIcon class="w-5 h-5 text-primary-600" />
+                        <div class="w-14 h-14 bg-gradient-to-br from-primary-500 to-primary-700 rounded-2xl flex items-center justify-center mr-4 shadow-lg shadow-primary-500/30 transition-transform duration-300 group-hover:scale-105">
+                            <CubeIcon class="w-7 h-7 text-white" />
                         </div>
                         <div>
-                            <p class="font-medium text-gray-900">{{ invoice.contract.box?.name }}</p>
-                            <p class="text-sm text-gray-500">{{ invoice.contract.contract_number }}</p>
+                            <p class="font-bold text-gray-900 dark:text-white text-lg">{{ invoice.contract.box?.name }}</p>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-0.5">
+                                <HashtagIcon class="w-4 h-4 mr-1" />
+                                {{ invoice.contract.contract_number }}
+                            </p>
                         </div>
                     </div>
-                    <ChevronRightIcon class="w-5 h-5 text-gray-400" />
+                    <div class="w-10 h-10 bg-white dark:bg-gray-700 rounded-xl flex items-center justify-center shadow-sm transition-transform duration-300 group-hover:translate-x-1">
+                        <ChevronRightIcon class="w-5 h-5 text-gray-400 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors" />
+                    </div>
                 </Link>
             </div>
         </div>
 
-        <!-- Payment History -->
-        <div v-if="invoice.payments?.length > 0" class="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
-            <div class="p-5">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Historique des paiements</h3>
-                <div class="space-y-3">
-                    <div
-                        v-for="payment in invoice.payments"
-                        :key="payment.id"
-                        class="flex items-center justify-between p-3 bg-green-50 rounded-xl"
-                    >
-                        <div class="flex items-center">
-                            <CheckCircleIcon class="w-5 h-5 text-green-500 mr-2" />
-                            <div>
-                                <p class="font-medium text-gray-900">{{ formatCurrency(payment.amount) }}</p>
-                                <p class="text-sm text-gray-500">{{ formatDate(payment.paid_at) }}</p>
-                            </div>
+        <!-- Payment History Section -->
+        <Transition
+            enter-active-class="transition-all duration-500 ease-out"
+            enter-from-class="opacity-0 translate-y-4"
+            enter-to-class="opacity-100 translate-y-0"
+        >
+            <div v-if="invoice.payments?.length > 0" class="bg-white dark:bg-gray-800 rounded-3xl shadow-xl shadow-gray-200/50 dark:shadow-none border border-gray-100 dark:border-gray-700 overflow-hidden mb-5">
+                <div class="p-6">
+                    <div class="flex items-center mb-5">
+                        <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mr-3 shadow-lg shadow-green-500/30">
+                            <CheckBadgeIcon class="w-5 h-5 text-white" />
                         </div>
-                        <span class="text-xs text-gray-500">{{ getMethodLabel(payment.method) }}</span>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900 dark:text-white">Historique des paiements</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">{{ invoice.payments.length }} paiement(s) effectue(s)</p>
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <TransitionGroup
+                            enter-active-class="transition-all duration-300 ease-out"
+                            enter-from-class="opacity-0 scale-95"
+                            enter-to-class="opacity-100 scale-100"
+                        >
+                            <div
+                                v-for="(payment, index) in invoice.payments"
+                                :key="payment.id"
+                                class="relative flex items-center justify-between p-4 bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-2xl border border-green-100 dark:border-green-800"
+                                :style="{ transitionDelay: `${index * 100}ms` }"
+                            >
+                                <div class="flex items-center">
+                                    <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-600 rounded-xl flex items-center justify-center mr-4 shadow-lg shadow-green-500/30">
+                                        <CheckCircleIcon class="w-6 h-6 text-white" />
+                                    </div>
+                                    <div>
+                                        <p class="font-bold text-green-700 dark:text-green-400 text-lg">{{ formatCurrency(payment.amount) }}</p>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400 flex items-center mt-0.5">
+                                            <CalendarDaysIcon class="w-4 h-4 mr-1" />
+                                            {{ formatDate(payment.paid_at) }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="inline-flex items-center px-3 py-1.5 bg-white dark:bg-gray-800 rounded-xl text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm">
+                                        <component :is="getPaymentMethodIcon(payment.method)" class="w-4 h-4 mr-1.5 text-gray-500" />
+                                        {{ getMethodLabel(payment.method) }}
+                                    </span>
+                                </div>
+                            </div>
+                        </TransitionGroup>
                     </div>
                 </div>
             </div>
-        </div>
+        </Transition>
 
-        <!-- Actions -->
-        <div class="space-y-3 mb-6">
-            <!-- Pay Button -->
+        <!-- Actions Section -->
+        <div class="space-y-4 mb-8">
+            <!-- Pay Button - Primary CTA -->
+            <Transition
+                enter-active-class="transition-all duration-500 ease-out"
+                enter-from-class="opacity-0 scale-95"
+                enter-to-class="opacity-100 scale-100"
+            >
+                <button
+                    v-if="invoice.status === 'sent' || invoice.status === 'overdue'"
+                    @click="payInvoice"
+                    class="group relative w-full overflow-hidden py-4 font-bold rounded-2xl flex items-center justify-center shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+                    :class="invoice.status === 'overdue'
+                        ? 'bg-gradient-to-r from-red-500 via-red-600 to-rose-600 text-white shadow-red-500/40 hover:shadow-red-500/60'
+                        : 'bg-gradient-to-r from-primary-500 via-primary-600 to-indigo-600 text-white shadow-primary-500/40 hover:shadow-primary-500/60'"
+                >
+                    <!-- Animated background effect -->
+                    <div class="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000"></div>
+
+                    <div class="relative flex items-center">
+                        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mr-3">
+                            <CreditCardIcon class="w-6 h-6" />
+                        </div>
+                        <div class="text-left">
+                            <span class="block text-lg">Payer maintenant</span>
+                            <span class="text-sm opacity-80">{{ formatCurrency(invoice.balance || invoice.total) }}</span>
+                        </div>
+                        <ArrowRightIcon class="w-6 h-6 ml-4 transition-transform duration-300 group-hover:translate-x-2" />
+                    </div>
+                </button>
+            </Transition>
+
+            <!-- Secondary Actions -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Download PDF -->
+                <a
+                    :href="route('mobile.invoices.pdf', invoice.id)"
+                    target="_blank"
+                    class="group flex flex-col items-center p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg shadow-gray-200/50 dark:shadow-none hover:shadow-xl transition-all duration-300 active:scale-95"
+                >
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mb-3 shadow-lg shadow-blue-500/30 transition-transform duration-300 group-hover:scale-110">
+                        <ArrowDownTrayIcon class="w-6 h-6 text-white" />
+                    </div>
+                    <span class="font-semibold text-gray-900 dark:text-white text-sm">Telecharger PDF</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Facture complete</span>
+                </a>
+
+                <!-- Contact Support -->
+                <Link
+                    :href="route('mobile.support', { invoice_id: invoice.id })"
+                    class="group flex flex-col items-center p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-lg shadow-gray-200/50 dark:shadow-none hover:shadow-xl transition-all duration-300 active:scale-95"
+                >
+                    <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-red-500 rounded-xl flex items-center justify-center mb-3 shadow-lg shadow-orange-500/30 transition-transform duration-300 group-hover:scale-110">
+                        <ChatBubbleLeftRightIcon class="w-6 h-6 text-white" />
+                    </div>
+                    <span class="font-semibold text-gray-900 dark:text-white text-sm">Contacter support</span>
+                    <span class="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Besoin d'aide?</span>
+                </Link>
+            </div>
+
+            <!-- Share Invoice -->
             <button
-                v-if="invoice.status === 'sent' || invoice.status === 'overdue'"
-                @click="payInvoice"
-                class="w-full py-3.5 bg-primary-600 text-white font-semibold rounded-xl flex items-center justify-center"
+                @click="shareInvoice"
+                class="group w-full flex items-center justify-center p-4 bg-gray-100 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300 font-semibold rounded-2xl hover:bg-gray-200 dark:hover:bg-gray-700 transition-all duration-200 active:scale-95"
             >
-                <CreditCardIcon class="w-5 h-5 mr-2" />
-                Payer {{ formatCurrency(invoice.balance || invoice.total) }}
+                <ShareIcon class="w-5 h-5 mr-2 transition-transform duration-200 group-hover:scale-110" />
+                Partager la facture
             </button>
-
-            <!-- Download PDF -->
-            <a
-                :href="route('mobile.invoices.pdf', invoice.id)"
-                target="_blank"
-                class="w-full py-3.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl flex items-center justify-center"
-            >
-                <ArrowDownTrayIcon class="w-5 h-5 mr-2" />
-                Telecharger PDF
-            </a>
-
-            <!-- Contact Support -->
-            <Link
-                :href="route('mobile.support', { invoice_id: invoice.id })"
-                class="w-full py-3.5 bg-gray-100 text-gray-700 font-semibold rounded-xl flex items-center justify-center"
-            >
-                <ChatBubbleLeftRightIcon class="w-5 h-5 mr-2" />
-                Contacter le support
-            </Link>
         </div>
     </MobileLayout>
 </template>
@@ -176,12 +356,27 @@ import { Link, router } from '@inertiajs/vue3'
 import MobileLayout from '@/Layouts/MobileLayout.vue'
 import {
     CalendarIcon,
+    CalendarDaysIcon,
     CubeIcon,
     ChevronRightIcon,
     CheckCircleIcon,
     CreditCardIcon,
     ArrowDownTrayIcon,
     ChatBubbleLeftRightIcon,
+    DocumentTextIcon,
+    DocumentDuplicateIcon,
+    ExclamationCircleIcon,
+    ExclamationTriangleIcon,
+    ClockIcon,
+    XCircleIcon,
+    BanknotesIcon,
+    HashtagIcon,
+    CheckBadgeIcon,
+    ArrowRightIcon,
+    ShareIcon,
+    BuildingLibraryIcon,
+    BanknotesIcon as CashIcon,
+    ReceiptPercentIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
@@ -215,15 +410,70 @@ const getStatusLabel = (status) => {
     return labels[status] || status
 }
 
+const getStatusBarClass = (status) => {
+    const classes = {
+        draft: 'bg-gray-300 dark:bg-gray-600',
+        sent: 'bg-gradient-to-r from-amber-400 to-orange-500',
+        paid: 'bg-gradient-to-r from-green-400 to-emerald-500',
+        overdue: 'bg-gradient-to-r from-red-500 to-rose-600',
+        cancelled: 'bg-gray-300 dark:bg-gray-600',
+    }
+    return classes[status] || 'bg-gray-300 dark:bg-gray-600'
+}
+
+const getStatusDecorationClass = (status) => {
+    const classes = {
+        draft: 'from-gray-400 to-gray-500',
+        sent: 'from-amber-400 to-orange-500',
+        paid: 'from-green-400 to-emerald-500',
+        overdue: 'from-red-500 to-rose-600',
+        cancelled: 'from-gray-400 to-gray-500',
+    }
+    return classes[status] || 'from-gray-400 to-gray-500'
+}
+
+const getStatusGradientClass = (status) => {
+    const classes = {
+        draft: 'bg-gradient-to-br from-gray-400 to-gray-500 shadow-gray-500/30',
+        sent: 'bg-gradient-to-br from-amber-400 to-orange-500 shadow-amber-500/30',
+        paid: 'bg-gradient-to-br from-green-400 to-emerald-600 shadow-green-500/30',
+        overdue: 'bg-gradient-to-br from-red-500 to-rose-600 shadow-red-500/30',
+        cancelled: 'bg-gradient-to-br from-gray-400 to-gray-500 shadow-gray-500/30',
+    }
+    return classes[status] || 'bg-gradient-to-br from-gray-400 to-gray-500 shadow-gray-500/30'
+}
+
+const getStatusIcon = (status) => {
+    const icons = {
+        draft: DocumentTextIcon,
+        sent: ClockIcon,
+        paid: CheckCircleIcon,
+        overdue: ExclamationCircleIcon,
+        cancelled: XCircleIcon,
+    }
+    return icons[status] || DocumentTextIcon
+}
+
 const getStatusBadgeClass = (status) => {
     const classes = {
-        draft: 'bg-gray-100 text-gray-700',
-        sent: 'bg-yellow-100 text-yellow-700',
-        paid: 'bg-green-100 text-green-700',
-        overdue: 'bg-red-100 text-red-700',
-        cancelled: 'bg-gray-100 text-gray-700',
+        draft: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+        sent: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+        paid: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+        overdue: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400',
+        cancelled: 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
     }
-    return classes[status] || 'bg-gray-100 text-gray-700'
+    return classes[status] || 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+}
+
+const getStatusDotClass = (status) => {
+    const classes = {
+        draft: 'bg-gray-500',
+        sent: 'bg-amber-500 animate-pulse',
+        paid: 'bg-green-500',
+        overdue: 'bg-red-500 animate-pulse',
+        cancelled: 'bg-gray-500',
+    }
+    return classes[status] || 'bg-gray-500'
 }
 
 const getMethodLabel = (method) => {
@@ -237,6 +487,17 @@ const getMethodLabel = (method) => {
     return labels[method] || method
 }
 
+const getPaymentMethodIcon = (method) => {
+    const icons = {
+        card: CreditCardIcon,
+        bank_transfer: BuildingLibraryIcon,
+        sepa: BuildingLibraryIcon,
+        cash: BanknotesIcon,
+        check: ReceiptPercentIcon,
+    }
+    return icons[method] || CreditCardIcon
+}
+
 const getDaysOverdue = (dueDate) => {
     if (!dueDate) return 0
     const due = new Date(dueDate)
@@ -246,6 +507,32 @@ const getDaysOverdue = (dueDate) => {
 }
 
 const payInvoice = () => {
+    // Haptic feedback
+    if (navigator.vibrate) {
+        navigator.vibrate(50)
+    }
     router.visit(route('mobile.pay', { invoice_id: props.invoice.id }))
+}
+
+const shareInvoice = async () => {
+    // Haptic feedback
+    if (navigator.vibrate) {
+        navigator.vibrate(30)
+    }
+
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: `Facture ${props.invoice.invoice_number}`,
+                text: `Facture ${props.invoice.invoice_number} - ${formatCurrency(props.invoice.total)}`,
+                url: window.location.href,
+            })
+        } catch (err) {
+            console.log('Share cancelled or failed')
+        }
+    } else {
+        // Fallback: copy to clipboard
+        navigator.clipboard.writeText(window.location.href)
+    }
 }
 </script>

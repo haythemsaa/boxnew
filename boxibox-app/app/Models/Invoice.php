@@ -75,7 +75,6 @@ class Invoice extends Model
         'period_start' => 'date',
         'period_end' => 'date',
         'last_reminder_sent' => 'date',
-        'items' => 'array',
         'subtotal' => 'decimal:2',
         'tax_rate' => 'decimal:2',
         'tax_amount' => 'decimal:2',
@@ -86,6 +85,11 @@ class Invoice extends Model
         'reminder_count' => 'integer',
         'deleted_at' => 'datetime',
     ];
+
+    /**
+     * Attributes to append to JSON serialization
+     */
+    protected $appends = ['balance'];
 
     // Relationships
     public function tenant(): BelongsTo
@@ -134,6 +138,52 @@ class Invoice extends Model
     }
 
     // Accessors
+
+    /**
+     * Get items as array (handles double-encoded JSON)
+     */
+    public function getItemsAttribute($value): array
+    {
+        if (is_null($value)) {
+            return [];
+        }
+
+        // If already an array, return it
+        if (is_array($value)) {
+            return $value;
+        }
+
+        // Decode JSON string
+        $decoded = json_decode($value, true);
+
+        // If decoding returned a string (double-encoded), decode again
+        if (is_string($decoded)) {
+            $decoded = json_decode($decoded, true);
+        }
+
+        return is_array($decoded) ? $decoded : [];
+    }
+
+    /**
+     * Set items attribute (convert array to JSON for storage)
+     */
+    public function setItemsAttribute($value): void
+    {
+        if (is_array($value)) {
+            $this->attributes['items'] = json_encode($value);
+        } else {
+            $this->attributes['items'] = $value;
+        }
+    }
+
+    /**
+     * Get the balance (remaining amount to pay)
+     */
+    public function getBalanceAttribute(): float
+    {
+        return max(0, ($this->total ?? 0) - ($this->paid_amount ?? 0));
+    }
+
     public function getIsOverdueAttribute(): bool
     {
         return $this->due_date && $this->due_date->isPast() &&

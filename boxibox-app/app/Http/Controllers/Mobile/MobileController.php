@@ -30,7 +30,7 @@ class MobileController extends Controller
     /**
      * Display login page
      */
-    public function loginPage(): Response
+    public function loginPage(): Response|\Illuminate\Http\RedirectResponse
     {
         // Redirect if already logged in
         if (session('mobile_customer_id')) {
@@ -52,7 +52,26 @@ class MobileController extends Controller
 
         $customer = Customer::where('email', $validated['email'])->first();
 
-        if (!$customer || !Hash::check($validated['password'], $customer->password ?? '')) {
+        if (!$customer) {
+            return back()->withErrors([
+                'email' => 'Ces identifiants ne correspondent pas à nos enregistrements.'
+            ]);
+        }
+
+        // Check password - try customer's linked user first, then customer's own password
+        $passwordValid = false;
+
+        // If customer has a linked user account, check user's password
+        if ($customer->user_id && $customer->user) {
+            $passwordValid = Hash::check($validated['password'], $customer->user->password ?? '');
+        }
+
+        // If no user or user password didn't match, try customer's own password field
+        if (!$passwordValid && $customer->password) {
+            $passwordValid = Hash::check($validated['password'], $customer->password);
+        }
+
+        if (!$passwordValid) {
             return back()->withErrors([
                 'email' => 'Ces identifiants ne correspondent pas à nos enregistrements.'
             ]);
@@ -189,7 +208,7 @@ class MobileController extends Controller
     {
         $this->authorizeCustomerAccess($invoice->customer_id);
 
-        $invoice->load(['contract.box.site', 'payments', 'items']);
+        $invoice->load(['contract.box.site', 'payments']); // 'items' is a JSON column, not a relationship
 
         return Inertia::render('Mobile/Invoices/Show', [
             'invoice' => $invoice,

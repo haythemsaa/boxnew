@@ -338,4 +338,52 @@ class ChatController extends Controller
             'message' => 'Conversation fermee.',
         ]);
     }
+
+    /**
+     * Authenticate broadcasting channel for mobile customer
+     */
+    public function broadcastAuth(Request $request): JsonResponse
+    {
+        $customer = $this->getCustomer();
+        $channelName = $request->input('channel_name');
+        $socketId = $request->input('socket_id');
+
+        // Parse the channel name (e.g., "private-chat.conv_xxx")
+        $channel = str_replace('private-', '', $channelName);
+
+        // Check authorization based on channel type
+        $authorized = false;
+
+        // Chat conversation channel
+        if (preg_match('/^chat\.(.+)$/', $channel, $matches)) {
+            $conversationId = $matches[1];
+            $authorized = ChatConversation::where('conversation_id', $conversationId)
+                ->where('customer_id', $customer->id)
+                ->exists();
+        }
+
+        // Customer-specific channel
+        if (preg_match('/^customer\.(\d+)\./', $channel, $matches)) {
+            $authorized = (int) $matches[1] === $customer->id;
+        }
+
+        if (!$authorized) {
+            return response()->json(['error' => 'Forbidden'], 403);
+        }
+
+        // Generate Pusher-compatible auth response
+        $pusher = new \Pusher\Pusher(
+            config('broadcasting.connections.reverb.key'),
+            config('broadcasting.connections.reverb.secret'),
+            config('broadcasting.connections.reverb.app_id'),
+            [
+                'cluster' => 'mt1',
+                'useTLS' => true,
+            ]
+        );
+
+        $auth = $pusher->authorizeChannel($channelName, $socketId);
+
+        return response()->json(json_decode($auth, true));
+    }
 }

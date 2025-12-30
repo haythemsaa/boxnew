@@ -1,201 +1,314 @@
 <template>
     <MobileLayout title="Detail Contrat" :show-back="true">
-        <!-- Contract Header -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
+        <!-- Contract Header Card with Visual Design -->
+        <div class="relative mb-6 overflow-hidden">
+            <!-- Background Pattern -->
             <div
-                class="p-5"
-                :class="contract.status === 'active' ? 'bg-gradient-to-br from-green-500 to-green-600' : 'bg-gradient-to-br from-gray-500 to-gray-600'"
+                class="absolute inset-0 rounded-3xl"
+                :class="contract.status === 'active'
+                    ? 'bg-gradient-to-br from-green-500 via-emerald-500 to-teal-600'
+                    : 'bg-gradient-to-br from-gray-500 via-gray-600 to-gray-700'"
             >
-                <div class="flex items-center justify-between text-white">
+                <div class="absolute inset-0 opacity-10">
+                    <div class="absolute -top-20 -right-20 w-64 h-64 bg-white rounded-full"></div>
+                    <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-white rounded-full"></div>
+                </div>
+            </div>
+
+            <div class="relative p-6 rounded-3xl">
+                <div class="flex items-start justify-between mb-6">
                     <div>
-                        <p class="text-white/80 text-sm">Contrat</p>
-                        <h2 class="text-xl font-bold">{{ contract.contract_number }}</h2>
+                        <p class="text-white/70 text-sm font-medium mb-1">Contrat</p>
+                        <h2 class="text-2xl font-bold text-white">{{ contract.contract_number }}</h2>
                     </div>
                     <span
-                        class="px-3 py-1.5 rounded-full text-sm font-medium bg-white/20"
+                        class="px-4 py-2 rounded-full text-sm font-bold uppercase tracking-wide bg-white/20 backdrop-blur-sm text-white"
                     >
                         {{ getStatusLabel(contract.status) }}
                     </span>
                 </div>
-            </div>
 
-            <div class="p-5">
-                <!-- Box Info -->
-                <div class="flex items-center mb-4">
-                    <div class="w-14 h-14 bg-primary-100 rounded-xl flex items-center justify-center mr-4">
-                        <CubeIcon class="w-7 h-7 text-primary-600" />
-                    </div>
-                    <div class="flex-1">
-                        <h3 class="font-bold text-gray-900 text-lg">{{ contract.box?.name }}</h3>
-                        <p class="text-gray-500 flex items-center">
-                            <MapPinIcon class="w-4 h-4 mr-1" />
-                            {{ contract.box?.site?.name }}
-                        </p>
+                <!-- Box Visual Card -->
+                <div class="bg-white/10 backdrop-blur-md rounded-2xl p-4">
+                    <div class="flex items-center">
+                        <div class="w-16 h-16 bg-white rounded-2xl flex items-center justify-center mr-4 shadow-lg">
+                            <CubeIcon class="w-8 h-8 text-primary-600" />
+                        </div>
+                        <div class="flex-1">
+                            <h3 class="font-bold text-white text-xl">{{ contract.box?.name }}</h3>
+                            <p class="text-white/80 flex items-center mt-1">
+                                <MapPinIcon class="w-4 h-4 mr-1.5" />
+                                {{ contract.box?.site?.name }}
+                            </p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Price -->
-                <div class="bg-gray-50 rounded-xl p-4 text-center">
-                    <p class="text-gray-500 text-sm mb-1">Prix mensuel</p>
-                    <p class="text-3xl font-bold text-primary-600">{{ contract.monthly_price }}€<span class="text-lg text-gray-400">/mois</span></p>
+                <!-- Price Badge -->
+                <div class="mt-4 flex justify-center">
+                    <div class="bg-white rounded-2xl px-8 py-4 shadow-xl transform -mb-12 z-10">
+                        <p class="text-gray-500 text-xs text-center mb-1">Prix mensuel</p>
+                        <p class="text-3xl font-bold text-primary-600 text-center">
+                            {{ contract.monthly_price }}<span class="text-lg text-gray-400">EUR/mois</span>
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Contract Details -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
-            <div class="p-5">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Details du contrat</h3>
+        <!-- Spacer for floating price badge -->
+        <div class="h-8"></div>
 
-                <div class="space-y-4">
-                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span class="text-gray-500">Date de debut</span>
-                        <span class="font-medium text-gray-900">{{ formatDate(contract.start_date) }}</span>
+        <!-- Contract Details Section -->
+        <div class="bg-white rounded-3xl shadow-sm overflow-hidden mb-4 transform transition-all duration-300 hover:shadow-md">
+            <div class="p-6">
+                <div class="flex items-center mb-5">
+                    <div class="w-10 h-10 bg-gradient-to-br from-primary-100 to-primary-200 rounded-xl flex items-center justify-center mr-3">
+                        <DocumentTextIcon class="w-5 h-5 text-primary-600" />
                     </div>
-                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span class="text-gray-500">Date de fin</span>
-                        <span class="font-medium text-gray-900">{{ formatDate(contract.end_date) }}</span>
+                    <h3 class="text-lg font-bold text-gray-900">Details du contrat</h3>
+                </div>
+
+                <div class="space-y-1">
+                    <div class="flex justify-between items-center py-4 border-b border-gray-100 group hover:bg-gray-50 -mx-6 px-6 transition-colors duration-200">
+                        <div class="flex items-center">
+                            <CalendarIcon class="w-5 h-5 text-gray-400 mr-3" />
+                            <span class="text-gray-600">Date de debut</span>
+                        </div>
+                        <span class="font-semibold text-gray-900">{{ formatDate(contract.start_date) }}</span>
                     </div>
-                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span class="text-gray-500">Type de contrat</span>
-                        <span class="font-medium text-gray-900">{{ getContractTypeLabel(contract.contract_type) }}</span>
+                    <div class="flex justify-between items-center py-4 border-b border-gray-100 group hover:bg-gray-50 -mx-6 px-6 transition-colors duration-200">
+                        <div class="flex items-center">
+                            <CalendarDaysIcon class="w-5 h-5 text-gray-400 mr-3" />
+                            <span class="text-gray-600">Date de fin</span>
+                        </div>
+                        <span class="font-semibold text-gray-900">{{ formatDate(contract.end_date) }}</span>
                     </div>
-                    <div class="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span class="text-gray-500">Mode de paiement</span>
-                        <span class="font-medium text-gray-900">{{ getPaymentModeLabel(contract.payment_mode) }}</span>
+                    <div class="flex justify-between items-center py-4 border-b border-gray-100 group hover:bg-gray-50 -mx-6 px-6 transition-colors duration-200">
+                        <div class="flex items-center">
+                            <DocumentTextIcon class="w-5 h-5 text-gray-400 mr-3" />
+                            <span class="text-gray-600">Type de contrat</span>
+                        </div>
+                        <span class="font-semibold text-gray-900 px-3 py-1 bg-primary-50 rounded-full text-primary-700 text-sm">
+                            {{ getContractTypeLabel(contract.contract_type) }}
+                        </span>
                     </div>
-                    <div v-if="contract.deposit" class="flex justify-between items-center py-2 border-b border-gray-100">
-                        <span class="text-gray-500">Depot de garantie</span>
-                        <span class="font-medium text-gray-900">{{ formatCurrency(contract.deposit) }}</span>
+                    <div class="flex justify-between items-center py-4 border-b border-gray-100 group hover:bg-gray-50 -mx-6 px-6 transition-colors duration-200">
+                        <div class="flex items-center">
+                            <CreditCardIcon class="w-5 h-5 text-gray-400 mr-3" />
+                            <span class="text-gray-600">Mode de paiement</span>
+                        </div>
+                        <span class="font-semibold text-gray-900">{{ getPaymentModeLabel(contract.payment_mode) }}</span>
+                    </div>
+                    <div v-if="contract.deposit" class="flex justify-between items-center py-4 group hover:bg-gray-50 -mx-6 px-6 transition-colors duration-200">
+                        <div class="flex items-center">
+                            <BanknotesIcon class="w-5 h-5 text-gray-400 mr-3" />
+                            <span class="text-gray-600">Depot de garantie</span>
+                        </div>
+                        <span class="font-semibold text-gray-900">{{ formatCurrency(contract.deposit) }}</span>
                     </div>
                 </div>
 
-                <!-- Progress bar -->
-                <div v-if="contract.status === 'active'" class="mt-6">
-                    <div class="flex justify-between text-sm text-gray-500 mb-2">
-                        <span>Progression du contrat</span>
-                        <span>{{ getProgressPercent() }}%</span>
+                <!-- Progress bar with Animation -->
+                <div v-if="contract.status === 'active'" class="mt-6 p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-2xl">
+                    <div class="flex justify-between text-sm mb-3">
+                        <span class="text-gray-600 font-medium">Progression du contrat</span>
+                        <span class="font-bold text-primary-600">{{ getProgressPercent() }}%</span>
                     </div>
-                    <div class="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                    <div class="relative w-full h-4 bg-gray-200 rounded-full overflow-hidden">
                         <div
-                            class="h-full bg-gradient-to-r from-primary-500 to-primary-600 rounded-full transition-all duration-300"
+                            class="absolute left-0 top-0 h-full bg-gradient-to-r from-primary-400 via-primary-500 to-primary-600 rounded-full transition-all duration-1000 ease-out"
                             :style="{ width: getProgressPercent() + '%' }"
-                        ></div>
+                        >
+                            <!-- Animated shine effect -->
+                            <div class="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+                        </div>
                     </div>
-                    <div class="flex justify-between text-xs text-gray-400 mt-1">
+                    <div class="flex justify-between text-xs text-gray-500 mt-2">
                         <span>{{ formatDate(contract.start_date) }}</span>
                         <span>{{ formatDate(contract.end_date) }}</span>
                     </div>
                 </div>
 
-                <!-- Expiring Warning -->
-                <div
-                    v-if="contract.days_until_expiry && contract.days_until_expiry <= 30 && contract.status === 'active'"
-                    class="mt-4 p-4 bg-yellow-50 rounded-xl flex items-start"
+                <!-- Expiring Warning with Enhanced Design -->
+                <Transition
+                    enter-active-class="transition-all duration-500"
+                    enter-from-class="opacity-0 scale-95"
+                    enter-to-class="opacity-100 scale-100"
                 >
-                    <ExclamationTriangleIcon class="w-6 h-6 text-yellow-500 mr-3 flex-shrink-0" />
-                    <div>
-                        <h4 class="font-semibold text-yellow-800">Contrat expire bientot</h4>
-                        <p class="text-sm text-yellow-700 mt-1">
-                            Votre contrat expire dans {{ contract.days_until_expiry }} jours. Pensez a le renouveler pour conserver votre box.
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Box Details -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
-            <div class="p-5">
-                <h3 class="text-lg font-semibold text-gray-900 mb-4">Details du box</h3>
-
-                <div class="grid grid-cols-2 gap-4 mb-4">
-                    <div class="bg-gray-50 rounded-xl p-3 text-center">
-                        <p class="text-gray-500 text-xs mb-1">Surface</p>
-                        <p class="font-bold text-gray-900">{{ contract.box?.area || 'N/A' }} m²</p>
-                    </div>
-                    <div class="bg-gray-50 rounded-xl p-3 text-center">
-                        <p class="text-gray-500 text-xs mb-1">Volume</p>
-                        <p class="font-bold text-gray-900">{{ contract.box?.volume || 'N/A' }} m³</p>
-                    </div>
-                    <div class="bg-gray-50 rounded-xl p-3 text-center">
-                        <p class="text-gray-500 text-xs mb-1">Etage</p>
-                        <p class="font-bold text-gray-900">{{ contract.box?.floor || 'RDC' }}</p>
-                    </div>
-                    <div class="bg-gray-50 rounded-xl p-3 text-center">
-                        <p class="text-gray-500 text-xs mb-1">Code</p>
-                        <p class="font-bold text-gray-900">{{ contract.box?.code }}</p>
-                    </div>
-                </div>
-
-                <!-- Features -->
-                <div v-if="contract.box?.features?.length" class="flex flex-wrap gap-2">
-                    <span
-                        v-for="feature in contract.box.features"
-                        :key="feature"
-                        class="px-3 py-1 bg-primary-50 text-primary-700 rounded-full text-xs"
+                    <div
+                        v-if="contract.days_until_expiry && contract.days_until_expiry <= 30 && contract.status === 'active'"
+                        class="mt-6 p-5 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl border border-amber-200"
                     >
-                        {{ feature }}
-                    </span>
+                        <div class="flex items-start">
+                            <div class="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-xl flex items-center justify-center mr-4 animate-pulse shadow-lg shadow-amber-500/30">
+                                <ExclamationTriangleIcon class="w-6 h-6 text-white" />
+                            </div>
+                            <div class="flex-1">
+                                <h4 class="font-bold text-amber-800 text-lg">Contrat expire bientot</h4>
+                                <p class="text-sm text-amber-700 mt-1">
+                                    Votre contrat expire dans <span class="font-bold">{{ contract.days_until_expiry }} jours</span>. Pensez a le renouveler pour conserver votre box.
+                                </p>
+                                <button
+                                    @click="showRenewalModal"
+                                    class="mt-3 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white font-semibold rounded-xl text-sm transition-all duration-300 hover:shadow-lg active:scale-[0.98]"
+                                >
+                                    Renouveler maintenant
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </Transition>
+            </div>
+        </div>
+
+        <!-- Box Details Section with Visual Grid -->
+        <div class="bg-white rounded-3xl shadow-sm overflow-hidden mb-4 transform transition-all duration-300 hover:shadow-md">
+            <div class="p-6">
+                <div class="flex items-center mb-5">
+                    <div class="w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mr-3">
+                        <CubeIcon class="w-5 h-5 text-purple-600" />
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900">Details du box</h3>
+                </div>
+
+                <!-- Box Stats Grid -->
+                <div class="grid grid-cols-2 gap-3 mb-5">
+                    <div class="relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-4 text-center group hover:scale-[1.02] transition-transform duration-300">
+                        <div class="absolute -right-4 -top-4 w-16 h-16 bg-blue-200/50 rounded-full"></div>
+                        <div class="relative">
+                            <div class="w-10 h-10 mx-auto mb-2 bg-blue-500 rounded-xl flex items-center justify-center">
+                                <Square3Stack3DIcon class="w-5 h-5 text-white" />
+                            </div>
+                            <p class="text-gray-600 text-xs font-medium mb-1">Surface</p>
+                            <p class="font-bold text-gray-900 text-xl">{{ contract.box?.area || 'N/A' }} m<sup>2</sup></p>
+                        </div>
+                    </div>
+                    <div class="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-4 text-center group hover:scale-[1.02] transition-transform duration-300">
+                        <div class="absolute -right-4 -top-4 w-16 h-16 bg-purple-200/50 rounded-full"></div>
+                        <div class="relative">
+                            <div class="w-10 h-10 mx-auto mb-2 bg-purple-500 rounded-xl flex items-center justify-center">
+                                <CubeTransparentIcon class="w-5 h-5 text-white" />
+                            </div>
+                            <p class="text-gray-600 text-xs font-medium mb-1">Volume</p>
+                            <p class="font-bold text-gray-900 text-xl">{{ contract.box?.volume || 'N/A' }} m<sup>3</sup></p>
+                        </div>
+                    </div>
+                    <div class="relative overflow-hidden bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-4 text-center group hover:scale-[1.02] transition-transform duration-300">
+                        <div class="absolute -right-4 -top-4 w-16 h-16 bg-green-200/50 rounded-full"></div>
+                        <div class="relative">
+                            <div class="w-10 h-10 mx-auto mb-2 bg-green-500 rounded-xl flex items-center justify-center">
+                                <BuildingOfficeIcon class="w-5 h-5 text-white" />
+                            </div>
+                            <p class="text-gray-600 text-xs font-medium mb-1">Etage</p>
+                            <p class="font-bold text-gray-900 text-xl">{{ contract.box?.floor || 'RDC' }}</p>
+                        </div>
+                    </div>
+                    <div class="relative overflow-hidden bg-gradient-to-br from-amber-50 to-amber-100 rounded-2xl p-4 text-center group hover:scale-[1.02] transition-transform duration-300">
+                        <div class="absolute -right-4 -top-4 w-16 h-16 bg-amber-200/50 rounded-full"></div>
+                        <div class="relative">
+                            <div class="w-10 h-10 mx-auto mb-2 bg-amber-500 rounded-xl flex items-center justify-center">
+                                <HashtagIcon class="w-5 h-5 text-white" />
+                            </div>
+                            <p class="text-gray-600 text-xs font-medium mb-1">Code</p>
+                            <p class="font-bold text-gray-900 text-xl">{{ contract.box?.code }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Features Tags -->
+                <div v-if="contract.box?.features?.length" class="mt-4">
+                    <p class="text-sm font-medium text-gray-600 mb-3">Caracteristiques</p>
+                    <div class="flex flex-wrap gap-2">
+                        <span
+                            v-for="feature in contract.box.features"
+                            :key="feature"
+                            class="px-4 py-2 bg-gradient-to-r from-primary-50 to-primary-100 text-primary-700 rounded-full text-sm font-medium transition-transform duration-200 hover:scale-105"
+                        >
+                            {{ feature }}
+                        </span>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Related Invoices -->
-        <div class="bg-white rounded-2xl shadow-sm overflow-hidden mb-4">
-            <div class="p-5">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-semibold text-gray-900">Factures</h3>
+        <!-- Related Invoices Section -->
+        <div class="bg-white rounded-3xl shadow-sm overflow-hidden mb-4 transform transition-all duration-300 hover:shadow-md">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-5">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-gradient-to-br from-green-100 to-green-200 rounded-xl flex items-center justify-center mr-3">
+                            <CurrencyEuroIcon class="w-5 h-5 text-green-600" />
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900">Factures</h3>
+                    </div>
                     <Link
                         :href="route('mobile.invoices', { contract_id: contract.id })"
-                        class="text-sm text-primary-600 font-medium"
+                        class="text-sm text-primary-600 font-semibold flex items-center hover:text-primary-700 transition-colors"
                     >
                         Voir tout
+                        <ChevronRightIcon class="w-4 h-4 ml-1" />
                     </Link>
                 </div>
 
-                <div v-if="contract.invoices?.length > 0" class="space-y-3">
+                <TransitionGroup
+                    tag="div"
+                    class="space-y-3"
+                    enter-active-class="transition-all duration-300"
+                    enter-from-class="opacity-0 translate-x-4"
+                    enter-to-class="opacity-100 translate-x-0"
+                >
                     <Link
-                        v-for="invoice in contract.invoices.slice(0, 3)"
+                        v-for="invoice in contract.invoices?.slice(0, 3)"
                         :key="invoice.id"
                         :href="route('mobile.invoices.show', invoice.id)"
-                        class="flex items-center justify-between p-3 bg-gray-50 rounded-xl"
+                        class="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100/50 rounded-2xl group hover:shadow-md transition-all duration-300 hover:scale-[1.01]"
                     >
                         <div class="flex items-center">
-                            <DocumentTextIcon
-                                class="w-5 h-5 mr-2"
-                                :class="getInvoiceStatusTextClass(invoice.status)"
-                            />
+                            <div
+                                class="w-12 h-12 rounded-xl flex items-center justify-center mr-4 transition-transform duration-300 group-hover:scale-110"
+                                :class="getInvoiceIconBgClass(invoice.status)"
+                            >
+                                <DocumentTextIcon
+                                    class="w-6 h-6"
+                                    :class="getInvoiceStatusTextClass(invoice.status)"
+                                />
+                            </div>
                             <div>
-                                <p class="font-medium text-gray-900 text-sm">{{ invoice.invoice_number }}</p>
-                                <p class="text-xs text-gray-500">{{ formatDate(invoice.invoice_date) }}</p>
+                                <p class="font-semibold text-gray-900">{{ invoice.invoice_number }}</p>
+                                <p class="text-sm text-gray-500">{{ formatDate(invoice.invoice_date) }}</p>
                             </div>
                         </div>
                         <div class="text-right flex items-center">
                             <span
-                                class="text-xs px-2 py-0.5 rounded-full mr-2"
+                                class="text-xs px-3 py-1.5 rounded-full font-semibold mr-3"
                                 :class="getInvoiceStatusBadgeClass(invoice.status)"
                             >
                                 {{ getInvoiceStatusLabel(invoice.status) }}
                             </span>
-                            <span class="font-semibold text-gray-900">{{ invoice.total }}€</span>
+                            <span class="font-bold text-gray-900 text-lg">{{ invoice.total }}EUR</span>
+                            <ChevronRightIcon class="w-5 h-5 text-gray-400 ml-2 transition-transform duration-300 group-hover:translate-x-1" />
                         </div>
                     </Link>
-                </div>
-                <div v-else class="text-center py-4 text-gray-500">
-                    Aucune facture
+                </TransitionGroup>
+
+                <div v-if="!contract.invoices?.length" class="text-center py-8">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                        <DocumentTextIcon class="w-8 h-8 text-gray-400" />
+                    </div>
+                    <p class="text-gray-500">Aucune facture</p>
                 </div>
             </div>
         </div>
 
-        <!-- Actions -->
-        <div class="space-y-3 mb-6">
+        <!-- Actions Section -->
+        <div class="space-y-3 mb-8">
             <!-- Access Button -->
             <Link
                 :href="route('mobile.access', { contract_id: contract.id })"
-                class="w-full py-3.5 bg-purple-600 text-white font-semibold rounded-xl flex items-center justify-center"
+                class="w-full py-4 bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold rounded-2xl flex items-center justify-center shadow-lg shadow-purple-500/30 transform transition-all duration-300 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99]"
             >
-                <KeyIcon class="w-5 h-5 mr-2" />
+                <KeyIcon class="w-6 h-6 mr-3" />
                 Acceder a mon box
             </Link>
 
@@ -203,9 +316,9 @@
             <button
                 v-if="contract.status === 'active'"
                 @click="showRenewalModal"
-                class="w-full py-3.5 bg-green-600 text-white font-semibold rounded-xl flex items-center justify-center"
+                class="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-2xl flex items-center justify-center shadow-lg shadow-green-500/30 transform transition-all duration-300 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99]"
             >
-                <ArrowPathIcon class="w-5 h-5 mr-2" />
+                <ArrowPathIcon class="w-6 h-6 mr-3" />
                 Renouveler le contrat
             </button>
 
@@ -213,9 +326,9 @@
             <a
                 :href="route('mobile.contracts.pdf', contract.id)"
                 target="_blank"
-                class="w-full py-3.5 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl flex items-center justify-center"
+                class="w-full py-4 bg-white border-2 border-gray-200 text-gray-700 font-bold rounded-2xl flex items-center justify-center transform transition-all duration-300 hover:bg-gray-50 hover:border-gray-300 active:scale-[0.99]"
             >
-                <ArrowDownTrayIcon class="w-5 h-5 mr-2" />
+                <ArrowDownTrayIcon class="w-6 h-6 mr-3" />
                 Telecharger le contrat
             </a>
 
@@ -223,52 +336,81 @@
             <button
                 v-if="contract.status === 'active'"
                 @click="showTerminateModal = true"
-                class="w-full py-3.5 bg-red-50 text-red-600 font-semibold rounded-xl flex items-center justify-center"
+                class="w-full py-4 bg-red-50 text-red-600 font-bold rounded-2xl flex items-center justify-center border-2 border-red-100 transform transition-all duration-300 hover:bg-red-100 hover:border-red-200 active:scale-[0.99]"
             >
-                <XMarkIcon class="w-5 h-5 mr-2" />
+                <XMarkIcon class="w-6 h-6 mr-3" />
                 Resilier le contrat
             </button>
         </div>
 
         <!-- Terminate Confirmation Modal -->
         <Transition
-            enter-active-class="transition-opacity duration-300"
+            enter-active-class="transition-all duration-300"
             enter-from-class="opacity-0"
             enter-to-class="opacity-100"
-            leave-active-class="transition-opacity duration-300"
+            leave-active-class="transition-all duration-300"
             leave-from-class="opacity-100"
             leave-to-class="opacity-0"
         >
             <div v-if="showTerminateModal" class="fixed inset-0 z-50">
-                <div class="absolute inset-0 bg-black/50" @click="showTerminateModal = false"></div>
-                <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl shadow-xl">
-                    <div class="w-12 h-1 bg-gray-300 rounded-full mx-auto mt-3"></div>
-                    <div class="p-6">
-                        <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <ExclamationTriangleIcon class="w-8 h-8 text-red-600" />
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="showTerminateModal = false"></div>
+                <Transition
+                    enter-active-class="transition-all duration-300 delay-100"
+                    enter-from-class="translate-y-full"
+                    enter-to-class="translate-y-0"
+                    leave-active-class="transition-all duration-200"
+                    leave-from-class="translate-y-0"
+                    leave-to-class="translate-y-full"
+                >
+                    <div v-if="showTerminateModal" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-[2rem] shadow-2xl">
+                        <!-- Handle Bar -->
+                        <div class="flex justify-center pt-4 pb-2">
+                            <div class="w-12 h-1.5 bg-gray-300 rounded-full"></div>
                         </div>
-                        <h3 class="text-xl font-bold text-gray-900 text-center mb-2">Resilier le contrat ?</h3>
-                        <p class="text-gray-500 text-center mb-6">
-                            Cette action est irreversible. Vous perdrez l'acces a votre box a la date de fin de preavis.
-                        </p>
 
-                        <div class="flex space-x-3">
-                            <button
-                                @click="showTerminateModal = false"
-                                class="flex-1 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl"
-                            >
-                                Annuler
-                            </button>
-                            <button
-                                @click="terminateContract"
-                                class="flex-1 py-3 bg-red-600 text-white font-semibold rounded-xl"
-                            >
-                                Confirmer
-                            </button>
+                        <div class="px-6 pb-6">
+                            <!-- Warning Icon -->
+                            <div class="text-center mb-6">
+                                <div class="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center shadow-lg shadow-red-500/30 animate-pulse">
+                                    <ExclamationTriangleIcon class="w-10 h-10 text-white" />
+                                </div>
+                                <h3 class="text-2xl font-bold text-gray-900">Resilier le contrat ?</h3>
+                                <p class="text-gray-500 mt-2 max-w-xs mx-auto">
+                                    Cette action est irreversible. Vous perdrez l'acces a votre box a la date de fin de preavis.
+                                </p>
+                            </div>
+
+                            <!-- Contract Info -->
+                            <div class="bg-red-50 rounded-2xl p-4 mb-6 border border-red-100">
+                                <div class="flex items-center">
+                                    <CubeIcon class="w-8 h-8 text-red-500 mr-3" />
+                                    <div>
+                                        <p class="font-bold text-gray-900">{{ contract.box?.name }}</p>
+                                        <p class="text-sm text-gray-500">{{ contract.contract_number }}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="flex space-x-3">
+                                <button
+                                    @click="showTerminateModal = false"
+                                    class="flex-1 py-4 bg-gray-100 text-gray-700 font-bold rounded-2xl transition-all duration-300 hover:bg-gray-200 active:scale-[0.98]"
+                                >
+                                    Annuler
+                                </button>
+                                <button
+                                    @click="terminateContract"
+                                    class="flex-1 py-4 bg-gradient-to-r from-red-500 to-red-600 text-white font-bold rounded-2xl shadow-lg shadow-red-500/30 transition-all duration-300 hover:shadow-xl active:scale-[0.98]"
+                                >
+                                    Confirmer
+                                </button>
+                            </div>
                         </div>
+                        <!-- Safe Area -->
+                        <div class="h-8 bg-white"></div>
                     </div>
-                    <div class="h-8 bg-white"></div>
-                </div>
+                </Transition>
             </div>
         </Transition>
     </MobileLayout>
@@ -287,6 +429,16 @@ import {
     ArrowDownTrayIcon,
     XMarkIcon,
     ExclamationTriangleIcon,
+    CalendarIcon,
+    CalendarDaysIcon,
+    CreditCardIcon,
+    BanknotesIcon,
+    CurrencyEuroIcon,
+    ChevronRightIcon,
+    Square3Stack3DIcon,
+    CubeTransparentIcon,
+    BuildingOfficeIcon,
+    HashtagIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
@@ -374,6 +526,17 @@ const getInvoiceStatusTextClass = (status) => {
     return classes[status] || 'text-gray-500'
 }
 
+const getInvoiceIconBgClass = (status) => {
+    const classes = {
+        draft: 'bg-gray-100',
+        sent: 'bg-yellow-100',
+        paid: 'bg-green-100',
+        overdue: 'bg-red-100',
+        cancelled: 'bg-gray-100',
+    }
+    return classes[status] || 'bg-gray-100'
+}
+
 const getInvoiceStatusBadgeClass = (status) => {
     const classes = {
         draft: 'bg-gray-100 text-gray-700',
@@ -397,3 +560,18 @@ const terminateContract = () => {
     })
 }
 </script>
+
+<style scoped>
+@keyframes shimmer {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+.animate-shimmer {
+    animation: shimmer 2s infinite;
+}
+</style>

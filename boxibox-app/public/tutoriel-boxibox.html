@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BoxiBox - Tutoriel Complet | Guide d'utilisation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        :root {
+            --primary: #22c55e;
+            --primary-dark: #16a34a;
+            --secondary: #6366f1;
+            --accent: #f59e0b;
+            --dark: #1e293b;
+            --light: #f8fafc;
+            --gray: #64748b;
+            --success: #22c55e;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --info: #3b82f6;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family: 'Inter', sans-serif; background: #ffffff; color: var(--dark); line-height: 1.7; }
+
+        /* Navigation fixe */
+        .nav { position: fixed; top: 0; left: 0; right: 0; background: rgba(255,255,255,0.98); backdrop-filter: blur(20px); z-index: 1000; padding: 0.8rem 2rem; box-shadow: 0 2px 20px rgba(0,0,0,0.08); }
+        .nav-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 800; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        .nav-links { display: flex; gap: 1.5rem; list-style: none; flex-wrap: wrap; }
+        .nav-links a { text-decoration: none; color: var(--dark); font-weight: 500; font-size: 0.9rem; transition: color 0.3s; padding: 0.5rem; }
+        .nav-links a:hover { color: var(--primary); }
+
+        /* Hero compact */
+        .hero { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 7rem 2rem 4rem; text-align: center; }
+        .hero h1 { font-size: 3rem; font-weight: 900; margin-bottom: 1rem; }
+        .hero p { font-size: 1.2rem; opacity: 0.95; max-width: 800px; margin: 0 auto 2rem; }
+        .hero-badge { display: inline-block; background: rgba(255,255,255,0.2); padding: 0.5rem 1.5rem; border-radius: 50px; font-size: 0.9rem; margin-bottom: 1rem; }
+
+        /* Table des matieres */
+        .toc { background: white; border-radius: 20px; padding: 2rem; margin: -3rem auto 3rem; max-width: 1200px; box-shadow: 0 20px 60px rgba(0,0,0,0.1); position: relative; z-index: 10; }
+        .toc h2 { font-size: 1.5rem; margin-bottom: 1.5rem; color: var(--dark); display: flex; align-items: center; gap: 0.5rem; }
+        .toc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.8rem; }
+        .toc-item { display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1rem; background: var(--light); border-radius: 10px; text-decoration: none; color: var(--dark); font-weight: 500; font-size: 0.95rem; transition: all 0.3s; }
+        .toc-item:hover { background: var(--primary); color: white; transform: translateX(5px); }
+        .toc-item i { width: 30px; height: 30px; background: var(--primary); color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; flex-shrink: 0; }
+        .toc-item:hover i { background: white; color: var(--primary); }
+        .toc-number { background: var(--secondary); color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+
+        /* Sections tutoriel */
+        .tutorial-section { padding: 4rem 2rem; max-width: 1200px; margin: 0 auto; border-bottom: 1px solid #e5e7eb; }
+        .tutorial-section:last-of-type { border-bottom: none; }
+        .section-number { display: inline-flex; align-items: center; justify-content: center; width: 50px; height: 50px; background: var(--primary); color: white; border-radius: 15px; font-size: 1.5rem; font-weight: 800; margin-bottom: 1rem; }
+        .section-title { font-size: 2.2rem; font-weight: 800; color: var(--dark); margin-bottom: 0.5rem; }
+        .section-subtitle { font-size: 1.1rem; color: var(--gray); margin-bottom: 2rem; }
+
+        /* Screenshots */
+        .screenshot-container { margin: 2rem 0; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.12); }
+        .screenshot-container img { width: 100%; display: block; }
+        .screenshot-caption { background: var(--dark); color: white; padding: 1rem 1.5rem; font-size: 0.9rem; }
+        .screenshot-caption i { margin-right: 0.5rem; color: var(--primary); }
+
+        /* Grille de fonctionnalites */
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+        .feature-card { background: var(--light); border-radius: 16px; padding: 1.5rem; border-left: 4px solid var(--primary); }
+        .feature-card h4 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--dark); display: flex; align-items: center; gap: 0.5rem; }
+        .feature-card h4 i { color: var(--primary); }
+        .feature-card p { color: var(--gray); font-size: 0.95rem; }
+        .feature-card ul { list-style: none; margin-top: 0.8rem; }
+        .feature-card ul li { padding: 0.4rem 0; color: var(--gray); font-size: 0.9rem; display: flex; align-items: flex-start; gap: 0.5rem; }
+        .feature-card ul li i { color: var(--success); margin-top: 0.2rem; flex-shrink: 0; }
+
+        /* Etapes numerotees */
+        .steps { margin: 2rem 0; }
+        .step { display: flex; gap: 1.5rem; margin-bottom: 1.5rem; padding: 1.5rem; background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); border: 1px solid #e5e7eb; }
+        .step-number { width: 40px; height: 40px; background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1.1rem; flex-shrink: 0; }
+        .step-content h4 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--dark); }
+        .step-content p { color: var(--gray); font-size: 0.95rem; }
+
+        /* Info boxes */
+        .info-box { padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0; display: flex; gap: 1rem; }
+        .info-box.tip { background: #ecfdf5; border-left: 4px solid var(--success); }
+        .info-box.warning { background: #fffbeb; border-left: 4px solid var(--warning); }
+        .info-box.info { background: #eff6ff; border-left: 4px solid var(--info); }
+        .info-box i { font-size: 1.5rem; flex-shrink: 0; }
+        .info-box.tip i { color: var(--success); }
+        .info-box.warning i { color: var(--warning); }
+        .info-box.info i { color: var(--info); }
+        .info-box-content h4 { font-size: 1rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .info-box-content p { font-size: 0.9rem; color: var(--gray); }
+
+        /* Stats highlight */
+        .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 2rem 0; }
+        .stat-card { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; padding: 1.5rem; border-radius: 16px; text-align: center; }
+        .stat-card .number { font-size: 2.5rem; font-weight: 900; }
+        .stat-card .label { font-size: 0.9rem; opacity: 0.9; }
+
+        /* Tableau comparaison */
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 2rem 0; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 40px rgba(0,0,0,0.08); }
+        .comparison-table th, .comparison-table td { padding: 1rem 1.2rem; text-align: left; border-bottom: 1px solid #e5e7eb; }
+        .comparison-table th { background: var(--dark); color: white; font-weight: 600; }
+        .comparison-table th:first-child { text-align: left; }
+        .comparison-table th:not(:first-child), .comparison-table td:not(:first-child) { text-align: center; }
+        .comparison-table tr:hover td { background: #f8fafc; }
+        .comparison-table .check { color: var(--success); font-size: 1.2rem; }
+        .comparison-table .cross { color: var(--danger); font-size: 1.2rem; }
+        .comparison-table .partial { color: var(--warning); font-size: 1.2rem; }
+        .boxibox-col { background: linear-gradient(180deg, var(--primary), var(--primary-dark)) !important; color: white !important; }
+        .winner-row td:first-child { font-weight: 700; }
+        .winner-row td.boxibox-col { background: #dcfce7 !important; color: var(--dark) !important; font-weight: 700; }
+
+        /* Mobile mockup */
+        .mobile-showcase { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 2rem; margin: 2rem 0; }
+        .mobile-item { text-align: center; }
+        .mobile-frame { background: white; border-radius: 30px; padding: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.15); max-width: 200px; margin: 0 auto; }
+        .mobile-frame img { width: 100%; border-radius: 24px; }
+        .mobile-item p { margin-top: 1rem; font-weight: 600; color: var(--dark); }
+
+        /* Section coloree */
+        .colored-section { background: linear-gradient(135deg, var(--secondary), #8b5cf6); color: white; padding: 4rem 2rem; margin: 3rem 0; }
+        .colored-section .section-title { color: white; }
+        .colored-section .section-subtitle { color: rgba(255,255,255,0.9); }
+
+        /* Avantages */
+        .advantages-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin: 2rem 0; }
+        .advantage-card { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 16px; padding: 1.5rem; border: 1px solid rgba(255,255,255,0.2); }
+        .advantage-card h4 { font-size: 1.1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem; }
+        .advantage-card p { font-size: 0.9rem; opacity: 0.9; }
+
+        /* Footer */
+        .footer { background: var(--dark); color: white; padding: 3rem 2rem; text-align: center; }
+        .footer .logo { justify-content: center; color: white; margin-bottom: 1rem; }
+        .footer p { opacity: 0.7; font-size: 0.9rem; }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 { font-size: 2rem; }
+            .section-title { font-size: 1.8rem; }
+            .nav-links { display: none; }
+            .step { flex-direction: column; gap: 1rem; }
+            .toc { margin: -2rem 1rem 2rem; padding: 1.5rem; }
+        }
+
+        /* Print styles */
+        @media print {
+            .nav { display: none; }
+            .hero { padding-top: 2rem; }
+            .screenshot-container { box-shadow: none; border: 1px solid #ccc; }
+        }
+
+        /* Badge */
+        .badge { display: inline-block; padding: 0.25rem 0.6rem; border-radius: 20px; font-size: 0.7rem; font-weight: 600; margin-left: 0.5rem; vertical-align: middle; }
+        .badge.new { background: var(--secondary); color: white; }
+        .badge.pro { background: var(--accent); color: white; }
+        .badge.exclusive { background: linear-gradient(135deg, #ec4899, #8b5cf6); color: white; }
+        .badge.ia { background: linear-gradient(135deg, #3b82f6, #8b5cf6); color: white; }
+
+        /* Sidebar navigation pour grandes sections */
+        .content-with-sidebar { display: grid; grid-template-columns: 250px 1fr; gap: 3rem; max-width: 1400px; margin: 0 auto; padding: 2rem; }
+        .sidebar { position: sticky; top: 80px; height: fit-content; }
+        .sidebar-nav { background: white; border-radius: 16px; padding: 1.5rem; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .sidebar-nav h3 { font-size: 0.9rem; color: var(--gray); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .sidebar-nav a { display: block; padding: 0.6rem 0; color: var(--dark); text-decoration: none; font-size: 0.9rem; border-left: 2px solid transparent; padding-left: 1rem; margin-left: -1rem; transition: all 0.3s; }
+        .sidebar-nav a:hover, .sidebar-nav a.active { color: var(--primary); border-left-color: var(--primary); background: #f0fdf4; }
+
+        @media (max-width: 1024px) {
+            .content-with-sidebar { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+        }
+
+        /* Deux colonnes */
+        .two-columns { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; margin: 2rem 0; }
+        @media (max-width: 900px) {
+            .two-columns { grid-template-columns: 1fr; }
+        }
+
+        /* Liste de fonctionnalites avec icones */
+        .feature-list { list-style: none; }
+        .feature-list li { padding: 0.8rem 0; border-bottom: 1px solid #e5e7eb; display: flex; align-items: flex-start; gap: 1rem; }
+        .feature-list li:last-child { border-bottom: none; }
+        .feature-list li i { color: var(--primary); margin-top: 0.2rem; }
+        .feature-list li strong { color: var(--dark); }
+        .feature-list li span { color: var(--gray); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="nav">
+        <div class="nav-content">
+            <div class="logo"><i class="fas fa-box"></i> BoxiBox</div>
+            <ul class="nav-links">
+                <li><a href="#introduction">Introduction</a></li>
+                <li><a href="#dashboard">Dashboard</a></li>
+                <li><a href="#boxes">Boxes</a></li>
+                <li><a href="#clients">Clients</a></li>
+                <li><a href="#contrats">Contrats</a></li>
+                <li><a href="#facturation">Facturation</a></li>
+                <li><a href="#reservations">Reservations</a></li>
+                <li><a href="#mobile">App Mobile</a></li>
+                <li><a href="#comparaison">Comparaison</a></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-badge"><i class="fas fa-book"></i> Guide Complet d'Utilisation</div>
+        <h1>Tutoriel BoxiBox</h1>
+        <p>Decouvrez toutes les fonctionnalites de la plateforme de gestion self-storage la plus complete du marche. Ce guide vous accompagne pas a pas dans l'utilisation de chaque module.</p>
+    </section>
+
+    <!-- Table des matieres -->
+    <div class="toc">
+        <h2><i class="fas fa-list"></i> Table des Matieres</h2>
+        <div class="toc-grid">
+            <a href="#introduction" class="toc-item"><span class="toc-number">1</span> Introduction & Vue d'ensemble</a>
+            <a href="#dashboard" class="toc-item"><span class="toc-number">2</span> Dashboard & KPIs</a>
+            <a href="#boxes" class="toc-item"><span class="toc-number">3</span> Gestion des Boxes</a>
+            <a href="#clients" class="toc-item"><span class="toc-number">4</span> Gestion des Clients</a>
+            <a href="#contrats" class="toc-item"><span class="toc-number">5</span> Gestion des Contrats</a>
+            <a href="#facturation" class="toc-item"><span class="toc-number">6</span> Facturation & Paiements</a>
+            <a href="#reservations" class="toc-item"><span class="toc-number">7</span> Reservations en Ligne</a>
+            <a href="#crm" class="toc-item"><span class="toc-number">8</span> CRM & Prospects</a>
+            <a href="#sites" class="toc-item"><span class="toc-number">9</span> Gestion Multi-Sites</a>
+            <a href="#communications" class="toc-item"><span class="toc-number">10</span> Communications</a>
+            <a href="#rapports" class="toc-item"><span class="toc-number">11</span> Rapports & Analytics</a>
+            <a href="#mobile" class="toc-item"><span class="toc-number">12</span> Application Mobile</a>
+            <a href="#parametres" class="toc-item"><span class="toc-number">13</span> Parametres</a>
+            <a href="#comparaison" class="toc-item"><span class="toc-number">14</span> Comparaison Concurrents</a>
+        </div>
+    </div>
+
+    <!-- Section 1: Introduction -->
+    <section id="introduction" class="tutorial-section">
+        <span class="section-number">1</span>
+        <h2 class="section-title">Introduction & Vue d'ensemble</h2>
+        <p class="section-subtitle">Decouvrez BoxiBox, la plateforme SaaS complete pour la gestion de centres de self-storage</p>
+
+        <div class="two-columns">
+            <div>
+                <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Qu'est-ce que BoxiBox ?</h3>
+                <p style="color: var(--gray); margin-bottom: 1.5rem;">BoxiBox est une solution logicielle tout-en-un concue pour les operateurs de self-storage. Elle permet de gerer l'ensemble de votre activite : boxes, clients, contrats, facturation, reservations en ligne, et bien plus encore.</p>
+
+                <div class="info-box tip">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="info-box-content">
+                        <h4>150+ Fonctionnalites</h4>
+                        <p>BoxiBox offre plus de 150 fonctionnalites, soit 5 fois plus que la concurrence comme Buxida.</p>
+                    </div>
+                </div>
+
+                <h3 style="font-size: 1.3rem; margin: 2rem 0 1rem;">Points Forts</h3>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check-circle"></i><div><strong>Application Mobile Native</strong><br><span>Vos clients peuvent gerer leur box depuis leur smartphone</span></div></li>
+                    <li><i class="fas fa-check-circle"></i><div><strong>Intelligence Artificielle</strong><br><span>Lead scoring, prediction de churn, tarification dynamique</span></div></li>
+                    <li><i class="fas fa-check-circle"></i><div><strong>Serrures Connectees</strong><br><span>Integration avec Noke, Salto, KISI, PTI</span></div></li>
+                    <li><i class="fas fa-check-circle"></i><div><strong>Multi-Sites</strong><br><span>Gerez plusieurs centres depuis une seule interface</span></div></li>
+                </ul>
+            </div>
+            <div>
+                <div class="screenshot-container">
+                    <img src="/images/screenshots/admin-dashboard.png" alt="Dashboard BoxiBox">
+                    <div class="screenshot-caption"><i class="fas fa-desktop"></i> Vue d'ensemble du Dashboard BoxiBox</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-row">
+            <div class="stat-card"><div class="number">35 679EUR</div><div class="label">Revenu Mensuel</div></div>
+            <div class="stat-card"><div class="number">260</div><div class="label">Boxes Occupes</div></div>
+            <div class="stat-card"><div class="number">68%</div><div class="label">Taux Occupation</div></div>
+            <div class="stat-card"><div class="number">262</div><div class="label">Contrats Actifs</div></div>
+        </div>
+    </section>
+
+    <!-- Section 2: Dashboard -->
+    <section id="dashboard" class="tutorial-section">
+        <span class="section-number">2</span>
+        <h2 class="section-title">Dashboard & Indicateurs Cles</h2>
+        <p class="section-subtitle">Votre tableau de bord centralise toutes les informations importantes de votre activite</p>
+
+        <div class="screenshot-container">
+            <img src="/images/screenshots/admin-dashboard.png" alt="Dashboard BoxiBox">
+            <div class="screenshot-caption"><i class="fas fa-chart-line"></i> Dashboard principal avec tous les KPIs</div>
+        </div>
+
+        <h3 style="font-size: 1.5rem; margin: 3rem 0 1.5rem;">Elements du Dashboard</h3>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <h4><i class="fas fa-euro-sign"></i> Revenu Mensuel</h4>
+                <p>Affiche le chiffre d'affaires du mois en cours avec la variation par rapport au mois precedent.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Montant total en euros</li>
+                    <li><i class="fas fa-check"></i> Pourcentage d'evolution (+637%)</li>
+                    <li><i class="fas fa-check"></i> Comparaison mois precedent</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-box"></i> Boxes Occupees</h4>
+                <p>Nombre de boxes actuellement loues et taux d'occupation global.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> 260 boxes occupes</li>
+                    <li><i class="fas fa-check"></i> 68.06% d'occupation</li>
+                    <li><i class="fas fa-check"></i> Indicateur visuel</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-chart-pie"></i> Repartition des Boxes</h4>
+                <p>Graphique circulaire montrant la distribution des statuts.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> 260 Occupes (vert)</li>
+                    <li><i class="fas fa-check"></i> 114 Disponibles (gris)</li>
+                    <li><i class="fas fa-check"></i> 8 Reserves (orange)</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-chart-area"></i> Evolution des Revenus</h4>
+                <p>Graphique lineaire sur 6 mois montrant la tendance du CA.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Vue 6 mois / 12 mois / YTD</li>
+                    <li><i class="fas fa-check"></i> Courbe interactive</li>
+                    <li><i class="fas fa-check"></i> Points de donnees detailles</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-shopping-cart"></i> Panier Moyen</h4>
+                <p>Valeur moyenne par contrat et par box.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> 137EUR par contrat</li>
+                    <li><i class="fas fa-check"></i> 93EUR par box/mois</li>
+                    <li><i class="fas fa-check"></i> Evolution vs mois dernier</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-bolt"></i> Actions Rapides</h4>
+                <p>Acces direct aux actions les plus frequentes.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Nouveau client</li>
+                    <li><i class="fas fa-check"></i> Plan des boxes</li>
+                    <li><i class="fas fa-check"></i> Facturation groupee</li>
+                    <li><i class="fas fa-check"></i> Mandats SEPA</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="info-box info">
+            <i class="fas fa-info-circle"></i>
+            <div class="info-box-content">
+                <h4>Indicateurs Supplementaires</h4>
+                <p>Le dashboard affiche aussi : REVPAU (93EUR/box), Valeur moyenne (137EUR/contrat), Churn (0%), Duree moyenne (13.2 mois), nombre de Prospects (25), et Taux de conversion (0%).</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 3: Gestion des Boxes -->
+    <section id="boxes" class="tutorial-section">
+        <span class="section-number">3</span>
+        <h2 class="section-title">Gestion des Boxes</h2>
+        <p class="section-subtitle">Gerez l'ensemble de votre inventaire de boxes avec une interface intuitive</p>
+
+        <div class="screenshot-container">
+            <img src="/images/screenshots/admin-boxes.png" alt="Gestion des Boxes">
+            <div class="screenshot-caption"><i class="fas fa-th-large"></i> Liste complete des boxes avec filtres et statuts</div>
+        </div>
+
+        <div class="two-columns" style="margin-top: 3rem;">
+            <div>
+                <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Fonctionnalites de Gestion</h3>
+
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Vue d'Ensemble</h4>
+                            <p>En haut de page, visualisez : Total Boxes (382), Disponibles (114), Occupes (260), Revenus/mois (35 590EUR).</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Recherche & Filtres</h4>
+                            <p>Recherchez par nom ou code, filtrez par statut (Disponible, Occupe) et par site.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Liste Detaillee</h4>
+                            <p>Chaque box affiche : Code (Q1, Q2...), Site, Dimensions (ex: 3.46m x 3.46m x 2.50m), Surface (29.93 m3), Prix et Statut.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Actions</h4>
+                            <p>Pour chaque box : Voir details, Modifier, Supprimer. Boutons "Plan visuel" et "Nouveau box" en haut.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="feature-card" style="background: white; border: 1px solid #e5e7eb;">
+                    <h4><i class="fas fa-map"></i> Plan Visuel Interactif <span class="badge pro">PRO</span></h4>
+                    <p>Visualisez vos boxes sur un plan 2D interactif :</p>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Vue par etage et batiment</li>
+                        <li><i class="fas fa-check"></i> Code couleur selon statut</li>
+                        <li><i class="fas fa-check"></i> Clic sur box = details</li>
+                        <li><i class="fas fa-check"></i> Drag & drop pour reorganiser</li>
+                    </ul>
+                </div>
+
+                <div class="info-box tip" style="margin-top: 1rem;">
+                    <i class="fas fa-lightbulb"></i>
+                    <div class="info-box-content">
+                        <h4>Astuce</h4>
+                        <p>Utilisez la vue en grille (icone en haut a droite) pour une visualisation plus compacte de vos boxes.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <h3 style="font-size: 1.3rem; margin: 3rem 0 1rem;">Types de Boxes</h3>
+        <div class="features-grid">
+            <div class="feature-card">
+                <h4><i class="fas fa-box"></i> Petit (S)</h4>
+                <p>Surface: 1-5 m2<br>Ideal pour: Documents, petits meubles<br>Prix moyen: 50-80EUR/mois</p>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-boxes"></i> Moyen (M)</h4>
+                <p>Surface: 5-15 m2<br>Ideal pour: Contenu appartement<br>Prix moyen: 80-150EUR/mois</p>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-warehouse"></i> Grand (L/XL)</h4>
+                <p>Surface: 15-30+ m2<br>Ideal pour: Contenu maison, stock<br>Prix moyen: 150-300EUR/mois</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 4: Gestion des Clients -->
+    <section id="clients" class="tutorial-section">
+        <span class="section-number">4</span>
+        <h2 class="section-title">Gestion des Clients</h2>
+        <p class="section-subtitle">Une vision 360 degres de vos clients avec historique complet</p>
+
+        <div class="screenshot-container">
+            <img src="/images/screenshots/admin-customers.png" alt="Liste des Clients">
+            <div class="screenshot-caption"><i class="fas fa-users"></i> Liste complete des clients avec informations de contact</div>
+        </div>
+
+        <h3 style="font-size: 1.3rem; margin: 3rem 0 1rem;">Fiche Client Detaillee</h3>
+
+        <div class="two-columns">
+            <div>
+                <div class="screenshot-container">
+                    <img src="/images/screenshots/admin-customer-detail.png" alt="Fiche Client">
+                    <div class="screenshot-caption"><i class="fas fa-user"></i> Fiche client complete avec historique</div>
+                </div>
+            </div>
+            <div>
+                <div class="features-grid" style="grid-template-columns: 1fr;">
+                    <div class="feature-card">
+                        <h4><i class="fas fa-id-card"></i> Informations Personnelles</h4>
+                        <ul>
+                            <li><i class="fas fa-check"></i> Nom, prenom, email, telephone</li>
+                            <li><i class="fas fa-check"></i> Adresse complete</li>
+                            <li><i class="fas fa-check"></i> Type (Particulier/Professionnel)</li>
+                            <li><i class="fas fa-check"></i> Date d'inscription</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <h4><i class="fas fa-history"></i> Historique Complet</h4>
+                        <ul>
+                            <li><i class="fas fa-check"></i> Tous les contrats (actifs et termines)</li>
+                            <li><i class="fas fa-check"></i> Factures et paiements</li>
+                            <li><i class="fas fa-check"></i> Communications envoyees</li>
+                            <li><i class="fas fa-check"></i> Notes et commentaires</li>
+                        </ul>
+                    </div>
+                    <div class="feature-card">
+                        <h4><i class="fas fa-file-alt"></i> Documents</h4>
+                        <ul>
+                            <li><i class="fas fa-check"></i> Piece d'identite</li>
+                            <li><i class="fas fa-check"></i> Contrats signes</li>
+                            <li><i class="fas fa-check"></i> Mandats SEPA</li>
+                            <li><i class="fas fa-check"></i> Autres documents</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 5: Contrats -->
+    <section id="contrats" class="tutorial-section">
+        <span class="section-number">5</span>
+        <h2 class="section-title">Gestion des Contrats</h2>
+        <p class="section-subtitle">Creez, gerez et suivez tous vos contrats de location avec signature electronique</p>
+
+        <div class="screenshot-container">
+            <img src="/images/screenshots/admin-contracts.png" alt="Liste des Contrats">
+            <div class="screenshot-caption"><i class="fas fa-file-contract"></i> 262 contrats actifs - Vue d'ensemble</div>
+        </div>
+
+        <div class="stats-row" style="margin: 2rem 0;">
+            <div class="stat-card"><div class="number">262</div><div class="label">Total Contrats</div></div>
+            <div class="stat-card"><div class="number">261</div><div class="label">Actifs</div></div>
+            <div class="stat-card"><div class="number">0</div><div class="label">En Attente</div></div>
+            <div class="stat-card"><div class="number">35 679EUR</div><div class="label">CA Mensuel</div></div>
+        </div>
+
+        <h3 style="font-size: 1.3rem; margin: 3rem 0 1rem;">Cycle de Vie d'un Contrat</h3>
+
+        <div class="steps">
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-content">
+                    <h4>Creation du Contrat</h4>
+                    <p>Cliquez sur "Nouveau Contrat", selectionnez le client et le box, definissez la date de debut, le loyer mensuel et les options (assurance, etc.).</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-content">
+                    <h4>Signature Electronique <span class="badge exclusive">Exclusif</span></h4>
+                    <p>Le contrat est envoye par email au client qui peut le signer electroniquement. La signature a une valeur juridique complete.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-content">
+                    <h4>Activation</h4>
+                    <p>Une fois signe, le contrat passe en statut "Actif". Le client recoit ses codes d'acces automatiquement.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-content">
+                    <h4>Facturation Automatique</h4>
+                    <p>Chaque mois, une facture est generee et envoyee automatiquement. Le prelevement SEPA ou paiement CB est effectue.</p>
+                </div>
+            </div>
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-content">
+                    <h4>Renouvellement / Resiliation</h4>
+                    <p>Les contrats se renouvellent automatiquement. En cas de resiliation, le preavis et l'etat des lieux sont geres dans le systeme.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-box tip">
+            <i class="fas fa-robot"></i>
+            <div class="info-box-content">
+                <h4>Assistant IA <span class="badge ia">IA</span></h4>
+                <p>L'assistant IA peut generer automatiquement les contrats, suggerer les meilleurs tarifs et verifier la coherence des donnees.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 6: Facturation -->
+    <section id="facturation" class="tutorial-section">
+        <span class="section-number">6</span>
+        <h2 class="section-title">Facturation & Paiements</h2>
+        <p class="section-subtitle">Systeme complet de facturation automatique avec plusieurs modes de paiement</p>
+
+        <div class="screenshot-container">
+            <img src="/images/screenshots/admin-invoices.png" alt="Facturation">
+            <div class="screenshot-caption"><i class="fas fa-file-invoice-dollar"></i> Gestion des factures - 1988 factures, 23 692EUR en attente</div>
+        </div>
+
+        <div class="features-grid" style="margin-top: 2rem;">
+            <div class="feature-card">
+                <h4><i class="fab fa-stripe-s"></i> Paiement Stripe</h4>
+                <p>Acceptez les cartes bancaires en toute securite.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Visa, Mastercard, Amex</li>
+                    <li><i class="fas fa-check"></i> 3D Secure integre</li>
+                    <li><i class="fas fa-check"></i> Retry automatique en cas d'echec</li>
+                    <li><i class="fas fa-check"></i> Paiement en 1 clic pour les clients</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-university"></i> Prelevement SEPA</h4>
+                <p>GoCardless pour les prelevements automatiques.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Mandat SEPA electronique</li>
+                    <li><i class="fas fa-check"></i> Prelevement a date fixe</li>
+                    <li><i class="fas fa-check"></i> Retry automatique</li>
+                    <li><i class="fas fa-check"></i> Reconciliation bancaire</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-money-bill-wave"></i> Paiements Manuels</h4>
+                <p>Pour les clients qui preferent payer autrement.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Especes</li>
+                    <li><i class="fas fa-check"></i> Cheque</li>
+                    <li><i class="fas fa-check"></i> Virement bancaire</li>
+                    <li><i class="fas fa-check"></i> Recu automatique</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="screenshot-container" style="margin-top: 2rem;">
+            <img src="/images/screenshots/admin-payments.png" alt="Paiements">
+            <div class="screenshot-caption"><i class="fas fa-credit-card"></i> Historique des paiements recus</div>
+        </div>
+
+        <div class="info-box warning" style="margin-top: 2rem;">
+            <i class="fas fa-exclamation-triangle"></i>
+            <div class="info-box-content">
+                <h4>Gestion des Impayes</h4>
+                <p>BoxiBox gere automatiquement les relances : Email de rappel J+3, SMS J+7, Lettre de relance J+15, Mise en demeure J+30. Vous pouvez personnaliser ces delais dans les parametres.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 7: Reservations -->
+    <section id="reservations" class="tutorial-section">
+        <span class="section-number">7</span>
+        <h2 class="section-title">Reservations en Ligne</h2>
+        <p class="section-subtitle">Permettez a vos clients de reserver 24h/24, 7j/7 depuis votre site web</p>
+
+        <div class="two-columns">
+            <div>
+                <div class="screenshot-container">
+                    <img src="/images/screenshots/booking-search.png" alt="Page de reservation">
+                    <div class="screenshot-caption"><i class="fas fa-calendar-check"></i> Interface de reservation publique</div>
+                </div>
+            </div>
+            <div>
+                <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Parcours de Reservation</h3>
+
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number">1</div>
+                        <div class="step-content">
+                            <h4>Recherche</h4>
+                            <p>Le client choisit la taille souhaitee, la date de debut et le site.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">2</div>
+                        <div class="step-content">
+                            <h4>Selection</h4>
+                            <p>Liste des boxes disponibles avec prix, dimensions et caracteristiques.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">3</div>
+                        <div class="step-content">
+                            <h4>Informations</h4>
+                            <p>Formulaire de coordonnees avec validation.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">4</div>
+                        <div class="step-content">
+                            <h4>Paiement</h4>
+                            <p>Paiement securise par carte Stripe.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number">5</div>
+                        <div class="step-content">
+                            <h4>Confirmation</h4>
+                            <p>Email avec contrat + code d'acces.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="screenshot-container" style="margin-top: 2rem;">
+            <img src="/images/screenshots/admin-bookings.png" alt="Gestion des reservations">
+            <div class="screenshot-caption"><i class="fas fa-list"></i> Back-office : Liste des reservations recues</div>
+        </div>
+
+        <div class="features-grid" style="margin-top: 2rem;">
+            <div class="feature-card">
+                <h4><i class="fas fa-code"></i> Widget Integrable</h4>
+                <p>Integrez le module de reservation sur votre site existant avec un simple code HTML/JavaScript.</p>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-percent"></i> Codes Promo</h4>
+                <p>Creez des codes promotionnels : reduction en %, montant fixe, premier mois offert, etc.</p>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-calculator"></i> Calculateur de Taille</h4>
+                <p>Aidez vos clients a choisir la bonne taille en selectionnant leurs objets a stocker.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 8: CRM -->
+    <section id="crm" class="tutorial-section">
+        <span class="section-number">8</span>
+        <h2 class="section-title">CRM & Prospects</h2>
+        <p class="section-subtitle">Convertissez plus de prospects en clients grace a l'intelligence artificielle</p>
+
+        <div class="screenshot-container">
+            <img src="/images/screenshots/admin-prospects.png" alt="CRM Prospects">
+            <div class="screenshot-caption"><i class="fas fa-funnel-dollar"></i> Pipeline commercial avec scoring IA</div>
+        </div>
+
+        <div class="features-grid" style="margin-top: 2rem;">
+            <div class="feature-card">
+                <h4><i class="fas fa-brain"></i> AI Lead Scoring <span class="badge ia">IA</span></h4>
+                <p>L'IA analyse chaque prospect et attribue un score de 0 a 100 base sur :</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Comportement sur le site</li>
+                    <li><i class="fas fa-check"></i> Reactivite aux emails</li>
+                    <li><i class="fas fa-check"></i> Type de demande</li>
+                    <li><i class="fas fa-check"></i> Historique similaire</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-chart-line"></i> Prediction de Churn <span class="badge ia">IA</span></h4>
+                <p>Identifiez les clients a risque de depart avant qu'il ne soit trop tard.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Score de risque</li>
+                    <li><i class="fas fa-check"></i> Alertes automatiques</li>
+                    <li><i class="fas fa-check"></i> Actions suggerees</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-bullhorn"></i> Campagnes Marketing</h4>
+                <p>Creez des campagnes ciblees pour convertir vos prospects.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Emails automatises</li>
+                    <li><i class="fas fa-check"></i> SMS marketing</li>
+                    <li><i class="fas fa-check"></i> Segmentation avancee</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 9: Multi-Sites -->
+    <section id="sites" class="tutorial-section">
+        <span class="section-number">9</span>
+        <h2 class="section-title">Gestion Multi-Sites</h2>
+        <p class="section-subtitle">Gerez plusieurs centres de stockage depuis une interface unique</p>
+
+        <div class="screenshot-container">
+            <img src="/images/screenshots/admin-sites.png" alt="Gestion des Sites">
+            <div class="screenshot-caption"><i class="fas fa-building"></i> Configuration et gestion des differents sites</div>
+        </div>
+
+        <div class="two-columns" style="margin-top: 2rem;">
+            <div>
+                <h3 style="font-size: 1.3rem; margin-bottom: 1rem;">Structure Hierarchique</h3>
+                <p style="color: var(--gray); margin-bottom: 1.5rem;">BoxiBox organise vos donnees selon une structure logique :</p>
+
+                <div class="steps">
+                    <div class="step">
+                        <div class="step-number"><i class="fas fa-building" style="font-size: 0.8rem;"></i></div>
+                        <div class="step-content">
+                            <h4>Tenant (Entreprise)</h4>
+                            <p>Votre compte principal regroupant tous vos sites.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number"><i class="fas fa-map-marker-alt" style="font-size: 0.8rem;"></i></div>
+                        <div class="step-content">
+                            <h4>Sites</h4>
+                            <p>Chaque centre de stockage avec son adresse et horaires.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number"><i class="fas fa-warehouse" style="font-size: 0.8rem;"></i></div>
+                        <div class="step-content">
+                            <h4>Batiments / Etages</h4>
+                            <p>Organisation physique de chaque site.</p>
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div class="step-number"><i class="fas fa-box" style="font-size: 0.8rem;"></i></div>
+                        <div class="step-content">
+                            <h4>Boxes</h4>
+                            <p>Les unites de stockage individuelles.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div>
+                <div class="feature-card" style="background: white; border: 1px solid #e5e7eb;">
+                    <h4><i class="fas fa-cog"></i> Configuration par Site</h4>
+                    <ul>
+                        <li><i class="fas fa-check"></i> Adresse et coordonnees GPS</li>
+                        <li><i class="fas fa-check"></i> Horaires d'ouverture</li>
+                        <li><i class="fas fa-check"></i> Contacts et responsables</li>
+                        <li><i class="fas fa-check"></i> Photos et description</li>
+                        <li><i class="fas fa-check"></i> Tarifs specifiques</li>
+                        <li><i class="fas fa-check"></i> Codes d'acces</li>
+                        <li><i class="fas fa-check"></i> Integration serrures IoT</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 10: Communications -->
+    <section id="communications" class="tutorial-section">
+        <span class="section-number">10</span>
+        <h2 class="section-title">Communications</h2>
+        <p class="section-subtitle">Restez en contact avec vos clients via tous les canaux</p>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <h4><i class="fas fa-envelope"></i> Email</h4>
+                <p>Templates personnalisables pour toutes vos communications.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Confirmation de reservation</li>
+                    <li><i class="fas fa-check"></i> Envoi de factures</li>
+                    <li><i class="fas fa-check"></i> Rappels de paiement</li>
+                    <li><i class="fas fa-check"></i> Newsletters</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-sms"></i> SMS</h4>
+                <p>Messages courts pour les informations urgentes.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Codes d'acces</li>
+                    <li><i class="fas fa-check"></i> Rappels de paiement</li>
+                    <li><i class="fas fa-check"></i> Alertes</li>
+                    <li><i class="fas fa-check"></i> Promotions</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-bell"></i> Push Notifications <span class="badge exclusive">Exclusif</span></h4>
+                <p>Notifications instantanees sur l'app mobile.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Nouvelle facture</li>
+                    <li><i class="fas fa-check"></i> Paiement recu</li>
+                    <li><i class="fas fa-check"></i> Acces au box</li>
+                    <li><i class="fas fa-check"></i> Messages support</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-comment-dots"></i> Live Chat <span class="badge exclusive">Exclusif</span></h4>
+                <p>Discutez en temps reel avec vos clients.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Chat integre</li>
+                    <li><i class="fas fa-check"></i> Historique conserve</li>
+                    <li><i class="fas fa-check"></i> Transfert de fichiers</li>
+                    <li><i class="fas fa-check"></i> Notifications</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-video"></i> Appels Video <span class="badge exclusive">Exclusif</span></h4>
+                <p>Visioconference integree pour vos rendez-vous.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Visite virtuelle</li>
+                    <li><i class="fas fa-check"></i> Support a distance</li>
+                    <li><i class="fas fa-check"></i> Partage d'ecran</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-ticket-alt"></i> Tickets Support</h4>
+                <p>Systeme de tickets pour le suivi des demandes.</p>
+                <ul>
+                    <li><i class="fas fa-check"></i> Creation par client ou staff</li>
+                    <li><i class="fas fa-check"></i> Priorites et categories</li>
+                    <li><i class="fas fa-check"></i> Assignation equipe</li>
+                    <li><i class="fas fa-check"></i> SLA et delais</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 11: Rapports -->
+    <section id="rapports" class="tutorial-section">
+        <span class="section-number">11</span>
+        <h2 class="section-title">Rapports & Analytics</h2>
+        <p class="section-subtitle">Prenez des decisions eclairees grace a des donnees precises</p>
+
+        <div class="screenshot-container">
+            <img src="/images/screenshots/admin-reports.png" alt="Rapports">
+            <div class="screenshot-caption"><i class="fas fa-chart-bar"></i> Centre de rapports et analytics</div>
+        </div>
+
+        <div class="features-grid" style="margin-top: 2rem;">
+            <div class="feature-card">
+                <h4><i class="fas fa-chart-pie"></i> Rapport d'Occupation</h4>
+                <ul>
+                    <li><i class="fas fa-check"></i> Taux d'occupation par site/type</li>
+                    <li><i class="fas fa-check"></i> Evolution dans le temps</li>
+                    <li><i class="fas fa-check"></i> Previsions IA</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-euro-sign"></i> Rapport Financier</h4>
+                <ul>
+                    <li><i class="fas fa-check"></i> Chiffre d'affaires</li>
+                    <li><i class="fas fa-check"></i> Revenus par box/type</li>
+                    <li><i class="fas fa-check"></i> Impayes et recouvrement</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-users"></i> Rapport Clients</h4>
+                <ul>
+                    <li><i class="fas fa-check"></i> Acquisitions / departs</li>
+                    <li><i class="fas fa-check"></i> Duree moyenne de location</li>
+                    <li><i class="fas fa-check"></i> Sources d'acquisition</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-file-export"></i> Exports</h4>
+                <ul>
+                    <li><i class="fas fa-check"></i> Export PDF</li>
+                    <li><i class="fas fa-check"></i> Export Excel/CSV</li>
+                    <li><i class="fas fa-check"></i> Export FEC (comptabilite)</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 12: Application Mobile -->
+    <section id="mobile" class="colored-section">
+        <div style="max-width: 1200px; margin: 0 auto;">
+            <span class="section-number" style="background: white; color: var(--secondary);">12</span>
+            <h2 class="section-title">Application Mobile Client</h2>
+            <p class="section-subtitle">Une exclusivite BoxiBox : vos clients gerent tout depuis leur smartphone</p>
+
+            <div class="two-columns" style="margin-top: 3rem;">
+                <div>
+                    <h3 style="font-size: 1.3rem; margin-bottom: 1.5rem;">Fonctionnalites de l'App</h3>
+
+                    <div class="advantages-grid" style="grid-template-columns: 1fr;">
+                        <div class="advantage-card">
+                            <h4><i class="fas fa-home"></i> Dashboard Personnel</h4>
+                            <p>Solde en cours, prochain paiement, meteo locale, notifications.</p>
+                        </div>
+                        <div class="advantage-card">
+                            <h4><i class="fas fa-box"></i> Mes Boxes</h4>
+                            <p>Liste des boxes loues avec details, dimensions, code d'acces.</p>
+                        </div>
+                        <div class="advantage-card">
+                            <h4><i class="fas fa-file-invoice"></i> Mes Factures</h4>
+                            <p>Consulter, telecharger et payer les factures en 1 clic.</p>
+                        </div>
+                        <div class="advantage-card">
+                            <h4><i class="fas fa-lock-open"></i> Ouverture Serrure</h4>
+                            <p>Ouvrir la serrure connectee via Bluetooth (Noke, Salto...).</p>
+                        </div>
+                        <div class="advantage-card">
+                            <h4><i class="fas fa-bell"></i> Notifications Push</h4>
+                            <p>Alertes en temps reel : factures, paiements, acces.</p>
+                        </div>
+                        <div class="advantage-card">
+                            <h4><i class="fas fa-comments"></i> Support</h4>
+                            <p>Chat en direct avec votre equipe, tickets de support.</p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="mobile-showcase" style="grid-template-columns: 1fr 1fr;">
+                        <div class="mobile-item">
+                            <div class="mobile-frame"><img src="/images/screenshots/mobile-dashboard.png" alt="Dashboard Mobile"></div>
+                            <p>Dashboard</p>
+                        </div>
+                        <div class="mobile-item">
+                            <div class="mobile-frame"><img src="/images/screenshots/mobile-boxes.png" alt="Mes Boxes"></div>
+                            <p>Mes Boxes</p>
+                        </div>
+                        <div class="mobile-item">
+                            <div class="mobile-frame"><img src="/images/screenshots/mobile-invoices.png" alt="Factures"></div>
+                            <p>Factures</p>
+                        </div>
+                        <div class="mobile-item">
+                            <div class="mobile-frame"><img src="/images/screenshots/mobile-access.png" alt="Codes Acces"></div>
+                            <p>Codes Acces</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 13: Parametres -->
+    <section id="parametres" class="tutorial-section">
+        <span class="section-number">13</span>
+        <h2 class="section-title">Parametres</h2>
+        <p class="section-subtitle">Personnalisez BoxiBox selon vos besoins</p>
+
+        <div class="screenshot-container">
+            <img src="/images/screenshots/admin-settings.png" alt="Parametres">
+            <div class="screenshot-caption"><i class="fas fa-cog"></i> Page de configuration generale</div>
+        </div>
+
+        <div class="features-grid" style="margin-top: 2rem;">
+            <div class="feature-card">
+                <h4><i class="fas fa-building"></i> Entreprise</h4>
+                <ul>
+                    <li><i class="fas fa-check"></i> Nom et logo</li>
+                    <li><i class="fas fa-check"></i> Coordonnees</li>
+                    <li><i class="fas fa-check"></i> Informations legales</li>
+                    <li><i class="fas fa-check"></i> Numero TVA</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-file-invoice-dollar"></i> Facturation</h4>
+                <ul>
+                    <li><i class="fas fa-check"></i> Numerotation des factures</li>
+                    <li><i class="fas fa-check"></i> Taux de TVA</li>
+                    <li><i class="fas fa-check"></i> Conditions de paiement</li>
+                    <li><i class="fas fa-check"></i> Mentions legales</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-credit-card"></i> Paiements</h4>
+                <ul>
+                    <li><i class="fas fa-check"></i> Configuration Stripe</li>
+                    <li><i class="fas fa-check"></i> Configuration GoCardless</li>
+                    <li><i class="fas fa-check"></i> Modes de paiement actifs</li>
+                    <li><i class="fas fa-check"></i> Relances automatiques</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-envelope"></i> Notifications</h4>
+                <ul>
+                    <li><i class="fas fa-check"></i> Templates email</li>
+                    <li><i class="fas fa-check"></i> Templates SMS</li>
+                    <li><i class="fas fa-check"></i> Declencheurs automatiques</li>
+                    <li><i class="fas fa-check"></i> Frequence des rappels</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-users-cog"></i> Utilisateurs</h4>
+                <ul>
+                    <li><i class="fas fa-check"></i> Gestion des comptes staff</li>
+                    <li><i class="fas fa-check"></i> Roles et permissions</li>
+                    <li><i class="fas fa-check"></i> Acces par site</li>
+                    <li><i class="fas fa-check"></i> Journal d'activite</li>
+                </ul>
+            </div>
+            <div class="feature-card">
+                <h4><i class="fas fa-lock"></i> Serrures IoT</h4>
+                <ul>
+                    <li><i class="fas fa-check"></i> Integration Noke</li>
+                    <li><i class="fas fa-check"></i> Integration Salto</li>
+                    <li><i class="fas fa-check"></i> Integration KISI</li>
+                    <li><i class="fas fa-check"></i> Integration PTI</li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section 14: Comparaison -->
+    <section id="comparaison" class="tutorial-section" style="background: var(--light); padding: 4rem 2rem; margin: 0; max-width: 100%;">
+        <div style="max-width: 1400px; margin: 0 auto;">
+            <span class="section-number">14</span>
+            <h2 class="section-title">Comparaison avec la Concurrence</h2>
+            <p class="section-subtitle">Decouvrez pourquoi BoxiBox est le choix #1 des professionnels du self-storage en Europe</p>
+
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th style="width: 30%;">Fonctionnalite</th>
+                        <th class="boxibox-col" style="width: 14%;">BoxiBox</th>
+                        <th style="width: 14%;">Buxida</th>
+                        <th style="width: 14%;">Storeganise</th>
+                        <th style="width: 14%;">SiteLink</th>
+                        <th style="width: 14%;">Yardi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><i class="fas fa-mobile-alt" style="color: var(--primary); margin-right: 8px;"></i> <strong>Application Mobile Native</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-minus partial"></i></td><td><i class="fas fa-minus partial"></i></td></tr>
+                    <tr><td><i class="fas fa-brain" style="color: var(--primary); margin-right: 8px;"></i> <strong>Intelligence Artificielle</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td></tr>
+                    <tr><td><i class="fas fa-robot" style="color: var(--primary); margin-right: 8px;"></i> <strong>Lead Scoring IA</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td></tr>
+                    <tr><td><i class="fas fa-chart-line" style="color: var(--primary); margin-right: 8px;"></i> <strong>Prediction de Churn</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td></tr>
+                    <tr><td><i class="fas fa-lock" style="color: var(--primary); margin-right: 8px;"></i> <strong>Serrures IoT (4+ marques)</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-minus partial"></i></td></tr>
+                    <tr><td><i class="fas fa-tags" style="color: var(--primary); margin-right: 8px;"></i> <strong>Tarification Dynamique</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td></tr>
+                    <tr><td><i class="fas fa-calendar-check" style="color: var(--primary); margin-right: 8px;"></i> <strong>Reservation en Ligne</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td></tr>
+                    <tr><td><i class="fas fa-file-signature" style="color: var(--primary); margin-right: 8px;"></i> <strong>Signature Electronique</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td></tr>
+                    <tr><td><i class="fab fa-stripe-s" style="color: var(--primary); margin-right: 8px;"></i> <strong>Paiement Stripe</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td></tr>
+                    <tr><td><i class="fas fa-university" style="color: var(--primary); margin-right: 8px;"></i> <strong>SEPA GoCardless</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-minus partial"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-minus partial"></i></td><td><i class="fas fa-minus partial"></i></td></tr>
+                    <tr><td><i class="fas fa-video" style="color: var(--primary); margin-right: 8px;"></i> <strong>Appels Video Integres</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td></tr>
+                    <tr><td><i class="fas fa-comment-dots" style="color: var(--primary); margin-right: 8px;"></i> <strong>Live Chat</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td></tr>
+                    <tr><td><i class="fas fa-bell" style="color: var(--primary); margin-right: 8px;"></i> <strong>Push Notifications</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-minus partial"></i></td><td><i class="fas fa-minus partial"></i></td></tr>
+                    <tr><td><i class="fas fa-star" style="color: var(--primary); margin-right: 8px;"></i> <strong>Programme Fidelite</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td></tr>
+                    <tr><td><i class="fas fa-user-friends" style="color: var(--primary); margin-right: 8px;"></i> <strong>Parrainage</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-times cross"></i></td></tr>
+                    <tr><td><i class="fas fa-shield-alt" style="color: var(--primary); margin-right: 8px;"></i> <strong>Gestion Assurances</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td></tr>
+                    <tr><td><i class="fas fa-thermometer-half" style="color: var(--primary); margin-right: 8px;"></i> <strong>Capteurs IoT</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-minus partial"></i></td><td><i class="fas fa-minus partial"></i></td><td><i class="fas fa-minus partial"></i></td></tr>
+                    <tr><td><i class="fas fa-plug" style="color: var(--primary); margin-right: 8px;"></i> <strong>API REST Complete</strong></td><td class="boxibox-col"><i class="fas fa-check check"></i></td><td><i class="fas fa-times cross"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td><td><i class="fas fa-check check"></i></td></tr>
+                    <tr class="winner-row" style="background: #f0fdf4;"><td><strong><i class="fas fa-calculator" style="color: var(--primary); margin-right: 8px;"></i> TOTAL FONCTIONNALITES</strong></td><td class="boxibox-col" style="font-size: 1.3rem;"><strong>150+</strong></td><td style="color: var(--danger);"><strong>~30</strong></td><td><strong>~80</strong></td><td><strong>~100</strong></td><td><strong>~90</strong></td></tr>
+                    <tr><td><strong><i class="fas fa-euro-sign" style="color: var(--primary); margin-right: 8px;"></i> Prix / mois</strong></td><td class="boxibox-col"><strong>Competitif</strong></td><td>~100EUR</td><td>Sur devis</td><td>50EUR+</td><td>400EUR+</td></tr>
+                </tbody>
+            </table>
+
+            <h3 style="font-size: 1.5rem; margin: 3rem 0 1.5rem; text-align: center;">Pourquoi BoxiBox est le Meilleur Choix ?</h3>
+
+            <div class="features-grid">
+                <div class="feature-card" style="border-left-color: var(--secondary);">
+                    <h4><i class="fas fa-mobile-alt"></i> Seule App Mobile Native</h4>
+                    <p>Aucun concurrent n'offre une vraie application mobile pour les clients. BoxiBox permet a vos locataires de gerer leur box, payer leurs factures et ouvrir les serrures depuis leur smartphone.</p>
+                </div>
+                <div class="feature-card" style="border-left-color: var(--secondary);">
+                    <h4><i class="fas fa-brain"></i> Intelligence Artificielle Exclusive</h4>
+                    <p>Lead scoring, prediction de churn, tarification dynamique - des fonctionnalites IA que vous ne trouverez nulle part ailleurs sur le marche europeen.</p>
+                </div>
+                <div class="feature-card" style="border-left-color: var(--secondary);">
+                    <h4><i class="fas fa-euro-sign"></i> 5x Plus de Fonctionnalites que Buxida</h4>
+                    <p>Avec 150+ fonctionnalites contre ~30 pour Buxida, BoxiBox offre une solution complete qui couvre tous vos besoins sans compromis.</p>
+                </div>
+                <div class="feature-card" style="border-left-color: var(--secondary);">
+                    <h4><i class="fas fa-star"></i> Fidelisation Client</h4>
+                    <p>Programme de fidelite avec points et niveaux + systeme de parrainage pour reduire le churn et augmenter la lifetime value de vos clients.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Final -->
+    <section style="background: linear-gradient(135deg, var(--primary), var(--primary-dark)); padding: 5rem 2rem; text-align: center; color: white;">
+        <h2 style="font-size: 2.5rem; margin-bottom: 1rem; font-weight: 800;">Pret a Commencer ?</h2>
+        <p style="font-size: 1.2rem; opacity: 0.95; margin-bottom: 2rem; max-width: 600px; margin-left: auto; margin-right: auto;">Contactez-nous pour une demonstration personnalisee de BoxiBox et decouvrez comment transformer votre activite.</p>
+        <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+            <a href="#" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background: white; color: var(--primary); text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 1rem;"><i class="fas fa-play"></i> Demander une Demo</a>
+            <a href="#" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 1rem 2rem; background: transparent; color: white; text-decoration: none; border-radius: 12px; font-weight: 700; font-size: 1rem; border: 2px solid white;"><i class="fas fa-phone"></i> Nous Contacter</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="logo"><i class="fas fa-box"></i> BoxiBox</div>
+        <p>2024 BoxiBox - La plateforme SaaS #1 pour le Self-Storage en Europe</p>
+        <p style="margin-top: 0.5rem;">Ce tutoriel a ete genere automatiquement. Toutes les captures d'ecran sont issues de l'application reelle.</p>
+    </footer>
+
+    <script>
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    const offset = 80;
+                    const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - offset;
+                    window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

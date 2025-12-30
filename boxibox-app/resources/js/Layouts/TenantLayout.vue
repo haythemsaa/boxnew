@@ -67,11 +67,15 @@
                         :active="route().current('tenant.boxes.*')"
                         :collapsed="sidebarCollapsed"
                         data-tutorial="boxes-menu"
+                        class="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-400/30 hover:from-amber-500/30 hover:to-orange-500/30"
                     >
                         <template #icon>
-                            <ArchiveBoxIcon class="h-5 w-5" />
+                            <ArchiveBoxIcon class="h-5 w-5 text-amber-500" />
                         </template>
-                        Boxes
+                        <span class="flex items-center gap-2 font-semibold">
+                            Boxes
+                            <span class="text-xs bg-amber-500 text-white px-1.5 py-0.5 rounded-full font-bold">{{ $page.props.boxesCount || '' }}</span>
+                        </span>
                     </SidebarLink>
 
                     <!-- Plan Interactif Pro -->
@@ -196,11 +200,15 @@
                         :active="route().current('tenant.contracts.*')"
                         :collapsed="sidebarCollapsed"
                         data-tutorial="contracts-menu"
+                        class="bg-gradient-to-r from-emerald-500/20 to-green-500/20 border border-emerald-400/30 hover:from-emerald-500/30 hover:to-green-500/30"
                     >
                         <template #icon>
-                            <DocumentTextIcon class="h-5 w-5" />
+                            <DocumentTextIcon class="h-5 w-5 text-emerald-500" />
                         </template>
-                        Contrats
+                        <span class="flex items-center gap-2 font-semibold">
+                            Contrats
+                            <span v-if="$page.props.contractsCount" class="text-xs bg-emerald-500 text-white px-1.5 py-0.5 rounded-full font-bold">{{ $page.props.contractsCount }}</span>
+                        </span>
                     </SidebarLink>
                 </div>
 
@@ -246,13 +254,16 @@
                         :active="route().current('tenant.invoices.*')"
                         :collapsed="sidebarCollapsed"
                         data-tutorial="invoices-menu"
+                        class="bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-400/30 hover:from-purple-500/30 hover:to-indigo-500/30"
                     >
                         <template #icon>
-                            <ReceiptPercentIcon class="h-5 w-5" />
+                            <ReceiptPercentIcon class="h-5 w-5 text-purple-500" />
                         </template>
-                        Factures
+                        <span class="flex items-center gap-2 font-semibold">
+                            Factures
+                        </span>
                         <template #badge>
-                            <span v-if="$page.props.overdueCount" class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                            <span v-if="$page.props.overdueCount" class="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full animate-pulse">
                                 {{ $page.props.overdueCount }}
                             </span>
                         </template>
@@ -295,11 +306,15 @@
                         :href="route('tenant.reminders.index')"
                         :active="route().current('tenant.reminders.*')"
                         :collapsed="sidebarCollapsed"
+                        class="bg-gradient-to-r from-red-500/20 to-rose-500/20 border border-red-400/30 hover:from-red-500/30 hover:to-rose-500/30"
                     >
                         <template #icon>
-                            <BellAlertIcon class="h-5 w-5" />
+                            <BellAlertIcon class="h-5 w-5 text-red-500" />
                         </template>
-                        Relances
+                        <span class="flex items-center gap-2 font-semibold">
+                            Relances
+                            <span v-if="$page.props.pendingRemindersCount" class="text-xs bg-red-500 text-white px-1.5 py-0.5 rounded-full font-bold animate-pulse">{{ $page.props.pendingRemindersCount }}</span>
+                        </span>
                     </SidebarLink>
 
                     <SidebarLink
@@ -1285,7 +1300,7 @@ import { Link } from '@inertiajs/vue3'
 import SidebarLink from '@/Components/SidebarLink.vue'
 import TutorialGuide from '@/Components/Tutorial/TutorialGuide.vue'
 import NotificationCenter from '@/Components/NotificationCenter.vue'
-import { useTutorial } from '@/Composables/useTutorial'
+import { useTutorial } from '@/composables/useTutorial'
 import { QuestionMarkCircleIcon } from '@heroicons/vue/24/outline'
 import {
     HomeIcon,

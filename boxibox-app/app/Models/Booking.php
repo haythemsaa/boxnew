@@ -51,6 +51,8 @@ class Booking extends Model
         'internal_notes',
         'promo_code',
         'discount_amount',
+        'payment_method',
+        'payment_notes',
         'id_document_path',
         'terms_accepted',
         'terms_accepted_at',

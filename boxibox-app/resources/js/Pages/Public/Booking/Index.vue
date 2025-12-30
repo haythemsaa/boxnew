@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { router, Head } from '@inertiajs/vue3'
 import {
     CubeIcon,
@@ -493,7 +493,7 @@ const nextStep = () => {
         step.value = 4
         window.scrollTo({ top: 0, behavior: 'smooth' })
         // Load Stripe if payment now is selected
-        if (paymentMethod.value === 'now' && props.settings?.stripe_publishable_key) {
+        if (paymentMethod.value === 'card_now' && props.settings?.stripe_publishable_key) {
             loadStripe()
         }
     }
@@ -550,16 +550,34 @@ const initStripe = () => {
 
     // Mount after a short delay to ensure DOM is ready
     setTimeout(() => {
-        const container = document.getElementById('card-element')
+        const container = document.getElementById('stripe-card-element')
         if (container) {
-            cardElement.value.mount('#card-element')
-            stripeLoaded.value = true
+            try {
+                cardElement.value.mount('#stripe-card-element')
+                stripeLoaded.value = true
 
-            cardElement.value.on('change', (event) => {
-                cardError.value = event.error ? event.error.message : ''
-            })
+                cardElement.value.on('change', (event) => {
+                    cardError.value = event.error ? event.error.message : ''
+                })
+            } catch (e) {
+                console.error('Erreur montage Stripe:', e)
+                cardError.value = 'Erreur lors du chargement du formulaire de paiement'
+            }
+        } else {
+            console.error('Container stripe-card-element non trouvé')
+            // Retry after another delay
+            setTimeout(() => {
+                const retryContainer = document.getElementById('stripe-card-element')
+                if (retryContainer) {
+                    cardElement.value.mount('#stripe-card-element')
+                    stripeLoaded.value = true
+                    cardElement.value.on('change', (event) => {
+                        cardError.value = event.error ? event.error.message : ''
+                    })
+                }
+            }, 500)
         }
-    }, 100)
+    }, 200)
 }
 
 // Process payment with Stripe
@@ -728,8 +746,12 @@ const submitBooking = async () => {
     }
 }
 
-// Reset filters when site changes
+// Flag to skip watcher during initialization
+const isInitializing = ref(true)
+
+// Reset filters when site changes (skip during initialization)
 watch(selectedSite, () => {
+    if (isInitializing.value) return
     selectedBox.value = null
     searchQuery.value = ''
     sizeFilter.value = 'all'
@@ -742,11 +764,39 @@ const minDate = computed(() => {
     return today.toISOString().split('T')[0]
 })
 
-// Initialize price range when mounted
+// Initialize from URL parameters when mounted
 onMounted(() => {
-    if (props.sites.length === 1) {
+    const urlParams = new URLSearchParams(window.location.search)
+    const siteParam = urlParams.get('site')
+    const boxParam = urlParams.get('box')
+
+    // Pre-select site from URL parameter or auto-select if only one site
+    if (siteParam) {
+        const siteId = parseInt(siteParam)
+        const siteExists = props.sites.find(s => s.id === siteId)
+        if (siteExists) {
+            selectedSite.value = siteId
+
+            // Pre-select box from URL parameter
+            if (boxParam) {
+                const boxId = parseInt(boxParam)
+                const site = props.sites.find(s => s.id === siteId)
+                const boxExists = site?.boxes?.find(b => b.id === boxId)
+                if (boxExists) {
+                    selectedBox.value = boxId
+                    // Move to step 2 (customer info) since box is pre-selected
+                    step.value = 2
+                }
+            }
+        }
+    } else if (props.sites.length === 1) {
         selectedSite.value = props.sites[0].id
     }
+
+    // Allow watcher to work after initialization
+    nextTick(() => {
+        isInitializing.value = false
+    })
 })
 </script>
 
@@ -829,7 +879,7 @@ onMounted(() => {
                                     'w-10 h-10 md:w-12 md:h-12 rounded-2xl flex items-center justify-center font-bold text-base md:text-lg transition-all duration-300 shadow-md',
                                     step >= s ? 'text-white scale-110' : 'bg-white text-gray-400 border-2 border-gray-200'
                                 ]"
-                                :style="step >= s ? { backgroundColor: settings?.primary_color } : {}"
+                                :style="step >= s ? { backgroundColor: settings?.primary_color || '#3B82F6' } : {}"
                             >
                                 <CheckIcon v-if="step > s" class="h-5 w-5 md:h-6 md:w-6" />
                                 <span v-else>{{ s }}</span>
@@ -1182,7 +1232,7 @@ onMounted(() => {
                     <button
                         @click="nextStep"
                         class="group px-8 py-4 rounded-2xl text-white font-semibold text-lg flex items-center transition-all transform hover:scale-105 shadow-lg"
-                        :style="{ backgroundColor: settings?.primary_color }"
+                        :style="{ backgroundColor: settings?.primary_color || '#3B82F6' }"
                     >
                         Continuer
                         <ArrowRightIcon class="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -1468,7 +1518,7 @@ onMounted(() => {
                     <button
                         @click="nextStep"
                         class="group px-8 py-4 rounded-2xl text-white font-semibold text-lg flex items-center transition-all transform hover:scale-105 shadow-lg"
-                        :style="{ backgroundColor: settings?.primary_color }"
+                        :style="{ backgroundColor: settings?.primary_color || '#3B82F6' }"
                     >
                         Continuer
                         <ArrowRightIcon class="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
@@ -1628,28 +1678,29 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <!-- Payment Method Selection (if Stripe enabled) -->
-                    <div v-if="settings?.stripe_publishable_key" class="mt-6 pt-6 border-t border-gray-100">
+                    <!-- Payment Method Selection -->
+                    <div class="mt-6 pt-6 border-t border-gray-100">
                         <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center">
                             <CurrencyEuroIcon class="h-6 w-6 mr-2" :style="{ color: settings?.primary_color }" />
                             Comment souhaitez-vous payer ?
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <!-- Pay Now -->
+                            <!-- Pay Now by Card (if Stripe enabled) -->
                             <button
+                                v-if="settings?.stripe_publishable_key"
                                 type="button"
-                                @click="paymentMethod = 'now'"
+                                @click="paymentMethod = 'card_now'"
                                 :class="[
                                     'p-5 rounded-2xl border-2 text-left transition-all hover:shadow-lg',
-                                    paymentMethod === 'now' ? 'shadow-lg' : 'border-gray-200'
+                                    paymentMethod === 'card_now' ? 'shadow-lg' : 'border-gray-200'
                                 ]"
-                                :style="paymentMethod === 'now' ? { borderColor: settings?.primary_color, backgroundColor: settings?.primary_color + '08' } : {}"
+                                :style="paymentMethod === 'card_now' ? { borderColor: settings?.primary_color, backgroundColor: settings?.primary_color + '08' } : {}"
                             >
                                 <div class="flex items-start justify-between">
                                     <div>
                                         <div class="flex items-center mb-2">
                                             <CreditCardIcon class="h-6 w-6 mr-2" :style="{ color: settings?.primary_color }" />
-                                            <span class="font-bold text-gray-900">Payer maintenant</span>
+                                            <span class="font-bold text-gray-900">Carte bancaire maintenant</span>
                                         </div>
                                         <p class="text-sm text-gray-600">
                                             Reglez votre premier mois et l'acompte par carte bancaire. Reservation confirmee immediatement.
@@ -1659,7 +1710,7 @@ onMounted(() => {
                                         </p>
                                     </div>
                                     <div
-                                        v-if="paymentMethod === 'now'"
+                                        v-if="paymentMethod === 'card_now'"
                                         class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
                                         :style="{ backgroundColor: settings?.primary_color }"
                                     >
@@ -1672,7 +1723,7 @@ onMounted(() => {
                                 </div>
                             </button>
 
-                            <!-- Pay at Signing -->
+                            <!-- Pay at Signing (on site) -->
                             <button
                                 type="button"
                                 @click="paymentMethod = 'at_signing'"
@@ -1689,7 +1740,7 @@ onMounted(() => {
                                             <span class="font-bold text-gray-900">Payer a la signature</span>
                                         </div>
                                         <p class="text-sm text-gray-600">
-                                            Reservez maintenant, payez lors de la signature du contrat sur site ou par virement.
+                                            Reservez maintenant, payez lors de la signature du contrat sur site (CB, especes, cheque).
                                         </p>
                                         <p class="mt-3 font-bold text-lg text-gray-700">
                                             0 € maintenant
@@ -1705,9 +1756,100 @@ onMounted(() => {
                                 </div>
                                 <div class="mt-3 flex items-center text-xs text-gray-500">
                                     <ClockIcon class="h-4 w-4 mr-1" />
-                                    Paiement differe
+                                    Paiement sur site
                                 </div>
                             </button>
+
+                            <!-- Bank Transfer -->
+                            <button
+                                type="button"
+                                @click="paymentMethod = 'bank_transfer'"
+                                :class="[
+                                    'p-5 rounded-2xl border-2 text-left transition-all hover:shadow-lg',
+                                    paymentMethod === 'bank_transfer' ? 'shadow-lg' : 'border-gray-200'
+                                ]"
+                                :style="paymentMethod === 'bank_transfer' ? { borderColor: settings?.primary_color, backgroundColor: settings?.primary_color + '08' } : {}"
+                            >
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <div class="flex items-center mb-2">
+                                            <BuildingOfficeIcon class="h-6 w-6 mr-2" :style="{ color: settings?.primary_color }" />
+                                            <span class="font-bold text-gray-900">Virement bancaire</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">
+                                            Recevez nos coordonnees bancaires par email et effectuez un virement.
+                                        </p>
+                                        <p class="mt-3 font-bold text-lg text-gray-700">
+                                            0 € maintenant
+                                        </p>
+                                    </div>
+                                    <div
+                                        v-if="paymentMethod === 'bank_transfer'"
+                                        class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                        :style="{ backgroundColor: settings?.primary_color }"
+                                    >
+                                        <CheckIcon class="h-4 w-4 text-white" />
+                                    </div>
+                                </div>
+                                <div class="mt-3 flex items-center text-xs text-gray-500">
+                                    <ClockIcon class="h-4 w-4 mr-1" />
+                                    Delai de traitement: 2-3 jours
+                                </div>
+                            </button>
+
+                            <!-- SEPA Direct Debit -->
+                            <button
+                                type="button"
+                                @click="paymentMethod = 'sepa_debit'"
+                                :class="[
+                                    'p-5 rounded-2xl border-2 text-left transition-all hover:shadow-lg',
+                                    paymentMethod === 'sepa_debit' ? 'shadow-lg' : 'border-gray-200'
+                                ]"
+                                :style="paymentMethod === 'sepa_debit' ? { borderColor: settings?.primary_color, backgroundColor: settings?.primary_color + '08' } : {}"
+                            >
+                                <div class="flex items-start justify-between">
+                                    <div>
+                                        <div class="flex items-center mb-2">
+                                            <CurrencyEuroIcon class="h-6 w-6 mr-2" :style="{ color: settings?.primary_color }" />
+                                            <span class="font-bold text-gray-900">Prelevement SEPA</span>
+                                        </div>
+                                        <p class="text-sm text-gray-600">
+                                            Mettez en place un prelevement automatique mensuel. Pratique et sans oubli !
+                                        </p>
+                                        <p class="mt-3 font-bold text-lg text-gray-700">
+                                            0 € maintenant
+                                        </p>
+                                    </div>
+                                    <div
+                                        v-if="paymentMethod === 'sepa_debit'"
+                                        class="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0"
+                                        :style="{ backgroundColor: settings?.primary_color }"
+                                    >
+                                        <CheckIcon class="h-4 w-4 text-white" />
+                                    </div>
+                                </div>
+                                <div class="mt-3 flex items-center text-xs text-gray-500">
+                                    <ShieldCheckIcon class="h-4 w-4 mr-1" />
+                                    Paiement automatique chaque mois
+                                </div>
+                            </button>
+                        </div>
+
+                        <!-- Bank details info for bank transfer -->
+                        <div v-if="paymentMethod === 'bank_transfer'" class="mt-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                            <p class="text-sm text-blue-800">
+                                <InformationCircleIcon class="h-5 w-5 inline mr-1" />
+                                Les coordonnees bancaires vous seront envoyees par email apres validation de votre reservation.
+                                Votre box sera reserve pendant 48h en attendant la reception du virement.
+                            </p>
+                        </div>
+
+                        <!-- SEPA info -->
+                        <div v-if="paymentMethod === 'sepa_debit'" class="mt-4 p-4 bg-green-50 rounded-xl border border-green-200">
+                            <p class="text-sm text-green-800">
+                                <InformationCircleIcon class="h-5 w-5 inline mr-1" />
+                                Vous recevrez un mandat SEPA a signer par email. Le premier prelevement sera effectue sous 5 jours ouvrables.
+                            </p>
                         </div>
                     </div>
 
@@ -1742,11 +1884,11 @@ onMounted(() => {
                     </button>
                     <!-- If paying now and Stripe enabled, go to step 4 -->
                     <button
-                        v-if="settings?.stripe_publishable_key && paymentMethod === 'now'"
+                        v-if="settings?.stripe_publishable_key && paymentMethod === 'card_now'"
                         @click="nextStep"
                         :disabled="!form.terms_accepted"
                         class="group px-10 py-4 rounded-2xl text-white font-bold text-lg flex items-center transition-all transform hover:scale-105 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                        :style="{ backgroundColor: settings?.primary_color }"
+                        :style="{ backgroundColor: settings?.primary_color || '#3B82F6' }"
                     >
                         <span class="flex items-center">
                             Proceder au paiement
@@ -1759,7 +1901,7 @@ onMounted(() => {
                         @click="submitBooking"
                         :disabled="processing || !form.terms_accepted"
                         class="group px-10 py-4 rounded-2xl text-white font-bold text-lg flex items-center transition-all transform hover:scale-105 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                        :style="{ backgroundColor: settings?.primary_color }"
+                        :style="{ backgroundColor: settings?.primary_color || '#3B82F6' }"
                     >
                         <span v-if="processing" class="flex items-center">
                             <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -1807,12 +1949,9 @@ onMounted(() => {
                         <label class="block text-sm font-semibold text-gray-700 mb-3">
                             Informations de carte bancaire
                         </label>
-                        <div
-                            id="card-element"
-                            class="border-2 border-gray-200 rounded-xl p-4 bg-white focus-within:border-blue-500 transition-colors"
-                        >
-                            <!-- Stripe Elements will mount here -->
-                            <div v-if="!stripeLoaded" class="flex items-center justify-center py-4 text-gray-400">
+                        <!-- Loading state -->
+                        <div v-if="!stripeLoaded" class="border-2 border-gray-200 rounded-xl p-4 bg-white">
+                            <div class="flex items-center justify-center py-4 text-gray-400">
                                 <svg class="animate-spin h-5 w-5 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -1820,6 +1959,12 @@ onMounted(() => {
                                 Chargement du formulaire de paiement...
                             </div>
                         </div>
+                        <!-- Stripe card element container -->
+                        <div
+                            v-show="stripeLoaded"
+                            id="stripe-card-element"
+                            class="border-2 border-gray-200 rounded-xl p-4 bg-white focus-within:border-blue-500 transition-colors min-h-[50px]"
+                        ></div>
                         <p v-if="cardError" class="text-red-500 text-sm mt-2 flex items-center">
                             <ExclamationCircleIcon class="h-4 w-4 mr-1" />
                             {{ cardError }}

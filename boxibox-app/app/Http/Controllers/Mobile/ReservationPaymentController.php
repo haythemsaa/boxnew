@@ -624,4 +624,466 @@ class ReservationPaymentController extends Controller
         return redirect()->route('mobile.reserve')
             ->with('warning', 'Reservation annulee');
     }
+
+    /**
+     * Create Bancontact payment session via Stripe
+     */
+    public function createBancontactPayment(Request $request)
+    {
+        $validated = $request->validate([
+            'box_id' => 'required|exists:boxes,id',
+            'start_date' => 'required|date|after_or_equal:today',
+            'include_deposit' => 'boolean',
+            'include_insurance' => 'boolean',
+        ]);
+
+        $customer = $this->getCustomer();
+        $box = Box::where('id', $validated['box_id'])
+            ->where('status', 'available')
+            ->with('site')
+            ->firstOrFail();
+
+        if ($box->site->tenant_id !== $customer->tenant_id) {
+            return response()->json(['error' => 'Box non disponible'], 403);
+        }
+
+        // Calculate total with correct tax rates
+        $monthlyPrice = $box->monthly_price;
+        $monthlyPriceWithVat = $monthlyPrice * 1.20;
+        $depositAmount = $validated['include_deposit'] ? ($monthlyPrice * 2) : 0;
+        $insuranceAmount = $validated['include_insurance'] ? (15.00 * 1.09) : 0;
+        $total = round($monthlyPriceWithVat + $depositAmount + $insuranceAmount, 2);
+
+        // Create reservation token
+        $reservationToken = bin2hex(random_bytes(16));
+
+        try {
+            $stripe = new \Stripe\StripeClient(config('services.stripe.secret'));
+
+            // Create Checkout Session with Bancontact
+            $session = $stripe->checkout->sessions->create([
+                'payment_method_types' => ['bancontact'],
+                'mode' => 'payment',
+                'line_items' => [[
+                    'price_data' => [
+                        'currency' => 'eur',
+                        'product_data' => [
+                            'name' => "Reservation Box {$box->number}",
+                            'description' => "Location mensuelle + options",
+                        ],
+                        'unit_amount' => (int)($total * 100),
+                    ],
+                    'quantity' => 1,
+                ]],
+                'success_url' => route('mobile.reserve.bancontact.success', ['token' => $reservationToken]),
+                'cancel_url' => route('mobile.reserve.bancontact.cancel'),
+                'customer_email' => $customer->email,
+                'metadata' => [
+                    'type' => 'reservation',
+                    'box_id' => $box->id,
+                    'customer_id' => $customer->id,
+                    'reservation_token' => $reservationToken,
+                ],
+            ]);
+
+            // Store reservation data
+            session([
+                "reservation_{$reservationToken}" => [
+                    'box_id' => $box->id,
+                    'start_date' => $validated['start_date'],
+                    'include_deposit' => $validated['include_deposit'] ?? false,
+                    'include_insurance' => $validated['include_insurance'] ?? false,
+                    'total' => $total,
+                    'deposit_amount' => $depositAmount,
+                    'monthly_price' => $monthlyPrice,
+                    'stripe_session_id' => $session->id,
+                    'payment_method' => 'bancontact',
+                ],
+            ]);
+
+            return response()->json([
+                'redirectUrl' => $session->url,
+                'reservationToken' => $reservationToken,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Bancontact payment creation failed', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Erreur Bancontact'], 500);
+        }
+    }
+
+    /**
+     * Confirm Bancontact payment after redirect
+     */
+    public function confirmBancontactPayment(Request $request)
+    {
+        $token = $request->query('token');
+        $reservationData = session("reservation_{$token}");
+
+        if (!$reservationData) {
+            return redirect()->route('mobile.reserve')
+                ->with('error', 'Session de reservation expiree');
+        }
+
+        try {
+            $stripe = new \Stripe\StripeClient(config('services.stripe.secret'));
+            $session = $stripe->checkout->sessions->retrieve($reservationData['stripe_session_id']);
+
+            if ($session->payment_status !== 'paid') {
+                return redirect()->route('mobile.reserve')
+                    ->with('error', 'Paiement Bancontact non confirme');
+            }
+
+            // Process reservation (same logic as PayPal capture)
+            $customer = $this->getCustomer();
+            $box = Box::where('id', $reservationData['box_id'])
+                ->where('status', 'available')
+                ->lockForUpdate()
+                ->first();
+
+            if (!$box) {
+                return redirect()->route('mobile.reserve')
+                    ->with('error', 'Box n\'est plus disponible');
+            }
+
+            DB::beginTransaction();
+
+            try {
+                $contract = Contract::create([
+                    'tenant_id' => $customer->tenant_id,
+                    'customer_id' => $customer->id,
+                    'box_id' => $box->id,
+                    'site_id' => $box->site_id,
+                    'contract_number' => 'CTR-' . strtoupper(uniqid()),
+                    'status' => 'active',
+                    'start_date' => $reservationData['start_date'],
+                    'end_date' => now()->addYear()->format('Y-m-d'),
+                    'monthly_price' => $reservationData['monthly_price'],
+                    'deposit_amount' => $reservationData['deposit_amount'],
+                    'deposit_paid' => $reservationData['include_deposit'],
+                    'billing_frequency' => 'monthly',
+                    'billing_day' => now()->day,
+                    'payment_method' => 'bancontact',
+                    'auto_renew' => true,
+                    'access_code' => str_pad(random_int(0, 9999), 4, '0', STR_PAD_LEFT),
+                ]);
+
+                $box->update(['status' => 'occupied']);
+
+                // Build invoice items with correct tax rates (FISCAL COMPLIANCE)
+                $invoiceItems = [];
+                $subtotal = 0;
+                $totalTax = 0;
+
+                // Storage item (20% VAT)
+                $monthlyPrice = $reservationData['monthly_price'];
+                $storageTax = round($monthlyPrice * 0.20, 2);
+                $invoiceItems[] = [
+                    'description' => "Location Box {$box->name} - 1er mois",
+                    'quantity' => 1,
+                    'unit_price' => $monthlyPrice,
+                    'tax_rate' => 20,
+                    'tax_amount' => $storageTax,
+                    'total' => round($monthlyPrice + $storageTax, 2),
+                ];
+                $subtotal += $monthlyPrice;
+                $totalTax += $storageTax;
+
+                // Deposit (0% VAT)
+                if ($reservationData['include_deposit']) {
+                    $depositAmount = $reservationData['deposit_amount'];
+                    $invoiceItems[] = [
+                        'description' => 'Depot de garantie (non soumis a TVA)',
+                        'quantity' => 1,
+                        'unit_price' => $depositAmount,
+                        'tax_rate' => 0,
+                        'tax_amount' => 0,
+                        'total' => $depositAmount,
+                    ];
+                    $subtotal += $depositAmount;
+                }
+
+                // Insurance (9% tax)
+                if ($reservationData['include_insurance']) {
+                    $insuranceBase = 15.00;
+                    $insuranceTax = round($insuranceBase * 0.09, 2);
+                    $invoiceItems[] = [
+                        'description' => 'Assurance',
+                        'quantity' => 1,
+                        'unit_price' => $insuranceBase,
+                        'tax_rate' => 9,
+                        'tax_amount' => $insuranceTax,
+                        'total' => round($insuranceBase + $insuranceTax, 2),
+                    ];
+                    $subtotal += $insuranceBase;
+                    $totalTax += $insuranceTax;
+                }
+
+                $grandTotal = round($subtotal + $totalTax, 2);
+
+                // Create invoice
+                $invoice = Invoice::create([
+                    'tenant_id' => $customer->tenant_id,
+                    'customer_id' => $customer->id,
+                    'contract_id' => $contract->id,
+                    'invoice_number' => 'FAC' . date('Ym') . str_pad(random_int(0, 99999), 5, '0', STR_PAD_LEFT),
+                    'type' => 'invoice',
+                    'status' => 'paid',
+                    'invoice_date' => now(),
+                    'due_date' => now()->addDays(30),
+                    'paid_at' => now(),
+                    'subtotal' => round($subtotal, 2),
+                    'tax_rate' => 20, // Default rate, individual items have specific rates
+                    'tax_amount' => round($totalTax, 2),
+                    'total' => $grandTotal,
+                    'paid_amount' => $grandTotal,
+                    'items' => $invoiceItems,
+                ]);
+
+                // Create payment
+                Payment::create([
+                    'tenant_id' => $customer->tenant_id,
+                    'customer_id' => $customer->id,
+                    'invoice_id' => $invoice->id,
+                    'contract_id' => $contract->id,
+                    'payment_number' => 'PAY-' . strtoupper(uniqid()),
+                    'amount' => $grandTotal,
+                    'method' => 'bancontact',
+                    'gateway' => 'stripe',
+                    'status' => 'completed',
+                    'stripe_payment_intent_id' => $session->payment_intent,
+                    'paid_at' => now(),
+                    'processed_at' => now(),
+                ]);
+
+                $customer->increment('total_contracts');
+
+                DB::commit();
+                session()->forget("reservation_{$token}");
+
+                return redirect()->route('mobile.contracts.show', $contract->id)
+                    ->with('success', 'Reservation confirmee avec succes!');
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
+            }
+        } catch (\Exception $e) {
+            Log::error('Bancontact confirmation failed', ['error' => $e->getMessage()]);
+            return redirect()->route('mobile.reserve')
+                ->with('error', 'Erreur lors de la confirmation Bancontact');
+        }
+    }
+
+    /**
+     * Create Wallet payment (Apple Pay / Google Pay)
+     */
+    public function createWalletPayment(Request $request)
+    {
+        // Similar to createPaymentIntent but with wallet-specific options
+        $validated = $request->validate([
+            'box_id' => 'required|exists:boxes,id',
+            'start_date' => 'required|date|after_or_equal:today',
+            'include_deposit' => 'boolean',
+            'include_insurance' => 'boolean',
+        ]);
+
+        $customer = $this->getCustomer();
+        $box = Box::where('id', $validated['box_id'])
+            ->where('status', 'available')
+            ->with('site')
+            ->firstOrFail();
+
+        if ($box->site->tenant_id !== $customer->tenant_id) {
+            return response()->json(['error' => 'Box non disponible'], 403);
+        }
+
+        $monthlyPrice = $box->monthly_price;
+        $monthlyPriceWithVat = $monthlyPrice * 1.20;
+        $depositAmount = $validated['include_deposit'] ? ($monthlyPrice * 2) : 0;
+        $insuranceAmount = $validated['include_insurance'] ? (15.00 * 1.09) : 0;
+        $total = round($monthlyPriceWithVat + $depositAmount + $insuranceAmount, 2);
+
+        $reservationToken = bin2hex(random_bytes(16));
+
+        try {
+            $intent = $this->stripeService->createPaymentIntent($customer, $total, [
+                'metadata' => [
+                    'type' => 'reservation',
+                    'box_id' => $box->id,
+                    'start_date' => $validated['start_date'],
+                    'include_deposit' => $validated['include_deposit'] ? '1' : '0',
+                    'include_insurance' => $validated['include_insurance'] ? '1' : '0',
+                    'reservation_token' => $reservationToken,
+                    'payment_method' => 'wallet',
+                ],
+            ]);
+
+            session([
+                "reservation_{$reservationToken}" => [
+                    'box_id' => $box->id,
+                    'start_date' => $validated['start_date'],
+                    'include_deposit' => $validated['include_deposit'] ?? false,
+                    'include_insurance' => $validated['include_insurance'] ?? false,
+                    'total' => $total,
+                    'deposit_amount' => $depositAmount,
+                    'monthly_price' => $monthlyPrice,
+                    'payment_method' => 'wallet',
+                ],
+            ]);
+
+            return response()->json([
+                'clientSecret' => $intent['client_secret'],
+                'paymentIntentId' => $intent['payment_intent_id'],
+                'reservationToken' => $reservationToken,
+                'amount' => $total,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Wallet payment creation failed', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Erreur Wallet'], 500);
+        }
+    }
+
+    /**
+     * Create Bank Transfer reservation (pending payment)
+     */
+    public function createBankTransferReservation(Request $request)
+    {
+        $validated = $request->validate([
+            'box_id' => 'required|exists:boxes,id',
+            'start_date' => 'required|date|after_or_equal:today',
+            'include_deposit' => 'boolean',
+            'include_insurance' => 'boolean',
+        ]);
+
+        $customer = $this->getCustomer();
+        $box = Box::where('id', $validated['box_id'])
+            ->where('status', 'available')
+            ->with('site')
+            ->lockForUpdate()
+            ->first();
+
+        if (!$box || $box->site->tenant_id !== $customer->tenant_id) {
+            return response()->json(['error' => 'Box non disponible'], 403);
+        }
+
+        $monthlyPrice = $box->monthly_price;
+        $monthlyPriceWithVat = $monthlyPrice * 1.20;
+        $depositAmount = $validated['include_deposit'] ? ($monthlyPrice * 2) : 0;
+        $insuranceAmount = $validated['include_insurance'] ? (15.00 * 1.09) : 0;
+        $total = round($monthlyPriceWithVat + $depositAmount + $insuranceAmount, 2);
+
+        DB::beginTransaction();
+
+        try {
+            // Create contract with draft status (awaiting bank transfer payment)
+            $contract = Contract::create([
+                'tenant_id' => $customer->tenant_id,
+                'customer_id' => $customer->id,
+                'box_id' => $box->id,
+                'site_id' => $box->site_id,
+                'contract_number' => 'CTR-' . strtoupper(uniqid()),
+                'status' => 'draft', // Draft until bank transfer payment received
+                'start_date' => $validated['start_date'],
+                'end_date' => now()->addYear()->format('Y-m-d'),
+                'monthly_price' => $monthlyPrice,
+                'deposit_amount' => $depositAmount,
+                'deposit_paid' => false,
+                'billing_frequency' => 'monthly',
+                'billing_day' => now()->day,
+                'payment_method' => 'bank_transfer',
+                'auto_renew' => true,
+                'access_code' => str_pad(random_int(0, 9999), 4, '0', STR_PAD_LEFT),
+            ]);
+
+            // Reserve the box temporarily
+            $box->update(['status' => 'reserved']);
+
+            // Build invoice items with correct tax rates (FISCAL COMPLIANCE)
+            $invoiceItems = [];
+            $subtotal = 0;
+            $totalTax = 0;
+
+            // Storage item (20% VAT)
+            $storageTax = round($monthlyPrice * 0.20, 2);
+            $invoiceItems[] = [
+                'description' => "Location Box {$box->name} - 1er mois",
+                'quantity' => 1,
+                'unit_price' => $monthlyPrice,
+                'tax_rate' => 20,
+                'tax_amount' => $storageTax,
+                'total' => round($monthlyPrice + $storageTax, 2),
+            ];
+            $subtotal += $monthlyPrice;
+            $totalTax += $storageTax;
+
+            // Deposit (0% VAT)
+            if ($validated['include_deposit'] ?? false) {
+                $invoiceItems[] = [
+                    'description' => 'Depot de garantie (non soumis a TVA)',
+                    'quantity' => 1,
+                    'unit_price' => $depositAmount,
+                    'tax_rate' => 0,
+                    'tax_amount' => 0,
+                    'total' => $depositAmount,
+                ];
+                $subtotal += $depositAmount;
+            }
+
+            // Insurance (9% tax)
+            if ($validated['include_insurance'] ?? false) {
+                $insuranceBase = 15.00;
+                $insuranceTax = round($insuranceBase * 0.09, 2);
+                $invoiceItems[] = [
+                    'description' => 'Assurance',
+                    'quantity' => 1,
+                    'unit_price' => $insuranceBase,
+                    'tax_rate' => 9,
+                    'tax_amount' => $insuranceTax,
+                    'total' => round($insuranceBase + $insuranceTax, 2),
+                ];
+                $subtotal += $insuranceBase;
+                $totalTax += $insuranceTax;
+            }
+
+            $grandTotal = round($subtotal + $totalTax, 2);
+
+            // Create invoice awaiting bank transfer payment
+            $invoice = Invoice::create([
+                'tenant_id' => $customer->tenant_id,
+                'customer_id' => $customer->id,
+                'contract_id' => $contract->id,
+                'invoice_number' => 'FAC' . date('Ym') . str_pad(random_int(0, 99999), 5, '0', STR_PAD_LEFT),
+                'type' => 'invoice',
+                'status' => 'sent', // Sent, awaiting bank transfer payment
+                'invoice_date' => now(),
+                'due_date' => now()->addDays(3), // 3 days to pay via bank transfer
+                'subtotal' => round($subtotal, 2),
+                'tax_rate' => 20, // Default rate, individual items have specific rates
+                'tax_amount' => round($totalTax, 2),
+                'total' => $grandTotal,
+                'paid_amount' => 0,
+                'items' => $invoiceItems,
+                'notes' => 'Paiement par virement bancaire attendu',
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'contract_id' => $contract->id,
+                'invoice_id' => $invoice->id,
+                'redirect' => route('mobile.contracts.show', $contract->id),
+                'message' => 'Reservation en attente de paiement',
+                'bank_details' => [
+                    'iban' => config('app.bank_iban', 'BE00 0000 0000 0000'),
+                    'bic' => config('app.bank_bic', 'GEBABEBB'),
+                    'reference' => $invoice->invoice_number,
+                    'amount' => $grandTotal,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Bank transfer reservation failed', ['error' => $e->getMessage()]);
+            return response()->json(['error' => 'Erreur lors de la reservation'], 500);
+        }
+    }
 }

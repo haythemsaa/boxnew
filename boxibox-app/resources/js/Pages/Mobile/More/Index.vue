@@ -136,6 +136,61 @@
                 </div>
             </div>
 
+            <!-- Install App Banner -->
+            <div v-if="!isInstalled" class="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-2xl shadow-lg p-4 mb-4">
+                <div class="flex items-center">
+                    <div class="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center mr-4">
+                        <DevicePhoneMobileIcon class="w-7 h-7 text-white" />
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-bold text-white">Installer l'application</h4>
+                        <p class="text-purple-100 text-sm">Acces rapide depuis votre ecran</p>
+                    </div>
+                    <button
+                        @click="installApp"
+                        class="px-4 py-2 bg-white text-purple-600 rounded-xl font-semibold text-sm"
+                    >
+                        Installer
+                    </button>
+                </div>
+            </div>
+
+            <!-- iOS Instructions Modal -->
+            <div v-if="showIOSModal" class="fixed inset-0 z-50 flex items-end justify-center" @click.self="showIOSModal = false">
+                <div class="absolute inset-0 bg-black/50"></div>
+                <div class="relative bg-white w-full rounded-t-3xl p-6 pb-10">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <DevicePhoneMobileIcon class="w-8 h-8 text-purple-600" />
+                        </div>
+                        <h3 class="text-xl font-bold">Installer sur Android</h3>
+                    </div>
+                    <div class="space-y-4 text-left">
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                                <span class="text-purple-600 font-bold">1</span>
+                            </div>
+                            <p class="text-gray-700 pt-1">Appuyez sur le menu <strong>⋮</strong> (3 points) en haut a droite de Chrome</p>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                                <span class="text-purple-600 font-bold">2</span>
+                            </div>
+                            <p class="text-gray-700 pt-1">Selectionnez <strong>"Installer l'application"</strong> ou <strong>"Ajouter a l'ecran d'accueil"</strong></p>
+                        </div>
+                        <div class="flex items-start">
+                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                                <span class="text-purple-600 font-bold">3</span>
+                            </div>
+                            <p class="text-gray-700 pt-1">Confirmez en appuyant sur <strong>"Installer"</strong></p>
+                        </div>
+                    </div>
+                    <button @click="showIOSModal = false" class="w-full mt-6 py-3 bg-purple-600 text-white rounded-xl font-semibold">
+                        Compris !
+                    </button>
+                </div>
+            </div>
+
             <!-- Settings Section -->
             <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
                 <h3 class="px-4 py-3 text-sm font-semibold text-gray-500 uppercase tracking-wider bg-gray-50">
@@ -223,7 +278,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Link, usePage } from '@inertiajs/vue3'
 import MobileLayout from '@/Layouts/MobileLayout.vue'
 import {
@@ -244,6 +299,7 @@ import {
     BellIcon,
     MoonIcon,
     ArrowRightOnRectangleIcon,
+    DevicePhoneMobileIcon,
 } from '@heroicons/vue/24/outline'
 
 const props = defineProps({
@@ -252,6 +308,9 @@ const props = defineProps({
 
 const page = usePage()
 const darkMode = ref(false)
+const showIOSModal = ref(false)
+const isInstalled = ref(false)
+let deferredPrompt = null
 
 const userInitial = computed(() => {
     return page.props.auth?.user?.name?.charAt(0)?.toUpperCase() || 'U'
@@ -268,4 +327,52 @@ const toggleDarkMode = () => {
     darkMode.value = !darkMode.value
     // TODO: Implement dark mode toggle
 }
+
+// Check if app is already installed
+const checkIfInstalled = () => {
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        isInstalled.value = true
+    }
+    if (window.navigator.standalone === true) {
+        isInstalled.value = true
+    }
+}
+
+// Install app function
+const installApp = async () => {
+    // Try native prompt first
+    if (deferredPrompt) {
+        deferredPrompt.prompt()
+        const { outcome } = await deferredPrompt.userChoice
+        if (outcome === 'accepted') {
+            isInstalled.value = true
+        }
+        deferredPrompt = null
+        return
+    }
+
+    // Try global install function
+    if (window.installPWA) {
+        window.installPWA()
+        return
+    }
+
+    // Show manual instructions
+    showIOSModal.value = true
+}
+
+onMounted(() => {
+    checkIfInstalled()
+
+    // Listen for install prompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault()
+        deferredPrompt = e
+    })
+
+    // Listen for successful install
+    window.addEventListener('appinstalled', () => {
+        isInstalled.value = true
+    })
+})
 </script>

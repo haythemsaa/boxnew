@@ -353,7 +353,7 @@ class NotificationService
 
             // Create in-app notifications for all users of this tenant
             $users = User::where('tenant_id', $booking->tenant_id)
-                ->where('is_active', true)
+                ->where('status', 'active')
                 ->get();
 
             $notificationCount = 0;

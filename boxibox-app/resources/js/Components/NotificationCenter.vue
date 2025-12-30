@@ -181,9 +181,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, h } from 'vue'
+import { ref, computed, onMounted, onUnmounted, h, watch } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
 import axios from 'axios'
+
+// Sound notification - base64 encoded notification sound
+const notificationSound = new Audio('data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA/+M4wAAAAAAAAAAAAEluZm8AAAAPAAAAAwAAAbAAqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV1dXV//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAAbD/////AAAAAAAAAAAAAAAAAAAAAP/jOMAAAAGQAAAAAACIiIiIiIj/iIiIiIiIiP///4iIiIiIiIj/iIiIiIiIiP///4iIiIiIiIj/iIiIiIiIiP///4iIiIiIiIj/iIiIiIiIiP///4iIiIiIiIj/iIiIiIiIiP/jOMQdAAAAkAAAAAD///+IiIiIiIiI/4iIiIiIiIj///+IiIiIiIiI/4iIiIiIiIj///+IiIiIiIiI/4iIiIiIiIj///+IiIiIiIiI/4iIiIiIiIj///+IiIiIiIiI/4iIiIiIiIj/4zjEOgAAAJAAAAAA///4iIiIiIiI//iIiIiIiIiI///+IiIiIiIiI//4iIiIiIiIiP///iIiIiIiIiP/+IiIiIiIiIj///4iIiIiIiIj//iIiIiIiIiI///+IiIiIiIiI//4iIiIiIiIiP/jOMRdAAAAkAAAAAD//4iIiIiIiIj/+IiIiIiIiIj//4iIiIiIiIj/+IiIiIiIiIj//4iIiIiIiIj/+IiIiIiIiIgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAP/jOMR9AAAAkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==')
 
 // Icons as render functions
 const ExclamationTriangleIcon = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
@@ -235,8 +238,8 @@ const criticalCount = computed(() => {
 const filters = computed(() => [
     { key: 'all', label: 'Tout', count: notifications.value.length },
     { key: 'unread', label: 'Non lues', count: notifications.value.filter(n => !n.is_read).length },
+    { key: 'booking', label: 'Réservations', count: notifications.value.filter(n => n.type === 'new_booking').length },
     { key: 'payment', label: 'Paiements', count: notifications.value.filter(n => n.type === 'payment_reminder' || n.type === 'payment_received').length },
-    { key: 'contract', label: 'Contrats', count: notifications.value.filter(n => n.type === 'contract_expiring').length },
 ])
 
 const filteredNotifications = computed(() => {
@@ -246,11 +249,11 @@ const filteredNotifications = computed(() => {
         case 'unread':
             result = result.filter(n => !n.is_read)
             break
+        case 'booking':
+            result = result.filter(n => n.type === 'new_booking')
+            break
         case 'payment':
             result = result.filter(n => n.type === 'payment_reminder' || n.type === 'payment_received')
-            break
-        case 'contract':
-            result = result.filter(n => n.type === 'contract_expiring')
             break
     }
 
@@ -268,11 +271,55 @@ const closeDropdown = () => {
     showNotifications.value = false
 }
 
+// Track previous notification IDs to detect new ones
+const previousNotificationIds = ref(new Set())
+const soundEnabled = ref(true)
+
+// Play notification sound
+const playNotificationSound = () => {
+    if (soundEnabled.value) {
+        try {
+            notificationSound.currentTime = 0
+            notificationSound.volume = 0.5
+            notificationSound.play().catch(e => console.log('Sound play prevented:', e))
+        } catch (e) {
+            console.log('Could not play notification sound:', e)
+        }
+    }
+}
+
 const fetchNotifications = async () => {
     isLoading.value = true
     try {
         const response = await axios.get(route('tenant.notifications.api.list'))
-        notifications.value = response.data.notifications || []
+        const newNotifications = response.data.notifications || []
+
+        // Check for new notifications (not seen before)
+        if (previousNotificationIds.value.size > 0) {
+            const newUnreadNotifications = newNotifications.filter(n =>
+                !n.is_read && !previousNotificationIds.value.has(n.id)
+            )
+
+            // Play sound if there are new unread notifications
+            if (newUnreadNotifications.length > 0) {
+                playNotificationSound()
+
+                // Show browser notification if permitted
+                if (Notification.permission === 'granted') {
+                    newUnreadNotifications.forEach(n => {
+                        new Notification(n.title, {
+                            body: n.message,
+                            icon: '/favicon.ico',
+                            tag: `notification-${n.id}`
+                        })
+                    })
+                }
+            }
+        }
+
+        // Update previous IDs
+        previousNotificationIds.value = new Set(newNotifications.map(n => n.id))
+        notifications.value = newNotifications
     } catch (error) {
         console.error('Erreur chargement notifications:', error)
         notifications.value = []
@@ -309,6 +356,13 @@ const markAllAsRead = async () => {
 const handleNotificationClick = (notification) => {
     markAsRead(notification.id)
 
+    // Handle new_booking type specifically
+    if (notification.type === 'new_booking' && notification.data?.booking_id) {
+        router.visit(route('tenant.bookings.show', notification.data.booking_id))
+        showNotifications.value = false
+        return
+    }
+
     // Navigation basée sur le type
     if (notification.related_type && notification.related_id) {
         const routes = {
@@ -316,6 +370,7 @@ const handleNotificationClick = (notification) => {
             'contract': 'tenant.contracts.show',
             'customer': 'tenant.customers.show',
             'payment': 'tenant.payments.show',
+            'App\\Models\\Booking': 'tenant.bookings.show',
         }
 
         const routeName = routes[notification.related_type]
@@ -326,6 +381,11 @@ const handleNotificationClick = (notification) => {
     }
 }
 
+// Icon for new booking (cube/box icon)
+const CubeIcon = () => h('svg', { fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, [
+    h('path', { 'stroke-linecap': 'round', 'stroke-linejoin': 'round', 'stroke-width': '2', d: 'M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4' })
+])
+
 const getIcon = (notification) => {
     const iconMap = {
         'payment_reminder': ExclamationTriangleIcon,
@@ -333,6 +393,7 @@ const getIcon = (notification) => {
         'contract_expiring': CalendarIcon,
         'invoice_generated': DocumentTextIcon,
         'message_received': BellIcon,
+        'new_booking': CubeIcon,
     }
 
     // Si c'est une alerte sur le taux d'occupation

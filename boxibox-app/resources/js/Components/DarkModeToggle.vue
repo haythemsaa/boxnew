@@ -116,7 +116,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useDarkMode } from '@/Composables/useDarkMode'
+import { useDarkMode } from '@/composables/useDarkMode'
 
 const props = defineProps({
     variant: {

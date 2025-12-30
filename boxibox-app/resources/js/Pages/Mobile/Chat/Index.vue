@@ -16,10 +16,10 @@
                     <h3 class="font-bold text-gray-900">Support Boxibox</h3>
                     <p v-if="agentOnline" class="text-sm text-green-600 flex items-center">
                         <span class="w-2 h-2 bg-green-500 rounded-full mr-2 animate-pulse"></span>
-                        En ligne - Repond en ~2 min
+                        En ligne - Répond en ~2 min
                     </p>
                     <p v-else class="text-sm text-gray-500">
-                        Hors ligne - Reponse sous 24h
+                        Hors ligne - Réponse sous 24h
                     </p>
                 </div>
                 <button @click="startCall" class="p-3 bg-green-100 rounded-xl text-green-600 hover:bg-green-200 transition">
@@ -233,6 +233,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue'
 import { router, usePage } from '@inertiajs/vue3'
+import axios from 'axios'
 import MobileLayout from '@/Layouts/MobileLayout.vue'
 import {
     UserIcon,
@@ -275,10 +276,10 @@ let typingTimeout = null
 let echoChannel = null
 
 const quickActions = [
-    { id: 1, label: 'Probleme d\'acces', message: 'Bonjour, j\'ai un probleme pour acceder a mon box.' },
-    { id: 2, label: 'Question facture', message: 'Bonjour, j\'ai une question concernant ma derniere facture.' },
-    { id: 3, label: 'Changer de box', message: 'Bonjour, je souhaite changer de box pour une taille differente.' },
-    { id: 4, label: 'Resilier', message: 'Bonjour, je souhaite des informations sur la resiliation de mon contrat.' },
+    { id: 1, label: 'Problème d\'accès', message: 'Bonjour, j\'ai un problème pour accéder à mon box.' },
+    { id: 2, label: 'Question facture', message: 'Bonjour, j\'ai une question concernant ma dernière facture.' },
+    { id: 3, label: 'Changer de box', message: 'Bonjour, je souhaite changer de box pour une taille différente.' },
+    { id: 4, label: 'Résilier', message: 'Bonjour, je souhaite des informations sur la résiliation de mon contrat.' },
 ]
 
 const canSend = computed(() => {
@@ -468,48 +469,89 @@ const startCall = () => {
     window.location.href = 'tel:0800123456'
 }
 
+// Create mobile-specific Echo instance
+let mobileEcho = null
+
+const createMobileEcho = async () => {
+    if (mobileEcho) return mobileEcho
+
+    const [{ default: Echo }, { default: Pusher }] = await Promise.all([
+        import('laravel-echo'),
+        import('pusher-js')
+    ])
+
+    mobileEcho = new Echo({
+        broadcaster: 'reverb',
+        key: import.meta.env.VITE_REVERB_APP_KEY,
+        wsHost: import.meta.env.VITE_REVERB_HOST || window.location.hostname,
+        wsPort: import.meta.env.VITE_REVERB_PORT ?? 443,
+        wssPort: import.meta.env.VITE_REVERB_PORT ?? 443,
+        forceTLS: true,
+        enabledTransports: ['ws', 'wss'],
+        authEndpoint: '/mobile/broadcasting/auth',
+    })
+
+    console.log('Mobile Echo initialized with auth endpoint: /mobile/broadcasting/auth')
+    return mobileEcho
+}
+
 // Setup Laravel Echo for real-time updates
-const setupEchoChannel = () => {
-    if (!conversation.value || !window.Echo) return
+const setupEchoChannel = async () => {
+    if (!conversation.value) return
 
-    const channelName = `chat.${conversation.value.conversation_id}`
+    try {
+        const echo = await createMobileEcho()
 
-    echoChannel = window.Echo.private(channelName)
-        .listen('.message.sent', (data) => {
-            // Only add if not from customer (our own message)
-            if (data.sender_type !== 'customer') {
-                messages.value.push(data.message)
-                scrollToBottom()
+        console.log('Setting up Echo channel for mobile chat:', conversation.value.conversation_id)
 
-                // Mark as read
-                axios.post(route('mobile.chat.read', { conversationId: conversation.value.conversation_id }))
-                    .catch(() => {})
-            }
-        })
-        .listen('.typing', (data) => {
-            if (data.typer_type === 'agent') {
-                agentTyping.value = data.is_typing
-            }
-        })
-        .listen('.messages.read', (data) => {
-            if (data.reader_type === 'agent') {
-                // Update our messages as read
-                messages.value.forEach(msg => {
-                    if (data.message_ids.includes(msg.id)) {
-                        msg.is_read = true
+        const channelName = `chat.${conversation.value.conversation_id}`
+
+        echoChannel = echo.private(channelName)
+            .listen('.message.sent', (data) => {
+                console.log('Mobile chat message received:', data)
+                // Only add if not from customer (our own message)
+                if (data.sender_type !== 'customer') {
+                    // Check if message already exists
+                    const exists = messages.value.some(m => m.id === data.message.id)
+                    if (!exists) {
+                        messages.value.push(data.message)
+                        scrollToBottom()
+
+                        // Mark as read
+                        axios.post(route('mobile.chat.read', { conversationId: conversation.value.conversation_id }))
+                            .catch(() => {})
                     }
-                })
-            }
-        })
+                }
+            })
+            .listen('.typing', (data) => {
+                if (data.typer_type === 'agent') {
+                    agentTyping.value = data.is_typing
+                }
+            })
+            .listen('.messages.read', (data) => {
+                if (data.reader_type === 'agent') {
+                    // Update our messages as read
+                    messages.value.forEach(msg => {
+                        if (data.message_ids.includes(msg.id)) {
+                            msg.is_read = true
+                        }
+                    })
+                }
+            })
 
-    // Track connection status
-    window.Echo.connector.pusher.connection.bind('connected', () => {
-        isConnected.value = true
-    })
+        // Track connection status
+        if (echo.connector?.pusher?.connection) {
+            echo.connector.pusher.connection.bind('connected', () => {
+                isConnected.value = true
+            })
 
-    window.Echo.connector.pusher.connection.bind('disconnected', () => {
-        isConnected.value = false
-    })
+            echo.connector.pusher.connection.bind('disconnected', () => {
+                isConnected.value = false
+            })
+        }
+    } catch (error) {
+        console.error('Failed to setup Echo channel:', error)
+    }
 }
 
 onMounted(() => {
@@ -527,8 +569,8 @@ onUnmounted(() => {
         clearTimeout(typingTimeout)
     }
 
-    if (echoChannel && conversation.value) {
-        window.Echo.leave(`chat.${conversation.value.conversation_id}`)
+    if (echoChannel && conversation.value && mobileEcho) {
+        mobileEcho.leave(`chat.${conversation.value.conversation_id}`)
     }
 })
 </script>

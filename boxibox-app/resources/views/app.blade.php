@@ -14,7 +14,11 @@
     <title inertia>{{ config('app.name', 'Boxibox') }}</title>
 
     <!-- PWA Manifest -->
+    @if(request()->is('mobile*'))
+    <link rel="manifest" href="/mobile-manifest.json">
+    @else
     <link rel="manifest" href="/manifest.json">
+    @endif
 
     <!-- Favicon & App Icons -->
     <link rel="icon" type="image/png" sizes="32x32" href="/images/icons/icon-32x32.png">

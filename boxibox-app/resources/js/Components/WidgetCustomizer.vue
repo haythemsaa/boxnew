@@ -165,7 +165,7 @@
 </template>
 
 <script setup>
-import { useDashboardWidgets } from '@/Composables/useDashboardWidgets';
+import { useDashboardWidgets } from '@/composables/useDashboardWidgets';
 
 const props = defineProps({
     isOpen: {

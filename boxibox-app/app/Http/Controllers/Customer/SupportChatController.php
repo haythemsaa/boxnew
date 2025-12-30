@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Customer;
 
+use App\Events\SupportMessageSent;
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
 use App\Models\SupportTicket;
@@ -113,7 +114,7 @@ class SupportChatController extends Controller
             'message' => 'required|string|max:5000',
         ]);
 
-        $ticket->messages()->create([
+        $message = $ticket->messages()->create([
             'sender_type' => 'customer',
             'customer_id' => $customer->id,
             'message' => $validated['message'],
@@ -123,6 +124,14 @@ class SupportChatController extends Controller
         if (in_array($ticket->status, ['waiting_customer', 'resolved'])) {
             $ticket->update(['status' => 'open']);
         }
+
+        // Broadcast the message for real-time updates
+        broadcast(new SupportMessageSent(
+            $message,
+            $ticket,
+            'customer',
+            $customer->first_name . ' ' . $customer->last_name
+        ));
 
         return back()->with('success', 'Message envoye.');
     }

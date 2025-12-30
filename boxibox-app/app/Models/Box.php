@@ -58,7 +58,7 @@ class Box extends Model
      * - code: alias for number (frontend compatibility)
      * - size_m2: calculated from length * width
      */
-    protected $appends = ['code', 'size_m2'];
+    protected $appends = ['code', 'size_m2', 'monthly_price'];
 
     // Relationships
     public function tenant(): BelongsTo
@@ -161,6 +161,14 @@ class Box extends Model
     public function getPriceAttribute(): float
     {
         return $this->current_price ?? $this->base_price ?? 0;
+    }
+
+    /**
+     * Get monthly_price attribute (alias for price for frontend compatibility)
+     */
+    public function getMonthlyPriceAttribute(): float
+    {
+        return $this->price;
     }
 
     /**
